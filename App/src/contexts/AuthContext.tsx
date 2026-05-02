@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { APP_URLS } from "@/config/urls";
 import { supabase } from "@/lib/supabase";
 
 export type UserRole = "admin" | "staff";
@@ -66,7 +65,6 @@ type ProfileRow = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-const backendBaseUrl = APP_URLS.api.backendBase;
 
 function normalizeRole(value: string | undefined): UserRole {
   return value === "admin" ? "admin" : "staff";
@@ -158,28 +156,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signup: async ({ email, password, role, name, organizationName, phone }) => {
         if (!email.trim()) return { ok: false, message: "Email is required." };
         if (!password.trim()) return { ok: false, message: "Password is required." };
+        const normalizedEmail = email.trim().toLowerCase();
 
         if (role === "admin" && import.meta.env.VITE_ANONYMOUS_ADMINS === 'false') {
           return { ok: false, message: "Anonymous admin creation is blocked by the server configuration." };
         }
 
-        const { error: createError } = await supabase.rpc("create_account", {
-          p_email: email.trim(),
-          p_password: password,
-          p_role: role,
-          p_full_name: name?.trim() || null,
-          p_organization_name: organizationName?.trim() || null,
-          p_phone: phone?.trim() || null,
-        });
-
-        if (createError) return { ok: false, message: createError.message };
-
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: normalizedEmail,
           password,
+          options: {
+            data: {
+              role,
+              full_name: name?.trim() || "",
+              organization_name: organizationName?.trim() || "InnovByte Organization",
+              phone: phone?.trim() || "",
+            },
+          },
         });
 
-        if (signInError) return { ok: false, message: signInError.message };
+        if (signUpError) return { ok: false, message: signUpError.message };
+
+        if (!signUpData.session) {
+          return {
+            ok: true,
+            message: "Account created. If email confirmation is enabled, verify your inbox before signing in.",
+          };
+        }
+
         return { ok: true };
       },
       updateProfile: async ({ name, email, organizationName, phone }) => {
