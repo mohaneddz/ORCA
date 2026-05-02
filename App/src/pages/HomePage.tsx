@@ -1,10 +1,54 @@
 import { DonutGauge, DualAreaChart } from "@/components/ui/TrendChart";
 import { DataTable, PageHeader, StatGrid } from "@/components/cards/BaseCards";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
-import { MOCK_INCIDENTS, MOCK_AUTOMATIONS } from "@/data/mockData";
+import { useQuery } from "@tanstack/react-query";
+import { fetchApi } from "@/lib/apiClient";
+import PageSkeleton from "@/components/ui/PageSkeleton";
 
 export default function HomePage() {
   const { t } = useAppSettings();
+
+  const { data: summaryData, isLoading: isSummaryLoading } = useQuery({
+    queryKey: ["home-summary"],
+    queryFn: () => fetchApi<any>("/api/dw/summary/"),
+  });
+  
+  const { data: trendData } = useQuery({
+    queryKey: ["home-trend"],
+    queryFn: () => fetchApi<any>("/api/dw/trend/?months=7"),
+  });
+
+  if (isSummaryLoading || !summaryData) {
+    return <PageSkeleton />;
+  }
+
+  const kpis = [
+    { label: t("home.stats.risk"), value: `${Math.round(summaryData?.device?.avg_risk_score || 0)} / 100`, trend: -2.1 },
+    { label: t("home.stats.incidents"), value: String(summaryData?.device?.risk_level_distribution?.high || 0), tone: "danger", trend: 12.5 },
+    { label: t("home.stats.devices"), value: String(summaryData?.device?.devices_reporting || 0), tone: "ok", trend: 4.8 },
+    { label: t("home.stats.policy"), value: `${summaryData?.quiz?.correct_rate || 0}%`, trend: 1.4 },
+  ];
+
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const chartData = (trendData?.trend || []).map((t: any) => {
+    const parts = t.month.split('-');
+    const mIndex = parts.length > 1 ? parseInt(parts[1], 10) - 1 : 0;
+    return {
+      name: monthNames[mIndex] || t.month,
+      primary: Math.round(t.device?.avg_risk_score || 0),
+      secondary: Math.round(t.phishing?.click_rate || 0),
+    };
+  });
+
+  const totalDevices = summaryData?.device?.devices_reporting || 1;
+  const compliantDevices = totalDevices - (summaryData?.device?.risk_level_distribution?.high || 0) - (summaryData?.device?.risk_level_distribution?.critical || 0);
+
+  const incidentsRows = (summaryData?.device?.top_signals || []).map((s: any) => [
+    s.signal,
+    `${s.affected_devices} devices`,
+    "High",
+    "Open"
+  ]);
 
   return (
     <div className="page-section">
@@ -14,41 +58,26 @@ export default function HomePage() {
         description={t("home.description")}
       />
 
-      <StatGrid
-        stats={[
-          { label: t("home.stats.risk"), value: "61 / 100", trend: -2.1 },
-          { label: t("home.stats.incidents"), value: "18", tone: "danger", trend: 12.5 },
-          { label: t("home.stats.devices"), value: "142", tone: "ok", trend: 4.8 },
-          { label: t("home.stats.policy"), value: "93%", trend: 1.4 },
-        ]}
-      />
+      <StatGrid stats={kpis} />
 
       <section className="grid gap-3 xl:grid-cols-[1.7fr_1fr]">
         <div className="min-h-[280px]">
           <DualAreaChart
-            data={[
-              { name: "Mon", primary: 72, secondary: 38 },
-              { name: "Tue", primary: 66, secondary: 44 },
-              { name: "Wed", primary: 63, secondary: 47 },
-              { name: "Thu", primary: 68, secondary: 51 },
-              { name: "Fri", primary: 64, secondary: 54 },
-              { name: "Sat", primary: 59, secondary: 46 },
-              { name: "Sun", primary: 61, secondary: 58 },
-            ]}
+            data={chartData}
             title={t("home.chart.riskVsRemediation")}
             primaryLabel={t("home.chart.riskIndex")}
-            secondaryLabel={t("home.chart.resolvedSignals")}
+            secondaryLabel={"Click Rate"}
           />
         </div>
         <DonutGauge
           title={t("home.gauge.assetCompliance")}
-          value={132}
-          max={142}
+          value={compliantDevices}
+          max={totalDevices}
           label={t("home.gauge.compliant")}
           breakdown={[
-            { label: t("home.gauge.compliant"), value: 132, color: "#10b981" },
-            { label: t("home.gauge.pending"), value: 7, color: "#f59e0b" },
-            { label: t("home.gauge.critical"), value: 3, color: "#f43f5e" },
+            { label: t("home.gauge.compliant"), value: compliantDevices, color: "#10b981" },
+            { label: t("home.gauge.pending"), value: summaryData?.device?.risk_level_distribution?.medium || 0, color: "#f59e0b" },
+            { label: t("home.gauge.critical"), value: (summaryData?.device?.risk_level_distribution?.high || 0) + (summaryData?.device?.risk_level_distribution?.critical || 0), color: "#f43f5e" },
           ]}
         />
       </section>
@@ -57,13 +86,13 @@ export default function HomePage() {
         <DataTable
           title={t("home.table.incidentQueue")}
           columns={[t("table.signal"), t("table.entity"), t("table.priority"), t("table.status")]}
-          rows={MOCK_INCIDENTS.map(row => [row[0], row[1], row[2], t(row[3])])}
+          rows={incidentsRows}
           minWidth={500}
         />
         <DataTable
           title={t("home.table.recentAutomations")}
           columns={[t("table.automation"), t("table.target"), t("table.result"), t("table.time")]}
-          rows={MOCK_AUTOMATIONS.map(row => [t(row[0]), row[1], t(row[2]), row[3]])}
+          rows={[]}
           minWidth={500}
         />
       </section>

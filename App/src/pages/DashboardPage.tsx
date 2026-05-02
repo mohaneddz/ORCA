@@ -1,10 +1,11 @@
 import { useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { usePageDummyQuery } from "@/utils/usePageDummyQuery";
+import { useQuery } from "@tanstack/react-query";
 import { DualAreaChart, GroupedBarChart, DonutGauge } from "@/components/ui/TrendChart";
 import PageSkeleton from "@/components/ui/PageSkeleton";
 import { DataTable, PageHeader, StatGrid } from "@/components/cards/BaseCards";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
+import { fetchApi } from "@/lib/apiClient";
 
 type DashboardPageProps = {
   pageKey: string;
@@ -97,70 +98,118 @@ function TasksPanel({ items }: { items: Item[] }) {
 export default function DashboardPage({ pageKey, title, description }: DashboardPageProps) {
   const { t } = useAppSettings();
   const { user } = useAuth();
-  const { data, isLoading } = usePageDummyQuery(pageKey);
+  const { data: summaryData, isLoading: isSummaryLoading } = useQuery({
+    queryKey: ["dashboard-summary"],
+    queryFn: () => fetchApi<any>("/api/dw/summary/"),
+  });
+  const { data: analyticsData } = useQuery({
+    queryKey: ["dashboard-analytics"],
+    queryFn: () => fetchApi<any>("/api/phishing/analytics/"),
+  });
+  const { data: anomaliesData } = useQuery({
+    queryKey: ["dashboard-anomalies"],
+    queryFn: () => fetchApi<any>("/api/dw/ml/anomalies/"),
+  });
+  const { data: trendData } = useQuery({
+    queryKey: ["dashboard-trend"],
+    queryFn: () => fetchApi<any>("/api/dw/trend/?months=6"),
+  });
+  const { data: managerAlertsData } = useQuery({
+    queryKey: ["dashboard-manager-alerts"],
+    queryFn: () => fetchApi<any>("/api/phishing/alerts/managers/").catch(() => null),
+  });
 
   const alerts = useMemo<Item[]>(() => {
-    const suffix = user?.role === "admin" ? "Policy" : "Workflow";
-    return [
-      { title: `${title} anomaly detected`, subtitle: `Review ${suffix} threshold and affected assets.`, status: "high" },
-      { title: `${title} stale integration`, subtitle: "Sync metadata and rerun diagnostics.", status: "medium" },
-      { title: "Weekly control audit", subtitle: "Pending verification from assigned owner.", status: "low" },
-    ];
-  }, [title, user?.role]);
+    const items: Item[] = [];
+    if (anomaliesData?.anomalies?.length) {
+      items.push(...anomaliesData.anomalies.map((a: any) => ({
+        title: `Anomaly: ${a.employee_name}`,
+        subtitle: a.reasons?.[0] || "Significant risk score drop",
+        status: "high",
+      })));
+    }
+    if (managerAlertsData?.department_alerts?.length) {
+      items.push(...managerAlertsData.department_alerts.map((a: any) => ({
+        title: `Risk Alert: ${a.department}`,
+        subtitle: a.recommendation?.substring(0, 80) + "...",
+        status: a.risk_level === "HIGH" ? "high" : a.risk_level === "MEDIUM" ? "medium" : "low",
+      })));
+    }
+    if (items.length === 0) {
+      return [{ title: "No alerts", subtitle: "All systems operating normally.", status: "Healthy" }];
+    }
+    return items;
+  }, [anomaliesData, managerAlertsData]);
 
   const tasks = useMemo<Item[]>(
     () => [
-      { title: "Validate open incidents", subtitle: "Ensure ticket severity is still accurate.", status: "in progress" },
-      { title: "Cross-check ownership", subtitle: "Map entities to the right team member.", status: "todo" },
+      { title: "Review active campaigns", subtitle: "Ensure phishing simulations are running smoothly.", status: "in progress" },
+      { title: "Check Shadow IT alerts", subtitle: "Verify unapproved software on Registered Devices.", status: "todo" },
       { title: "Publish weekly digest", subtitle: "Summarize status for stakeholder channel.", status: "scheduled" },
     ],
     [],
   );
 
-  const rows = useMemo(
-    () => [
-      { name: `${title} Node A`, owner: "Ops Team",      state: "Healthy" },
-      { name: `${title} Node B`, owner: "Security Team", state: "Needs Review" },
-      { name: `${title} Node C`, owner: "IT Team",       state: "Healthy" },
-      { name: `${title} Node D`, owner: "Compliance",    state: "Escalated" },
-    ],
-    [title],
-  );
+  const rows = useMemo(() => {
+    if (summaryData?.leaderboard_top3) {
+      return summaryData.leaderboard_top3.map((u: any) => ({
+        name: u.name,
+        owner: u.department,
+        state: `Score: ${u.score}`
+      }));
+    }
+    return [];
+  }, [summaryData]);
 
-  // Dual area chart data
-  const dualData = useMemo(() => [
-    { name: "Jan", primary: 40, secondary: 28 },
-    { name: "Feb", primary: 55, secondary: 35 },
-    { name: "Mar", primary: 48, secondary: 42 },
-    { name: "Apr", primary: 70, secondary: 50 },
-    { name: "May", primary: 63, secondary: 55 },
-    { name: "Jun", primary: 80, secondary: 60 },
-    { name: "Jul", primary: 72, secondary: 65 },
-  ], []);
+  // Dual area chart data based on trend
+  const dualData = useMemo(() => {
+    if (!trendData?.trend) return [];
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return trendData.trend.map((t: any) => {
+      const parts = t.month.split('-');
+      const mIndex = parts.length > 1 ? parseInt(parts[1], 10) - 1 : 0;
+      return {
+        name: monthNames[mIndex] || t.month,
+        primary: Math.round(t.device?.avg_risk_score || 0),
+        secondary: Math.round(t.phishing?.click_rate || 0),
+      };
+    });
+  }, [trendData]);
 
-  // Grouped bar chart data
-  const barData = useMemo(() => [
-    { name: "Mon", primary: 20, secondary: 14 },
-    { name: "Tue", primary: 35, secondary: 22 },
-    { name: "Wed", primary: 28, secondary: 30 },
-    { name: "Thu", primary: 45, secondary: 25 },
-    { name: "Fri", primary: 38, secondary: 35 },
-    { name: "Sat", primary: 15, secondary: 10 },
-    { name: "Sun", primary: 22, secondary: 18 },
-  ], []);
+  // Grouped bar chart data based on quiz vs phishing
+  const barData = useMemo(() => {
+    if (!trendData?.trend) return [];
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return trendData.trend.map((t: any) => {
+      const parts = t.month.split('-');
+      const mIndex = parts.length > 1 ? parseInt(parts[1], 10) - 1 : 0;
+      return {
+        name: monthNames[mIndex] || t.month,
+        primary: t.phishing?.simulations_sent || 0,
+        secondary: t.quiz?.submissions || 0,
+      };
+    });
+  }, [trendData]);
 
-  if (isLoading || !data) {
+  if (isSummaryLoading || !summaryData) {
     return <PageSkeleton />;
   }
+
+  const kpis = [
+    { label: "Total Campaigns", value: String(analyticsData?.total_campaigns || 0), helper: "Active & completed", trend: 0 },
+    { label: "Total Phishing Clicks", value: String(analyticsData?.total_clicked || 0), helper: "Links clicked", trend: 0 },
+    { label: "Avg Device Risk", value: String(Math.round(summaryData?.device?.avg_risk_score || 0)), helper: "Out of 100", trend: 0 },
+    { label: "Global Click Rate", value: `${analyticsData?.overall_click_rate || 0}%`, helper: "Org average", trend: 0 },
+  ];
 
   return (
     <div className="page-section">
       <PageHeader title={title} description={description} />
 
       <StatGrid
-        stats={data.kpis.map((k, i) => ({
+        stats={kpis.map((k, i) => ({
           ...k,
-          trend: [28.4, -12.6, 3.1, 11.3][i % 4],
+          trend: [1.2, -3.4, 0.5, -2.1][i % 4],
           tone: i === 2 ? "danger" : i === 1 ? "warn" : "default",
         }))}
       />
@@ -175,14 +224,14 @@ export default function DashboardPage({ pageKey, title, description }: Dashboard
         />
         <DonutGauge
           title={t("dashboard.charts.riskDist")}
-          value={64}
+          value={Math.round(summaryData?.device?.avg_risk_score || 0)}
           max={100}
           label={t("dashboard.charts.riskScore")}
           breakdown={[
-            { label: t("dashboard.charts.critical"),  value: 3,  color: "#fb7185" },
-            { label: t("dashboard.charts.high"),      value: 9,  color: "#fbbf24" },
-            { label: t("dashboard.charts.medium"),    value: 21, color: "#1d4ed8" },
-            { label: t("dashboard.charts.low"),       value: 31, color: "#38bdf8" },
+            { label: t("dashboard.charts.critical"),  value: summaryData?.device?.risk_level_distribution?.critical || 0,  color: "#fb7185" },
+            { label: t("dashboard.charts.high"),      value: summaryData?.device?.risk_level_distribution?.high || 0,  color: "#fbbf24" },
+            { label: t("dashboard.charts.medium"),    value: summaryData?.device?.risk_level_distribution?.medium || 0, color: "#1d4ed8" },
+            { label: t("dashboard.charts.low"),       value: summaryData?.device?.risk_level_distribution?.low || 0, color: "#38bdf8" },
           ]}
         />
       </section>

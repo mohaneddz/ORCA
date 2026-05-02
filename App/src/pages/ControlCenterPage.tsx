@@ -1,6 +1,8 @@
 import { DataTable, PageHeader, StatGrid } from "@/components/cards/BaseCards";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
-import { MOCK_EMPLOYEES, EXPOSURE_BY_TYPE } from "@/data/mockData";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { fetchApi } from "@/lib/apiClient";
+import PageSkeleton from "@/components/ui/PageSkeleton";
 
 function SummaryPanel() {
   const { t } = useAppSettings();
@@ -120,6 +122,60 @@ function ActionsPanel() {
 
 export default function ControlCenterPage() {
   const { t } = useAppSettings();
+  const queryClient = useQueryClient();
+
+  const { data: campaigns, isLoading } = useQuery({
+    queryKey: ["phishing-campaigns"],
+    queryFn: () => fetchApi<any[]>("/api/phishing/campaigns/"),
+  });
+
+  const launchMutation = useMutation({
+    mutationFn: (id: string) => fetchApi(`/api/phishing/campaigns/${id}/launch/`, { method: "POST" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["phishing-campaigns"] });
+      alert("Campaign launched successfully.");
+    },
+    onError: (err: any) => {
+      alert(`Failed to launch campaign: ${err.message}`);
+    }
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: (id: string) => fetchApi(`/api/phishing/campaigns/${id}/complete/`, { method: "POST" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["phishing-campaigns"] });
+      alert("Campaign marked as completed.");
+    },
+    onError: (err: any) => {
+      alert(`Failed to complete campaign: ${err.message}`);
+    }
+  });
+
+  if (isLoading || !campaigns) {
+    return <PageSkeleton />;
+  }
+
+  const activeCount = campaigns.filter(c => c.status === "ACTIVE").length;
+  const draftCount = campaigns.filter(c => c.status === "DRAFT").length;
+  const completedCount = campaigns.filter(c => c.status === "COMPLETED").length;
+
+  const handleLaunch = () => {
+    const draft = campaigns.find(c => c.status === "DRAFT");
+    if (draft) {
+      launchMutation.mutate(draft.id);
+    } else {
+      alert("No draft campaigns available to launch.");
+    }
+  };
+
+  const handleComplete = () => {
+    const active = campaigns.find(c => c.status === "ACTIVE");
+    if (active) {
+      completeMutation.mutate(active.id);
+    } else {
+      alert("No active campaigns available to complete.");
+    }
+  };
 
   return (
     <div className="page-section">
@@ -127,14 +183,32 @@ export default function ControlCenterPage() {
         badge={t("cc.badge")}
         title={t("cc.title")}
         description={t("cc.description")}
+        actions={
+          <div className="flex gap-2">
+            <button 
+              className="btn-primary" 
+              onClick={handleLaunch}
+              disabled={launchMutation.isPending}
+            >
+              {launchMutation.isPending ? "Launching..." : "Launch Draft Campaign"}
+            </button>
+            <button 
+              className="btn-ghost border border-slate-700 hover:bg-slate-800" 
+              onClick={handleComplete}
+              disabled={completeMutation.isPending}
+            >
+              {completeMutation.isPending ? "Completing..." : "Complete Active Campaign"}
+            </button>
+          </div>
+        }
       />
 
       <StatGrid
         stats={[
-          { label: t("cc.stats.queued"), value: "32", trend: 8.4 },
-          { label: t("cc.stats.executed"), value: "147", tone: "ok", trend: 12.2 },
-          { label: t("cc.stats.failed"), value: "5", tone: "danger", trend: -3.1 },
-          { label: t("cc.stats.live"), value: "11", trend: 2.7 },
+          { label: t("cc.stats.queued"), value: String(draftCount), trend: 0 },
+          { label: t("cc.stats.executed"), value: String(completedCount), tone: "ok", trend: 0 },
+          { label: t("cc.stats.failed"), value: "0", tone: "danger", trend: 0 },
+          { label: t("cc.stats.live"), value: String(activeCount), trend: 0 },
         ]}
       />
 
@@ -142,11 +216,16 @@ export default function ControlCenterPage() {
         <DataTable
           className="xl:col-span-3"
           fillHeight
-          title={t("cc.table.employees")}
-          columns={[t("table.employee"), t("table.lastAction"), t("table.risk"), t("table.status")]}
-          rows={MOCK_EMPLOYEES.map(row => [row[0], row[1], t(row[2]), t(row[3])])}
+          title="Phishing Campaigns"
+          columns={["Name", "Target Group", "Template", "Status"]}
+          rows={campaigns.map(c => [
+            c.name,
+            c.target_group,
+            c.template?.subject || "N/A",
+            c.status
+          ])}
           minWidth={600}
-          filterColumn={t("table.status")}
+          filterColumn="Status"
           searchPlaceholder={t("cc.search")}
         />
 

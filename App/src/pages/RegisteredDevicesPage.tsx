@@ -2,7 +2,10 @@ import { useNavigate } from "react-router-dom";
 import { ROUTES } from "@/config/routes";
 import { DataTable, PageHeader, StatGrid } from "@/components/cards/BaseCards";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
-import { MOCK_DEVICES, COMPLIANCE_TREND, EXPOSURE_BY_TYPE } from "@/data/mockData";
+import { useQuery } from "@tanstack/react-query";
+import { fetchApi } from "@/lib/apiClient";
+import PageSkeleton from "@/components/ui/PageSkeleton";
+import { COMPLIANCE_TREND, EXPOSURE_BY_TYPE } from "@/data/mockData";
 import {
   Bar,
   BarChart,
@@ -20,6 +23,27 @@ export default function DevicesPage() {
   const navigate = useNavigate();
   const { t } = useAppSettings();
 
+  const { data: summaryData } = useQuery({
+    queryKey: ["devices-summary"],
+    queryFn: () => fetchApi<any>("/api/dw/summary/"),
+  });
+
+  const { data: devicesList, isLoading } = useQuery({
+    queryKey: ["devices-list"],
+    queryFn: () => fetchApi<any[]>("/api/dw/export/devices/?format=json"),
+  });
+
+  if (isLoading) {
+    return <PageSkeleton />;
+  }
+
+  const tableRows = (devicesList || []).map((d: any) => [
+    d.hostname || d.id,
+    d.os_info?.os || "Unknown",
+    d.ip_address || "N/A",
+    d.latest_risk_score > 70 ? "At Risk" : "Healthy"
+  ]);
+
   return (
     <div className="page-section">
       <PageHeader
@@ -30,10 +54,10 @@ export default function DevicesPage() {
 
       <StatGrid
         stats={[
-          { label: t("devices.stats.total"), value: "142", trend: 6.4 },
-          { label: t("devices.stats.healthy"), value: "113", tone: "ok", trend: 3.1 },
-          { label: t("devices.stats.atRisk"), value: "24", tone: "warn", trend: -2.4 },
-          { label: t("devices.stats.critical"), value: "5", tone: "danger", trend: 25 },
+          { label: t("devices.stats.total"), value: String(summaryData?.device?.devices_reporting || 0), trend: 0 },
+          { label: t("devices.stats.healthy"), value: String(summaryData?.device?.risk_level_distribution?.low || 0), tone: "ok", trend: 0 },
+          { label: t("devices.stats.atRisk"), value: String(summaryData?.device?.risk_level_distribution?.high || 0), tone: "warn", trend: 0 },
+          { label: t("devices.stats.critical"), value: String(summaryData?.device?.risk_level_distribution?.critical || 0), tone: "danger", trend: 0 },
         ]}
       />
 
@@ -123,10 +147,10 @@ export default function DevicesPage() {
         <DataTable
           title={t("devices.table.title")}
           actions={<span className="text-xs text-slate-400">{t("devices.table.hint")}</span>}
-          columns={[t("table.id"), t("table.name"), t("table.user"), t("table.status")]}
-          rows={MOCK_DEVICES.map((r) => [r[0], r[1], r[2], r[4]])}
+          columns={["Hostname", "OS", "IP Address", "Status"]}
+          rows={tableRows}
           minWidth={500}
-          filterColumn={t("table.status")}
+          filterColumn="Status"
           searchPlaceholder={t("devices.search")}
           onRowClick={(row) => navigate(ROUTES.deviceDetails.replace(":deviceId", row[0]))}
         />

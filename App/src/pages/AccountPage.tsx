@@ -3,11 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { PageHeader, StatGrid, DataTable } from "@/components/cards/BaseCards";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { ROUTES } from "@/config/routes";
+import { APP_URLS } from "@/config/urls";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
-
-const AVATARS_BUCKET = import.meta.env.VITE_SUPABASE_AVATARS_BUCKET || "staff-pfps";
-const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+// Supabase removed to migrate to CyberBase backend
 
 function getInitials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -52,20 +50,6 @@ export default function AccountPage() {
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        email,
-        data: {
-          name,
-          organizationName,
-          phone,
-        }
-      });
-      
-      if (error) {
-        setStatus(error.message);
-        return;
-      }
-
       const result = await updateProfile({
         name,
         email,
@@ -86,46 +70,38 @@ export default function AccountPage() {
     setStatus(null);
 
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setStatus("Please select an image file.");
-      return;
-    }
-    if (file.size > MAX_AVATAR_BYTES) {
-      setStatus("Profile picture must be under 5MB.");
-      return;
-    }
-
+    
     setIsUploadingAvatar(true);
+    setStatus("Uploading avatar...");
+
     try {
-      const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const objectPath = `staff/${user.id}/avatar.${extension}`;
-      const upload = await supabase.storage.from(AVATARS_BUCKET).upload(objectPath, file, {
-        upsert: true,
-        contentType: file.type,
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const raw = localStorage.getItem("cyberbase-auth-v1");
+      const session = raw ? JSON.parse(raw) : null;
+
+      const res = await fetch(`${APP_URLS.api.backendBase}/api/auth/profile/avatar`, {
+        method: "POST",
+        headers: {
+          Authorization: `Token ${session?.token}`,
+        },
+        body: formData,
       });
 
-      if (upload.error) throw upload.error;
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData?.error || "Failed to upload avatar");
+      }
 
-      const { data } = supabase.storage.from(AVATARS_BUCKET).getPublicUrl(objectPath);
-      const nextAvatarUrl = `${data.publicUrl}?v=${Date.now()}`;
-      setAvatarUrl(nextAvatarUrl);
+      const data = await res.json();
+      setAvatarUrl(data.avatarUrl);
       setAvatarLoadFailed(false);
-
-      await supabase.auth.updateUser({
-        data: { avatarUrl: nextAvatarUrl }
-      });
-
-      const result = await updateProfile({
-        name,
-        email,
-        organizationName,
-        phone,
-        avatarUrl: nextAvatarUrl,
-      });
-
-      setStatus(result.ok ? "Profile picture uploaded." : result.message || "Failed to persist profile picture.");
-    } catch (error: any) {
-      setStatus(error?.message || "Failed to upload profile picture.");
+      setStatus("Avatar updated successfully.");
+      
+      await updateProfile({ avatarUrl: data.avatarUrl });
+    } catch (e: any) {
+      setStatus(e.message || "Failed to upload avatar.");
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -146,19 +122,12 @@ export default function AccountPage() {
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-
-      if (error) {
-        setStatus(error.message);
-        return;
+      const result = await updatePassword({ newPassword });
+      setStatus(result.ok ? "Password updated." : result.message || "Failed to update password.");
+      if (result.ok) {
+        setNewPassword("");
+        setConfirmPassword("");
       }
-
-      await updatePassword({ newPassword });
-      setStatus("Password updated.");
-      setNewPassword("");
-      setConfirmPassword("");
     } catch (error: any) {
       setStatus(error?.message || "Failed to update password.");
     }
@@ -207,7 +176,7 @@ export default function AccountPage() {
             )}
             <div className="min-w-0">
               <p className="m-0 text-sm font-medium text-white">{t("account.profile.picture")}</p>
-              <p className="m-0 mt-0.5 text-xs text-slate-400">{t("account.profile.pictureDesc")} {AVATARS_BUCKET}</p>
+              <p className="m-0 mt-0.5 text-xs text-slate-400">{t("account.profile.pictureDesc")}</p>
               <label className="mt-2 inline-flex cursor-pointer items-center rounded-md border border-[var(--color-border-glow)] bg-[var(--color-surface-hover)] px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-primary-strong)] hover:opacity-80 transition-opacity">
                 {isUploadingAvatar ? t("account.profile.uploading") : t("account.profile.upload")}
                 <input

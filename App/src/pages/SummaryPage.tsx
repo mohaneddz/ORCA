@@ -6,6 +6,7 @@ import { DataTable, PageHeader, StatGrid } from "@/components/cards/BaseCards";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { logger } from "@/lib/logger";
 import { SUMMARY_FALLBACK } from "@/data/mockData";
+import { fetchApi } from "@/lib/apiClient";
 
 type SummarySnapshot = {
   generatedAt: string;
@@ -24,30 +25,18 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 const GROQ_BASE_URL = import.meta.env.VITE_GROQ_BASE_URL || "https://api.groq.com/openai/v1";
 const GROQ_CHAT_MODEL = import.meta.env.VITE_GROQ_CHAT_MODEL || "openai/gpt-oss-20b";
 
-function createDummyMetrics() {
-  const incidents = 9 + Math.floor(Math.random() * 6);
-  const resolved = Math.max(5, incidents - 2 + Math.floor(Math.random() * 4));
-  const activeDevices = 138 + Math.floor(Math.random() * 8);
-  const secureAccounts = 88 + Math.floor(Math.random() * 8);
-
-  return {
-    incidents,
-    resolved,
-    activeDevices,
-    secureAccounts,
-  };
+interface DwSummaryResponse {
+  device: { risk_level_distribution: { high: number; critical: number }; devices_reporting: number };
+  phishing: { total_clicks: number; training_completed: number; click_rate: number };
+  quiz: { correct_total: number; correct_rate: number };
 }
 
-function buildChartData(seed: number) {
-  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  return days.map((name, index) => {
-    const drift = (seed + index * 3) % 7;
-    return {
-      name,
-      primary: 48 + drift + index,
-      secondary: 35 + Math.max(0, drift - 1) + Math.floor(index / 2),
-    };
-  });
+interface DwTrendResponse {
+  trend: Array<{
+    month: string;
+    device: { avg_risk_score: number };
+    phishing: { click_rate: number };
+  }>;
 }
 
 async function explainWithGroq(input: string): Promise<{ headline: string; highlights: string[] }> {
@@ -135,10 +124,31 @@ async function buildSummarySnapshot(forceRefresh: boolean): Promise<SummarySnaps
     if (cached) return cached;
   }
 
-  const metrics = createDummyMetrics();
-  const seed = Math.floor(Math.random() * 100);
-  const chart = buildChartData(seed);
-  const prompt = `Company security summary input:
+  try {
+    const [summary, trendData] = await Promise.all([
+      fetchApi<DwSummaryResponse>("/api/dw/summary/"),
+      fetchApi<DwTrendResponse>("/api/dw/trend/?months=7")
+    ]);
+
+    const metrics = {
+      incidents: (summary.device?.risk_level_distribution?.high || 0) + (summary.device?.risk_level_distribution?.critical || 0) + (summary.phishing?.total_clicks || 0),
+      resolved: (summary.phishing?.training_completed || 0) + (summary.quiz?.correct_total || 0),
+      activeDevices: summary.device?.devices_reporting || 0,
+      secureAccounts: Math.round(((summary.quiz?.correct_rate || 0) + (100 - (summary.phishing?.click_rate || 0))) / 2) || 0
+    };
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const chart = (trendData.trend || []).map(t => {
+      const monthParts = t.month.split('-');
+      const monthIndex = monthParts.length > 1 ? parseInt(monthParts[1], 10) - 1 : 0;
+      return {
+        name: monthNames[monthIndex] || t.month,
+        primary: Math.round(t.device?.avg_risk_score || 0),
+        secondary: Math.round(t.phishing?.click_rate || 0)
+      };
+    });
+
+    const prompt = `Company security summary input:
 - Open incidents: ${metrics.incidents}
 - Resolved this cycle: ${metrics.resolved}
 - Managed devices: ${metrics.activeDevices}
@@ -169,22 +179,26 @@ Explain what this means in simple terms.`;
     };
   }
 
-  const snapshot: SummarySnapshot = {
-    generatedAt: new Date().toISOString(),
-    company: "ORCA Company",
-    kpis: [
-      { label: "summary.stats.openIssues", value: String(metrics.incidents), helper: "summary.stats.openIssuesDesc", trend: 4.2 },
-      { label: "summary.stats.fixedToday", value: String(metrics.resolved), helper: "summary.stats.fixedTodayDesc", trend: 6.1 },
-      { label: "summary.stats.activeDevices", value: String(metrics.activeDevices), helper: "summary.stats.activeDevicesDesc", trend: 1.7 },
-      { label: "summary.stats.accountsGood", value: `${metrics.secureAccounts}%`, helper: "summary.stats.accountsGoodDesc", trend: 2.3 },
-    ],
-    chart,
-    interpretation,
-  };
+    const snapshot: SummarySnapshot = {
+      generatedAt: new Date().toISOString(),
+      company: "ORCA Company",
+      kpis: [
+        { label: "summary.stats.openIssues", value: String(metrics.incidents), helper: "summary.stats.openIssuesDesc", trend: 4.2 },
+        { label: "summary.stats.fixedToday", value: String(metrics.resolved), helper: "summary.stats.fixedTodayDesc", trend: 6.1 },
+        { label: "summary.stats.activeDevices", value: String(metrics.activeDevices), helper: "summary.stats.activeDevicesDesc", trend: 1.7 },
+        { label: "summary.stats.accountsGood", value: `${metrics.secureAccounts}%`, helper: "summary.stats.accountsGoodDesc", trend: 2.3 },
+      ],
+      chart,
+      interpretation,
+    };
 
-  writeCache(snapshot);
-  logger.info("summary.snapshot.build_success", { generatedAt: snapshot.generatedAt });
-  return snapshot;
+    writeCache(snapshot);
+    logger.info("summary.snapshot.build_success", { generatedAt: snapshot.generatedAt });
+    return snapshot;
+  } catch (error) {
+    logger.error("summary.snapshot.build_error", { error });
+    throw error;
+  }
 }
 
 export default function SummaryPage() {

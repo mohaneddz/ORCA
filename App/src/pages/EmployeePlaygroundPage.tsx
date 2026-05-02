@@ -1,8 +1,9 @@
 import { DataTable, PageHeader } from "@/components/cards/BaseCards";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-
-import { RESILIENCE_TREND, CAMPAIGN_BREAKDOWN, MOCK_TRAINING_SESSIONS } from "@/data/mockData";
+import { useQuery } from "@tanstack/react-query";
+import { fetchApi } from "@/lib/apiClient";
+import PageSkeleton from "@/components/ui/PageSkeleton";
 
 const AXIS_STYLE = { fill: "#64748b", fontSize: 11 };
 const CHART_PRIMARY = "#1d4ed8";
@@ -10,6 +11,48 @@ const CHART_SECONDARY = "#38bdf8";
 
 export default function TrainingPage() {
   const { t } = useAppSettings();
+
+  const { data: analyticsData, isLoading: isAnalyticsLoading } = useQuery({
+    queryKey: ["training-analytics"],
+    queryFn: () => fetchApi<any>("/api/phishing/analytics/"),
+  });
+
+  const { data: quizzesData } = useQuery({
+    queryKey: ["training-quizzes"],
+    queryFn: () => fetchApi<any>("/api/gamification/quizzes/").catch(() => null),
+  });
+
+  const { data: enrollmentsData } = useQuery({
+    queryKey: ["training-enrollments"],
+    queryFn: () => fetchApi<any>("/api/phishing/training/enrollments/").catch(() => null),
+  });
+
+  if (isAnalyticsLoading || !analyticsData) {
+    return <PageSkeleton />;
+  }
+
+  const tableRows = (quizzesData?.quizzes || []).map((q: any) => [
+    q.title || q.question,
+    q.difficulty || "Medium",
+    `${q.points_reward || 10} pts`,
+    "Available"
+  ]);
+
+  const enrollmentRows = (enrollmentsData?.enrollments || []).map((e: any) => [
+    e.employee_name,
+    e.module_title,
+    new Date(e.enrolled_at).toLocaleDateString(),
+    e.completed_at ? "Completed" : "Pending"
+  ]);
+
+  const trendData = (analyticsData?.trend || []).map((t: any) => ({
+    week: t.month,
+    passRate: t.trainings_completed ? 100 : 0, // Mock pass rate from trainings
+    reportRate: t.click_rate ? 100 - t.click_rate : 100, // Inverse of click rate
+  }));
+
+  const clickRate = Math.round(analyticsData?.overall_click_rate || 0);
+  const reportRate = 100 - clickRate;
 
   return (
     <div className="page-section">
@@ -31,7 +74,7 @@ export default function TrainingPage() {
               </div>
               <div className="h-[230px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={RESILIENCE_TREND} margin={{ top: 4, right: 6, left: -20, bottom: 0 }}>
+                  <AreaChart data={trendData.length ? trendData : [{ week: "Current", passRate: 0, reportRate: 0 }]} margin={{ top: 4, right: 6, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="passRateGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={CHART_PRIMARY} stopOpacity={0.46} />
@@ -59,7 +102,7 @@ export default function TrainingPage() {
               <p className="m-0 text-xs text-slate-400">{t("training.completion.title")}</p>
               <div className="mt-2 h-[230px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={CAMPAIGN_BREAKDOWN} margin={{ top: 4, right: 6, left: -20, bottom: 0 }} barCategoryGap="28%">
+                  <BarChart data={trendData.length ? trendData.map((d: any) => ({ group: d.week, completed: d.passRate })) : []} margin={{ top: 4, right: 6, left: -20, bottom: 0 }} barCategoryGap="28%">
                     <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
                     <XAxis dataKey="group" tick={AXIS_STYLE} tickLine={false} axisLine={false} />
                     <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={32} domain={[0, 100]} />
@@ -74,17 +117,17 @@ export default function TrainingPage() {
             </section>
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-            <div className="rounded-lg border border-blue-700/35 bg-blue-900/20 px-3 py-2 text-slate-300 backdrop-blur-sm">{t("training.stats.passRate")} <span className="ml-1 font-semibold text-white">74%</span></div>
-            <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-slate-300">{t("training.stats.reportRate")} <span className="ml-1 font-semibold text-white">59%</span></div>
-            <div className="rounded-lg border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-slate-300">{t("training.stats.clickRate")} <span className="ml-1 font-semibold text-white">20%</span></div>
+            <div className="rounded-lg border border-blue-700/35 bg-blue-900/20 px-3 py-2 text-slate-300 backdrop-blur-sm">{t("training.stats.passRate")} <span className="ml-1 font-semibold text-white">N/A</span></div>
+            <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-slate-300">{t("training.stats.reportRate")} <span className="ml-1 font-semibold text-white">{reportRate}%</span></div>
+            <div className="rounded-lg border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-slate-300">{t("training.stats.clickRate")} <span className="ml-1 font-semibold text-white">{clickRate}%</span></div>
           </div>
         </section>
         <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-1">
           {[
-            { key: "training.kpi.active", val: "9" },
-            { key: "training.kpi.failure", val: "14%" },
-            { key: "training.kpi.report", val: "73%" },
-            { key: "training.kpi.enrolled", val: "22" }
+            { key: "training.kpi.active", val: String(analyticsData?.total_campaigns || 0) },
+            { key: "training.kpi.failure", val: `${clickRate}%` },
+            { key: "training.kpi.report", val: `${reportRate}%` },
+            { key: "training.kpi.enrolled", val: String(analyticsData?.total_sent || 0) }
           ].map((item) => (
             <section key={item.key} className="card p-5 min-h-[96px]">
               <p className="m-0 text-xs uppercase tracking-[0.08em] text-slate-400">{t(item.key)}</p>
@@ -95,12 +138,19 @@ export default function TrainingPage() {
       </section>
 
       <section className="grid gap-3 xl:grid-cols-5">
-        <div className="xl:col-span-4">
+        <div className="xl:col-span-4 grid gap-3">
           <DataTable
-            title={t("training.table.title")}
-            columns={[t("table.session"), t("table.target"), t("table.result"), t("table.date")]}
-            rows={MOCK_TRAINING_SESSIONS.map(r => [r[0], r[1], r[2], r[4]])}
+            title={t("training.table.title") + " (Quizzes)"}
+            columns={["Quiz", "Difficulty", "Reward", "Status"]}
+            rows={tableRows}
             minWidth={500}
+          />
+          <DataTable
+            title="Training Enrollments"
+            columns={["Employee", "Module", "Enrolled", "Status"]}
+            rows={enrollmentRows}
+            minWidth={500}
+            filterColumn="Status"
           />
         </div>
         <section className="card p-5">

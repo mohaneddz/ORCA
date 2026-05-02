@@ -1,9 +1,35 @@
+import { useQuery } from "@tanstack/react-query";
 import { DataTable, PageHeader, StatGrid } from "@/components/cards/BaseCards";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
-import { MOCK_ACCOUNTS } from "@/data/mockData";
+import { fetchApi } from "@/lib/apiClient";
+import PageSkeleton from "@/components/ui/PageSkeleton";
 
 export default function AccountsPage() {
   const { t } = useAppSettings();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["accounts-page"],
+    queryFn: () => fetchApi<any>("/api/dw/employees/"),
+  });
+
+  if (isLoading || !data) {
+    return <PageSkeleton />;
+  }
+
+  const rows = (data?.employees || []).map((emp: any) => [
+    emp.name || "Unknown",
+    emp.email || "No email",
+    emp.role || emp.department || "Employee",
+    "Enabled", // Mocking MFA status as API doesn't return it
+    "Active"
+  ]);
+
+  const stats = [
+    { label: t("accounts.stats.total"), value: String(data?.total || 0) },
+    { label: t("accounts.stats.admins"), value: String(data?.employees?.filter((e: any) => e.role?.toLowerCase() === "admin").length || 0) },
+    { label: t("accounts.stats.staff"), value: String(data?.employees?.filter((e: any) => e.role?.toLowerCase() !== "admin").length || 0) },
+    { label: t("accounts.stats.atRisk"), value: String(data?.employees?.filter((e: any) => e.device?.latest_risk_score < 50).length || 0), tone: "danger" },
+  ];
   return (
     <div className="page-section min-h-0">
       <PageHeader
@@ -12,14 +38,7 @@ export default function AccountsPage() {
         description={t("accounts.description")}
       />
 
-      <StatGrid
-        stats={[
-          { label: t("accounts.stats.total"), value: "124" },
-          { label: t("accounts.stats.admins"), value: "14" },
-          { label: t("accounts.stats.staff"), value: "98" },
-          { label: t("accounts.stats.atRisk"), value: "5", tone: "danger" },
-        ]}
-      />
+      <StatGrid stats={stats} />
 
       <section className="grid flex-1 min-h-0 gap-3 xl:grid-cols-5">
         <div className="xl:col-span-4 min-h-0 flex">
@@ -29,7 +48,7 @@ export default function AccountsPage() {
             columns={[t("table.name"), t("table.email"), t("table.role"), t("table.mfa"), t("table.status")]}
             filterColumn={t("table.status")}
             searchPlaceholder={t("accounts.search")}
-            rows={MOCK_ACCOUNTS}
+            rows={rows}
             minWidth={500}
           />
         </div>

@@ -1,7 +1,10 @@
 import { DataTable, PageHeader } from "@/components/cards/BaseCards";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { RISK_TREND, EXPOSURE_BY_ZONE, NAC_COMPLIANCE_TREND, MOCK_NETWORK_NODES } from "@/data/mockData";
+import { useQuery } from "@tanstack/react-query";
+import { fetchApi } from "@/lib/apiClient";
+import PageSkeleton from "@/components/ui/PageSkeleton";
+import { RISK_TREND, EXPOSURE_BY_ZONE, NAC_COMPLIANCE_TREND } from "@/data/mockData";
 
 const AXIS_STYLE = { fill: "#64748b", fontSize: 11 };
 const CHART_PRIMARY = "#1d4ed8";
@@ -9,6 +12,28 @@ const CHART_SECONDARY = "#38bdf8";
 
 export default function NetworkPage() {
   const { t } = useAppSettings();
+
+  const { data: portAudit, isLoading: isPortsLoading } = useQuery({
+    queryKey: ["network-port-audit"],
+    queryFn: () => fetchApi<any[]>("/api/agent/port-audit/").catch(() => []),
+  });
+
+  const { data: softwareAudit, isLoading: isSoftwareLoading } = useQuery({
+    queryKey: ["network-software-audit"],
+    queryFn: () => fetchApi<any[]>("/api/agent/software-audit/").catch(() => []),
+  });
+
+  if (isPortsLoading || isSoftwareLoading) {
+    return <PageSkeleton />;
+  }
+
+  const tableRows = [...(portAudit || []), ...(softwareAudit || [])].map((item: any) => [
+    item.hostname || item.device_id || "Unknown Node",
+    item.ip_address || item.port || "N/A",
+    item.process_name || item.software_name || "Service",
+    item.state || item.status || "Active",
+    item.is_approved === false ? "High" : "Low"
+  ]);
 
   return (
     <div className="page-section">
@@ -104,8 +129,8 @@ export default function NetworkPage() {
       <DataTable
         className="flex-1 min-h-[420px]"
         title={t("network.table.title")}
-        columns={[t("table.node"), t("table.ip"), t("table.segment"), t("table.latestEvent"), t("table.severity")]}
-        rows={MOCK_NETWORK_NODES}
+        columns={[t("table.node"), t("table.ip"), "Process / Software", "State", t("table.severity")]}
+        rows={tableRows}
         minWidth={500}
       />
     </div>
