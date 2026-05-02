@@ -1,0 +1,6 @@
+**/**.env
+**/INSTRUCTIONS.md
+**/**.sql
+**/__pycache__/
+**/*.pyc
+/Extension/node_modules

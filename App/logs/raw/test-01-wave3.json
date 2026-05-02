@@ -1,0 +1,3102 @@
+{
+  "collectedAtUtc": "2026-05-02T11:07:41.175479300+00:00",
+  "hardware": {
+    "hostname": "DESKTOP-M7DKHI4",
+    "osName": "Windows",
+    "osVersion": "11 (26200)",
+    "osBuild": "26200",
+    "cpuModel": "AMD Ryzen 7 7745HX with Radeon Graphics        ",
+    "ramTotalMb": 15553,
+    "diskTotalGb": 1904,
+    "diskFreeGb": 400,
+    "machineUuid": "9DF353F2-2980-4574-A661-745D2296AFC7",
+    "primaryMacAddress": "74-5D-22-96-AF-C7",
+    "supported": true,
+    "status": "ok"
+  },
+  "patchStatus": {
+    "lastUpdated": "2026-04-19T00:00:00.0000000",
+    "isCurrent": false,
+    "daysSinceUpdate": null,
+    "staleThresholdDays": 30,
+    "supported": true,
+    "statusText": "windows update history"
+  },
+  "software": {
+    "software": [
+      {
+        "name": "draw.io 27.0.9",
+        "version": "27.0.9",
+        "vendor": "JGraph",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Upscayl 2.15.0",
+        "version": "2.15.0",
+        "vendor": "Nayam Amarshe",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "7-Zip 24.09 (x64)",
+        "version": "24.09",
+        "vendor": "Igor Pavlov",
+        "installLocation": "C:\\Program Files\\7-Zip\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "AIMP",
+        "version": "5.40.2675",
+        "vendor": "Artem Izmaylov",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Android Studio",
+        "version": "2024.3",
+        "vendor": "Google LLC",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Audacity 3.7.7",
+        "version": "3.7.7",
+        "vendor": "Audacity Team",
+        "installLocation": "C:\\Program Files\\Audacity\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "BlueStacks",
+        "version": "5.22.101.2017",
+        "vendor": "now.gg, Inc.",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Cisco Packet Tracer 8.2.2 64Bit",
+        "version": "8.2.2.400",
+        "vendor": "Cisco Systems, Inc.",
+        "installLocation": "C:\\Program Files\\Cisco Packet Tracer 8.2.2\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Docker Desktop",
+        "version": "4.60.1",
+        "vendor": "Docker Inc.",
+        "installLocation": "C:\\Program Files\\Docker\\Docker",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Fairlight Audio Accelerator Utility",
+        "version": "1.0.15",
+        "vendor": "Blackmagic Design",
+        "installLocation": "C:\\Program Files\\Blackmagic Design\\DaVinci Resolve\\audio\\Fairlight Audio Accelerator\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "GAMS 53.4.0",
+        "version": "GAMS 53.4.0",
+        "vendor": "GAMS Development",
+        "installLocation": "C:\\GAMS\\53\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Git",
+        "version": "2.49.0",
+        "vendor": "The Git Development Community",
+        "installLocation": "C:\\Program Files\\Git\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Hytale Launcher",
+        "version": "2026.01.11-b022ef5",
+        "vendor": "Hypixel Studios Canada inc.",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "IntelliJ IDEA 2026.1",
+        "version": "261.22158.277",
+        "vendor": "JetBrains s.r.o.",
+        "installLocation": "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2026.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Mozilla Firefox (x64 en-US)",
+        "version": "150.0.1",
+        "vendor": "Mozilla",
+        "installLocation": "C:\\Program Files\\Mozilla Firefox",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Mozilla Thunderbird (x64 en-US)",
+        "version": "148.0",
+        "vendor": "Mozilla",
+        "installLocation": "C:\\Program Files\\Mozilla Thunderbird",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Mozilla Maintenance Service",
+        "version": "148.0",
+        "vendor": "Mozilla",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "MuseHub",
+        "version": "2.5.2.2063",
+        "vendor": "Muse Group",
+        "installLocation": "C:\\Program Files\\MuseHub\\current\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft 365 Apps for enterprise - en-us",
+        "version": "16.0.19929.20090",
+        "vendor": "Microsoft Corporation",
+        "installLocation": "C:\\Program Files\\Microsoft Office",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Octave 10.3.0",
+        "version": "10.3.0",
+        "vendor": "GNU Octave",
+        "installLocation": "C:\\Program Files\\GNU Octave\\Octave-10.3.0",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Proton VPN",
+        "version": "4.3.7",
+        "vendor": "Proton AG",
+        "installLocation": "C:\\Program Files\\Proton\\VPN\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "QEMU",
+        "version": "10.1.94",
+        "vendor": "QEMU Community",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "R for Windows 4.5.2",
+        "version": "4.5.2",
+        "vendor": "R Core Team",
+        "installLocation": "C:\\Program Files\\R\\R-4.5.2\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Garry's Mod",
+        "version": null,
+        "vendor": "Facepunch Studios",
+        "installLocation": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\GarrysMod",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Wallpaper Engine",
+        "version": null,
+        "vendor": "Wallpaper Engine Team",
+        "installLocation": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\wallpaper_engine",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Tesseract-OCR - open source OCR engine",
+        "version": "5.5.0.20241111",
+        "vendor": "Tesseract-OCR community",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Winaero Tweaker",
+        "version": "1.63.0.0",
+        "vendor": "Winaero",
+        "installLocation": "C:\\Program Files\\Winaero Tweaker\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "WinRAR 7.11 (64-bit)",
+        "version": "7.11.0",
+        "vendor": "win.rar GmbH",
+        "installLocation": "C:\\Program Files\\WinRAR",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "WizTree v4.26",
+        "version": "4.26",
+        "vendor": "Antibody Software",
+        "installLocation": "C:\\Program Files\\WizTree\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "XAMPP",
+        "version": "8.0.30-0",
+        "vendor": "Apache Friends",
+        "installLocation": "C:\\xampp",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Zen Browser (x64 en-US)",
+        "version": "1.19.11b",
+        "vendor": "Zen OSS Team",
+        "installLocation": "C:\\Program Files\\Zen Browser",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA Nsight Systems 2022.4.2",
+        "version": "22.4.2.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "LocalSend version 1.17.0",
+        "version": "1.17.0",
+        "vendor": "Tien Do Nam",
+        "installLocation": "C:\\Program Files\\LocalSend\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft Visual C++ 2013 x64 Additional Runtime - 12.0.40664",
+        "version": "12.0.40664",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Python 3.13.5 Documentation (64-bit)",
+        "version": "3.13.5150.0",
+        "vendor": "Python Software Foundation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft .NET Host FX Resolver - 9.0.15 (x64)",
+        "version": "72.60.50518",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Windows SDK DirectX x64 Remote",
+        "version": "10.1.26100.3916",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "DaVinci Resolve Control Panels",
+        "version": "2.3.2.0",
+        "vendor": "Blackmagic Design",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Video2X Qt6 version 6.4.0",
+        "version": "6.4.0",
+        "vendor": null,
+        "installLocation": "C:\\Program Files\\Video2X Qt6\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Free Download Manager",
+        "version": "6.33.1.6648",
+        "vendor": "Softdeluxe",
+        "installLocation": "C:\\Program Files\\Softdeluxe\\Free Download Manager\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Lenovo Legion Toolkit version 2.26.1",
+        "version": "2.26.1",
+        "vendor": "Bartosz Cichecki",
+        "installLocation": "C:\\Users\\Mohaned\\AppData\\Local\\Programs\\LenovoLegionToolkit\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Strawberry Perl (64-bit)",
+        "version": "5.42.1",
+        "vendor": "strawberryperl.com project",
+        "installLocation": "C:\\Strawberry\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "DiagnosticsHub_CollectionService",
+        "version": "17.12.35318",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Oracle VirtualBox 7.2.6",
+        "version": "7.2.6",
+        "vendor": "Oracle and/or its affiliates",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft Windows Desktop Runtime - 9.0.11 (x64)",
+        "version": "72.44.42433",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft .NET Runtime - 9.0.11 (x64)",
+        "version": "72.44.42384",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Oh My Posh",
+        "version": "26.6.1",
+        "vendor": "Jan De Dobbeleer",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Blender",
+        "version": "4.4.3",
+        "vendor": "Blender Foundation",
+        "installLocation": "C:\\Program Files\\Blender Foundation\\Blender 4.4\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "ClickUp",
+        "version": "3.5.150.0",
+        "vendor": "ClickUp",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft Visual C++ 2010  x64 Redistributable - 10.0.40219",
+        "version": "10.0.40219",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Python 3.13.5 pip Bootstrap (64-bit)",
+        "version": "3.13.5150.0",
+        "vendor": "Python Software Foundation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "MPC-HC 2.4.3.6 (26b7859e2) Nightly (64-bit)",
+        "version": "2.4.3.6",
+        "vendor": "MPC-HC Team",
+        "installLocation": "C:\\Program Files\\MPC-HC\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Application Verifier x64 External Package",
+        "version": "10.1.22000.832",
+        "vendor": "Microsoft",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft .NET Host - 8.0.26 (x64)",
+        "version": "64.104.50421",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "GitHub CLI",
+        "version": "2.86.0",
+        "vendor": "GitHub, Inc.",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Universal CRT Tools x64",
+        "version": "10.1.26100.3916",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft Visual C++ 2012 x64 Additional Runtime - 11.0.61030",
+        "version": "11.0.61030",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "vs_communityx64msi",
+        "version": "17.14.36025",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA Nsight Visual Studio Edition 2025.2.1.25125",
+        "version": "25.2.1.25125",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Python 3.13.5 Executables (64-bit)",
+        "version": "3.13.5150.0",
+        "vendor": "Python Software Foundation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft Visual C++ 2022 X64 Minimum Runtime - 14.44.35211",
+        "version": "14.44.35211",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft Windows Desktop Runtime - 9.0.15 (x64)",
+        "version": "72.60.50530",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CMake",
+        "version": "3.24.2",
+        "vendor": "Kitware",
+        "installLocation": "C:\\Program Files\\CMake\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft Windows Desktop Runtime - 8.0.22 (x64)",
+        "version": "64.88.42561",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft Visual C++ 2013 x64 Minimum Runtime - 12.0.40664",
+        "version": "12.0.40664",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Application Verifier x64 External Package (DesktopEditions)",
+        "version": "10.1.26100.3916",
+        "vendor": "Microsoft",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "vs_devenx64vmsi",
+        "version": "17.14.36015",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft System CLR Types for SQL Server 2019",
+        "version": "15.0.2000.5",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "vs_Graphics_Singletonx64",
+        "version": "17.14.36015",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft Visual C++ 2008 Redistributable - x64 9.0.30729.6161",
+        "version": "9.0.30729.6161",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "RealVNC Viewer 7.15.1",
+        "version": "7.15.1.18",
+        "vendor": "RealVNC",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Windows App Certification Kit Native Components",
+        "version": "10.1.26100.3916",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Node.js",
+        "version": "22.16.0",
+        "vendor": "Node.js Foundation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "VS JIT Debugger",
+        "version": "17.0.157.0",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "spacedesk Windows DRIVER",
+        "version": "2.2.14.0",
+        "vendor": "datronicsoft Inc.",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "icecap_collection_x64",
+        "version": "17.14.36015",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft Visual Studio Installer",
+        "version": "3.14.2082.42463",
+        "vendor": "Microsoft Corporation",
+        "installLocation": "\"C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\"",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Processing",
+        "version": "4.4.10",
+        "vendor": "Processing Foundation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft .NET Host FX Resolver - 8.0.22 (x64)",
+        "version": "64.88.42551",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "PDFgear 2.1.14",
+        "version": "2.1.14",
+        "vendor": "PDFgear",
+        "installLocation": "C:\\Program Files\\PDFgear\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Azkari",
+        "version": "0.1.0",
+        "vendor": "azkari",
+        "installLocation": "C:\\Users\\Mohaned\\AppData\\Local\\azkari\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "fanumtag",
+        "version": "0.1.0",
+        "vendor": "FanumTag",
+        "installLocation": "C:\\Program Files\\fanumtag\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Hoppscotch",
+        "version": "26.2.1",
+        "vendor": "hoppscotch",
+        "installLocation": "C:\\Program Files\\Hoppscotch\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft Visual C++ 2022 X64 Additional Runtime - 14.44.35211",
+        "version": "14.44.35211",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "vs_minshellx64msi",
+        "version": "17.14.36015",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Office 16 Click-to-Run Extensibility Component",
+        "version": "16.0.19929.20032",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "World Monitor",
+        "version": "2.5.23",
+        "vendor": "worldmonitor",
+        "installLocation": "C:\\Program Files\\World Monitor\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Application Verifier x64 External Package (OnecoreUAP)",
+        "version": "10.1.26100.3916",
+        "vendor": "Microsoft",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Python 3.13.5 Core Interpreter (64-bit)",
+        "version": "3.13.5150.0",
+        "vendor": "Python Software Foundation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft .NET Runtime - 9.0.15 (x64)",
+        "version": "72.60.50518",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA Nsight Systems 2025.1.3",
+        "version": "25.1.3.140",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Python 3.13.5 Test Suite (64-bit)",
+        "version": "3.13.5150.0",
+        "vendor": "Python Software Foundation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA Nsight Systems 2023.1.2",
+        "version": "23.1.2.43",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "PDFsam Basic",
+        "version": "5.3.2.0",
+        "vendor": "Sober Lemur S.r.l.",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Python 3.13.5 Tcl/Tk Support (64-bit)",
+        "version": "3.13.5150.0",
+        "vendor": "Python Software Foundation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Application Verifier x64 External Package (DesktopEditions)",
+        "version": "10.1.22621.5040",
+        "vendor": "Microsoft",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "DaVinci Resolve",
+        "version": "20.0.00049",
+        "vendor": "Blackmagic Design",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA Broadcast Voice Driver 1.0.1.13",
+        "version": "1.0.1.13",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\BroadcastVoice.Driver.{7E2A89C5-065D-4F6F-9D11-B1FF5355CE51}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUBLAS Runtime",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUBLAS Runtime",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUBLAS Runtime",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUBLAS Runtime",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUBLAS Development",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUBLAS Development",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUBLAS Development",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUBLAS Development",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA CUDA Development 11.8",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA CUDA Development 12.1",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA CUDA Development 12.2",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA CUDA Development 12.9",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA CUDA Documentation 11.8",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA CUDA Documentation 12.1",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA CUDA Documentation 12.2",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA CUDA Documentation 12.9",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDART Runtime",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDART Runtime",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDART Runtime",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDART Runtime",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA CUDA Runtime 11.8",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\CUDARuntimes_11.8.{BC2C140D-249A-4813-BB11-130CF287C846}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA CUDA Runtime 12.1",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\CUDARuntimes_12.1.{42B1C3DD-1807-4562-98E0-DF0BEAE3CB19}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA CUDA Runtime 12.2",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\CUDARuntimes_12.2.{402F7CB1-FC54-4F2A-9DF3-1D68ECF3BCA7}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA CUDA Runtime 12.9",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\CUDARuntimes_12.9.{3101E2F4-F915-47B5-9F9C-DEFE0CA1DDFC}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDA Toolkit",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDA Toolkit",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDA Toolkit",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA CUDA Toolkit 12.9",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDA Profiler API",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDA Profiler API",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDA Profiler API",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDA Profiler API",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDNN Runtime",
+        "version": "9.17",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA\\CUDNN\\v9.17",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDNN Runtime",
+        "version": "9.17",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA\\CUDNN\\v9.17",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDNN Development",
+        "version": "9.17",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA\\CUDNN\\v9.17",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDNN Development",
+        "version": "9.17",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA\\CUDNN\\v9.17",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDNN Samples",
+        "version": "9.17",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA\\CUDNN\\v9.17",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "${{arpDisplayName}}",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "${{arpDisplayName}}",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "${{arpDisplayName}}",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "${{arpDisplayName}}",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUFFT Development",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUFFT Development",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUFFT Development",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUFFT Development",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "cuobjdump",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "cuobjdump",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "cuobjdump",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "cuobjdump",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUPTI",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUPTI",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUPTI",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUPTI",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CURAND Runtime",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CURAND Runtime",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CURAND Runtime",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CURAND Runtime",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CURAND Development",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CURAND Development",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CURAND Development",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CURAND Development",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUSOLVER Runtime",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUSOLVER Runtime",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUSOLVER Runtime",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUSOLVER Runtime",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUSOLVER Development",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUSOLVER Development",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUSOLVER Development",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUSOLVER Development",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUSPARSE Runtime",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUSPARSE Runtime",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUSPARSE Runtime",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUSPARSE Runtime",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUSPARSE Development",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUSPARSE Development",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUSPARSE Development",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUSPARSE Development",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "cuxxfilt",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "cuxxfilt",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "cuxxfilt",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "cuxxfilt",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Demo Suite",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Demo Suite",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Demo Suite",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Demo Suite",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA Graphics Driver 595.79",
+        "version": "595.79",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\Display.Driver.{72EBE98B-5155-492D-80A0-A849CBC64F01}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA App 11.0.7.247",
+        "version": "11.0.7.247",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\Display.NvApp.{E1910C72-A146-4463-89EB-1DC8C02ECB2B}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA MessageBus 3 for NvApp",
+        "version": "3.21",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\Display.NvApp.MessageBus.{D9FC33D8-E274-4BB1-86E5-BFB7E90A5B77}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA Backend",
+        "version": "11.0.7.247",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\Display.NvApp.NvBackend.{FCD4F7E6-A1AE-4D33-90D0-840CEB816198}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NvCpl",
+        "version": "1.0",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\Display.NvApp.NvCPL.{C4323C9C-C774-4617-B14C-6725E7B771F4}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA PhysX System Software 9.23.1019",
+        "version": "9.23.1019",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDA Documentation",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDA Documentation",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDA Documentation",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDA Documentation",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA FrameView SDK 1.7.12227.37421622",
+        "version": "1.7.12227.37421622",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\FrameViewSDK",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA HD Audio Driver 1.4.5.7",
+        "version": "1.4.5.7",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\HDAudio.Driver.{9CE73A56-B43C-4E61-BCF9-A22C2B17F3EF}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA Install Application",
+        "version": "2.1002.442.0",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\InstallerCore",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "MEMCHECK",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NPP Runtime",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NPP Runtime",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NPP Runtime",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NPP Runtime",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NPP Development",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NPP Development",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NPP Development",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NPP Development",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA CUDA Nsight NVTX 11.8",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "nvcc",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "nvcc",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "nvcc",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "nvcc",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA Container",
+        "version": "1.48",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\NvContainer",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA AIUser Container",
+        "version": "1.48",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\NvContainer.AIUser.{C6D69F7C-FC2D-44D9-B435-C7B68FB196D4}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA LocalSystem Container",
+        "version": "1.48",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\NvContainer.LocalSystem.{DC0965CB-1CBE-4B43-93F9-D35FDF7EFE37}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA Session Container",
+        "version": "1.48",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\NvContainer.Session.{455F2EA8-836A-46F6-877F-470A7C257ADB}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA User Container",
+        "version": "1.48",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\NvContainer.User.{0F3B262D-56AB-4482-B8FD-72B1EF263C39}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Disassembler",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Disassembler",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Disassembler",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Disassembler",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA NvDLISR",
+        "version": "1.0",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\NvDLISR.{093C2223-6F5A-4CD6-A5D6-22ECD9B785CA}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVFATBIN Runtime",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA Broadcast 2.0.1",
+        "version": "2.0.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\NVIDIABroadcast.{B36DAB4B-75EB-4A16-B51D-0F126EB3B899}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVJITLINK Runtime",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVJITLINK Runtime",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVJITLINK Runtime",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVJPEG Runtime",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVJPEG Runtime",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVJPEG Runtime",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVJPEG Runtime",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVJPEG Development",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVJPEG Development",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVJPEG Development",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVJPEG Development",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVML Development",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVML Development",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVML Development",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVML Development",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "OTA Dependencies",
+        "version": "0.8.1.0",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\NvModels.{187390DF-D764-4172-9C28-8A4E50D418CB}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA Platform Controllers and Framework",
+        "version": "595.31",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\NVPCF.{D8CC4C70-8575-435B-B393-50F817F28F63}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA Watchdog Plugin for NvContainer",
+        "version": "1.48",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\NvPlugin.Watchdog.{85195B5B-173D-45B0-9D56-2E1853DFF9AB}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDA Profiler Tools",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDA Profiler Tools",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDA Profiler Tools",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDA Profiler Tools",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "nvprune",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "nvprune",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "nvprune",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "nvprune",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVRTC Runtime",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVRTC Runtime",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVRTC Runtime",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVRTC Runtime",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVRTC Development",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVRTC Development",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVRTC Development",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVRTC Development",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA Telemetry Client",
+        "version": "19.5.13.0",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\NvTelemetry",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVTX Development",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVTX Development",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVTX Development",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVTX Development",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Camera (NVIDIA Broadcast)",
+        "version": "2.0.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\NvVirtualCamera.{E3F214CA-B174-47D8-96AE-4CEE3002595A}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVVM Samples",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Occupancy Calculator",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Occupancy Calculator",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Occupancy Calculator",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Occupancy Calculator",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "OPENCL Runtime",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "OPENCL Runtime",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "OPENCL Runtime",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Compute Sanitizer",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Compute Sanitizer",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Compute Sanitizer",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Compute Sanitizer",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA ShadowPlay 11.0.7.0",
+        "version": "11.0.7.0",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\ShadowPlay",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDA CCCL",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDA CCCL",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDA CCCL",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "CUDA CCCL",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA USBC Driver 1.52.831.832",
+        "version": "1.52.831.832",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\USBC.{61D0650A-65BD-48C3-A97D-52CA7C2E3040}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA Virtual Audio 4.65.0.12",
+        "version": "4.65.0.12",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA Corporation\\Installer2\\VirtualAudio.Driver.{3D7DE555-5C93-42F0-92A5-B0C0E7FE1B78}",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Visual Profiler",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Visual Profiler",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Visual Profiler",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Visual Profiler",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA CUDA Visual Studio Integration 11.8",
+        "version": "11.8",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA CUDA Visual Studio Integration 12.1",
+        "version": "12.1",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA CUDA Visual Studio Integration 12.2",
+        "version": "12.2",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.2",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA CUDA Visual Studio Integration 12.9",
+        "version": "12.9",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Converseen",
+        "version": "0.15.0.2",
+        "vendor": "Francesco Mondello",
+        "installLocation": "C:\\Program Files\\Converseen\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Python 3.13.5 Development Libraries (64-bit)",
+        "version": "3.13.5150.0",
+        "vendor": "Python Software Foundation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA Tools Extension SDK (NVTX) - 64 bit",
+        "version": "1.00.00.00",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "PowerToys (Preview)",
+        "version": "0.93.0",
+        "vendor": "Microsoft Corporation",
+        "installLocation": "C:\\Users\\Mohaned\\AppData\\Local\\PowerToys\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "vs_minshellinteropx64msi",
+        "version": "17.14.36015",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft Windows Desktop Runtime - 8.0.26 (x64)",
+        "version": "64.104.50433",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "DaVinci Resolve Renderer",
+        "version": "20.0.00049",
+        "vendor": "Blackmagic Design",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft .NET Runtime - 8.0.22 (x64)",
+        "version": "64.88.42551",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Caesium Image Compressor 2.8.5",
+        "version": "2.8.5",
+        "vendor": "SaeraSoft",
+        "installLocation": "C:\\Program Files\\Caesium Image Compressor\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Application Verifier x64 External Package (OnecoreUAP)",
+        "version": "10.1.22621.5040",
+        "vendor": "Microsoft",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft .NET Host FX Resolver - 8.0.26 (x64)",
+        "version": "64.104.50421",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Python 3.13.5 Standard Library (64-bit)",
+        "version": "3.13.5150.0",
+        "vendor": "Python Software Foundation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft Visual C++ 2012 x64 Minimum Runtime - 11.0.61030",
+        "version": "11.0.61030",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft .NET Runtime - 8.0.26 (x64)",
+        "version": "64.104.50421",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Python 3.13.5 Add to Path (64-bit)",
+        "version": "3.13.5150.0",
+        "vendor": "Python Software Foundation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Windows Subsystem for Linux",
+        "version": "2.5.7.0",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Blackmagic RAW Common Components",
+        "version": "4.5",
+        "vendor": "Blackmagic Design",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Lexi",
+        "version": "0.1.0",
+        "vendor": "lexi",
+        "installLocation": "C:\\Users\\Mohaned\\AppData\\Local\\Lexi\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "4K Video Downloader+",
+        "version": "25.4.3.0264",
+        "vendor": "InterPromo GMBH",
+        "installLocation": "C:\\Program Files\\4KDownload\\4kvideodownloaderplus\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA Nsight Compute 2022.3.0",
+        "version": "22.3.0.0",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft .NET Host FX Resolver - 9.0.11 (x64)",
+        "version": "72.44.42384",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Java(TM) SE Development Kit 24.0.1 (64-bit)",
+        "version": "24.0.1.0",
+        "vendor": "Oracle Corporation",
+        "installLocation": "C:\\Program Files\\Java\\jdk-24\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "VS Script Debugging Common",
+        "version": "17.0.157.0",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "NVIDIA Nsight Systems 2023.2.3",
+        "version": "23.2.3.1001",
+        "vendor": "NVIDIA Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "focus-clock",
+        "version": "0.1.0",
+        "vendor": "mohaned",
+        "installLocation": "C:\\Program Files\\focus-clock\\",
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft .NET Host - 9.0.15 (x64)",
+        "version": "72.60.50518",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      },
+      {
+        "name": "Microsoft Visual C++ 2022 X64 Debug Runtime - 14.44.35211",
+        "version": "14.44.35211",
+        "vendor": "Microsoft Corporation",
+        "installLocation": null,
+        "source": "registry",
+        "riskFlag": null
+      }
+    ],
+    "notes": [
+      "Windows software inventory via uninstall registry keys."
+    ]
+  },
+  "lan": {
+    "subnet": "10.67.114.0/24",
+    "devices": [
+      {
+        "ip": "10.67.114.222",
+        "mac": null,
+        "vendor": null,
+        "deviceType": null
+      },
+      {
+        "ip": "10.67.114.234",
+        "mac": "66:87:2B:F9:9D:2C",
+        "vendor": null,
+        "deviceType": null
+      },
+      {
+        "ip": "10.67.114.255",
+        "mac": "FF:FF:FF:FF:FF:FF",
+        "vendor": null,
+        "deviceType": null
+      }
+    ],
+    "supported": true,
+    "notes": [
+      "Safe LAN discovery uses ping and arp metadata only."
+    ]
+  },
+  "localPorts": {
+    "host": "localhost",
+    "ports": [
+      {
+        "port": 123,
+        "protocol": "UDP",
+        "owningProcess": "14700",
+        "riskLevel": "low"
+      },
+      {
+        "port": 135,
+        "protocol": "TCP",
+        "owningProcess": "952",
+        "riskLevel": "low"
+      },
+      {
+        "port": 137,
+        "protocol": "UDP",
+        "owningProcess": "4",
+        "riskLevel": "low"
+      },
+      {
+        "port": 138,
+        "protocol": "UDP",
+        "owningProcess": "4",
+        "riskLevel": "low"
+      },
+      {
+        "port": 139,
+        "protocol": "TCP",
+        "owningProcess": "4",
+        "riskLevel": "low"
+      },
+      {
+        "port": 445,
+        "protocol": "TCP",
+        "owningProcess": "4",
+        "riskLevel": "high"
+      },
+      {
+        "port": 500,
+        "protocol": "UDP",
+        "owningProcess": "6048",
+        "riskLevel": "low"
+      },
+      {
+        "port": 1900,
+        "protocol": "UDP",
+        "owningProcess": "1840",
+        "riskLevel": "low"
+      },
+      {
+        "port": 4500,
+        "protocol": "UDP",
+        "owningProcess": "6048",
+        "riskLevel": "low"
+      },
+      {
+        "port": 5040,
+        "protocol": "TCP",
+        "owningProcess": "8628",
+        "riskLevel": "low"
+      },
+      {
+        "port": 5050,
+        "protocol": "UDP",
+        "owningProcess": "8628",
+        "riskLevel": "low"
+      },
+      {
+        "port": 5353,
+        "protocol": "UDP",
+        "owningProcess": "2560",
+        "riskLevel": "low"
+      },
+      {
+        "port": 5355,
+        "protocol": "UDP",
+        "owningProcess": "2560",
+        "riskLevel": "low"
+      },
+      {
+        "port": 5600,
+        "protocol": "TCP",
+        "owningProcess": "8832",
+        "riskLevel": "low"
+      },
+      {
+        "port": 7265,
+        "protocol": "TCP",
+        "owningProcess": "17412",
+        "riskLevel": "low"
+      },
+      {
+        "port": 7680,
+        "protocol": "TCP",
+        "owningProcess": "14868",
+        "riskLevel": "low"
+      },
+      {
+        "port": 7777,
+        "protocol": "TCP",
+        "owningProcess": "26904",
+        "riskLevel": "low"
+      },
+      {
+        "port": 28252,
+        "protocol": "TCP",
+        "owningProcess": "6120",
+        "riskLevel": "low"
+      },
+      {
+        "port": 28252,
+        "protocol": "UDP",
+        "owningProcess": "6120",
+        "riskLevel": "low"
+      },
+      {
+        "port": 31558,
+        "protocol": "TCP",
+        "owningProcess": "12328",
+        "riskLevel": "low"
+      },
+      {
+        "port": 37446,
+        "protocol": "TCP",
+        "owningProcess": "21596",
+        "riskLevel": "low"
+      },
+      {
+        "port": 39678,
+        "protocol": "TCP",
+        "owningProcess": "12328",
+        "riskLevel": "low"
+      },
+      {
+        "port": 49664,
+        "protocol": "TCP",
+        "owningProcess": "1812",
+        "riskLevel": "low"
+      },
+      {
+        "port": 49664,
+        "protocol": "UDP",
+        "owningProcess": "6012",
+        "riskLevel": "low"
+      },
+      {
+        "port": 49665,
+        "protocol": "TCP",
+        "owningProcess": "1644",
+        "riskLevel": "low"
+      },
+      {
+        "port": 49666,
+        "protocol": "TCP",
+        "owningProcess": "2444",
+        "riskLevel": "low"
+      },
+      {
+        "port": 49667,
+        "protocol": "TCP",
+        "owningProcess": "3220",
+        "riskLevel": "low"
+      },
+      {
+        "port": 49668,
+        "protocol": "TCP",
+        "owningProcess": "5716",
+        "riskLevel": "low"
+      },
+      {
+        "port": 49670,
+        "protocol": "TCP",
+        "owningProcess": "1784",
+        "riskLevel": "low"
+      },
+      {
+        "port": 55799,
+        "protocol": "UDP",
+        "owningProcess": "2560",
+        "riskLevel": "low"
+      },
+      {
+        "port": 56357,
+        "protocol": "UDP",
+        "owningProcess": "7400",
+        "riskLevel": "low"
+      },
+      {
+        "port": 56839,
+        "protocol": "UDP",
+        "owningProcess": "1840",
+        "riskLevel": "low"
+      },
+      {
+        "port": 56840,
+        "protocol": "UDP",
+        "owningProcess": "1840",
+        "riskLevel": "low"
+      },
+      {
+        "port": 56841,
+        "protocol": "UDP",
+        "owningProcess": "1840",
+        "riskLevel": "low"
+      },
+      {
+        "port": 56842,
+        "protocol": "UDP",
+        "owningProcess": "1840",
+        "riskLevel": "low"
+      },
+      {
+        "port": 62833,
+        "protocol": "UDP",
+        "owningProcess": "23744",
+        "riskLevel": "low"
+      },
+      {
+        "port": 64977,
+        "protocol": "UDP",
+        "owningProcess": "23744",
+        "riskLevel": "low"
+      }
+    ],
+    "supported": true,
+    "notes": [
+      "Localhost-only listening port scan."
+    ]
+  },
+  "antivirus": {
+    "avDetected": true,
+    "productName": "Kaspersky",
+    "enabledStatus": true,
+    "signatureUpToDate": null,
+    "supported": true,
+    "statusText": "securitycenter2/defender detection"
+  },
+  "usb": {
+    "enabled": false,
+    "devices": [],
+    "events": [],
+    "notes": [
+      "USB event collection is disabled by config."
+    ]
+  },
+  "wifi": {
+    "profiles": [
+      {
+        "ssid": "realme 10 Pro+ 5G",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "Darkin",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "ENSIA",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "PG",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "Ahmed",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "dlink",
+        "securityType": "Open",
+        "isOpenNetwork": true,
+        "lastConnected": null
+      },
+      {
+        "ssid": "ychouki-hotspot",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "TABOZIII",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "khalil's pc",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "LAPTOP-REI7R3QD",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "Shorta",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "live free or die",
+        "securityType": "Open",
+        "isOpenNetwork": true,
+        "lastConnected": null
+      },
+      {
+        "ssid": "Amphitheater",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "Mi 10T",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "Piksou",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "Sekiro",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "Deez",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "incubateur1 AT",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "incubateur AT",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "incubateur",
+        "securityType": "Open",
+        "isOpenNetwork": true,
+        "lastConnected": null
+      },
+      {
+        "ssid": "DESKTOP-HAM7I8G 0566",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "استغفر الله",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "Ibrahim's Galaxy S21 FE 5G",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "Aymen’s iPhone",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "Polaris",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "Khalil",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "alienware",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "Alaaaaaaaaaaaa",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "INCUBATEUR AT2",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "INCUBATEUR AT",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "INCUBATEUR AT1",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "Atp",
+        "securityType": "Open",
+        "isOpenNetwork": true,
+        "lastConnected": null
+      },
+      {
+        "ssid": "DESKTOP-C332RF6 5574",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "Darkin - Blade",
+        "securityType": "WPA2-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "Aboubakr bendahmane",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "....",
+        "securityType": null,
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "Phone",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "ENSIA-5G",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "3amek",
+        "securityType": null,
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "Ashen One",
+        "securityType": "Open",
+        "isOpenNetwork": true,
+        "lastConnected": null
+      },
+      {
+        "ssid": "The Real man world",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      },
+      {
+        "ssid": "ZTE_5G_XSQTbz",
+        "securityType": "WPA3-Personal",
+        "isOpenNetwork": false,
+        "lastConnected": null
+      }
+    ],
+    "supported": true,
+    "notes": [
+      "WiFi profile metadata only, no passwords collected."
+    ]
+  },
+  "diskEncryption": {
+    "encrypted": false,
+    "provider": "BitLocker",
+    "statusText": "",
+    "supported": true
+  },
+  "peerFingerprint": null,
+  "startupPersistence": null
+}

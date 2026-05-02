@@ -1,0 +1,34 @@
+{
+  "patterns": [
+    {
+      "id": "credentials",
+      "label": "credentials or secrets",
+      "source": "\\b(password|passwd|api[_\\s-]?key|secret[_\\s-]?key|private[_\\s-]?key|access[_\\s-]?token|refresh[_\\s-]?token|bearer)\\b",
+      "flags": "i"
+    },
+    {
+      "id": "personal_id",
+      "label": "personal identifiers",
+      "source": "\\b(ssn|social security|passport|national id|employee id|dob|date of birth)\\b",
+      "flags": "i"
+    },
+    {
+      "id": "banking",
+      "label": "banking information",
+      "source": "\\b(iban|swift|routing number|bank account|credit card|card number)\\b",
+      "flags": "i"
+    },
+    {
+      "id": "confidentiality_marker",
+      "label": "confidentiality markers",
+      "source": "\\b(confidential|internal use only|do not share|restricted|private and confidential)\\b",
+      "flags": "i"
+    },
+    {
+      "id": "legal_finance",
+      "label": "legal or finance sensitive content",
+      "source": "\\b(nda|contract|payroll|salary|financial report|acquisition|merger)\\b",
+      "flags": "i"
+    }
+  ]
+}
