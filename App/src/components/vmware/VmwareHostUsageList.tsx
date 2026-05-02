@@ -46,7 +46,7 @@ export function VmwareHostUsageList({ hosts }: VmwareHostUsageListProps) {
     <div className="card p-5 flex flex-col gap-4 h-full">
       <div className="flex items-center justify-between">
         <div>
-          <p className="m-0 text-sm font-semibold text-white">Host Load</p>
+          <p className="m-0 text-sm font-semibold text-black dark:text-white">Host Load</p>
           <p className="m-0 text-xs mt-0.5" style={{ color: "var(--color-neutral-500)" }}>
             {hosts.filter(h => h.connection_state === "CONNECTED").length} connected, {hosts.filter(h => h.maintenanceMode).length} maintenance
           </p>

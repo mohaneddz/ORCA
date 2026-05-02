@@ -272,7 +272,7 @@ export function VmwareDashboard() {
         {/* VM Health Summary */}
         <div className="card p-5">
           <div className="flex items-center justify-between mb-4">
-            <p className="m-0 text-sm font-semibold text-white">VM Health Summary</p>
+            <p className="m-0 text-sm font-semibold text-black dark:text-white">VM Health Summary</p>
             <Shield size={15} style={{ color: "var(--color-primary)" }} />
           </div>
           <div className="flex items-center gap-2 mb-3">
@@ -309,7 +309,7 @@ export function VmwareDashboard() {
         {/* Snapshot Risk */}
         <div className="card p-5">
           <div className="flex items-center justify-between mb-4">
-            <p className="m-0 text-sm font-semibold text-white">Snapshot Risk</p>
+            <p className="m-0 text-sm font-semibold text-black dark:text-white">Snapshot Risk</p>
             <Camera size={15} style={{ color: "var(--color-primary)" }} />
           </div>
           <div className="space-y-3">
@@ -338,7 +338,7 @@ export function VmwareDashboard() {
         {/* VMware Tools */}
         <div className="card p-5">
           <div className="flex items-center justify-between mb-4">
-            <p className="m-0 text-sm font-semibold text-white">VMware Tools / Guest</p>
+            <p className="m-0 text-sm font-semibold text-black dark:text-white">VMware Tools / Guest</p>
             <Wrench size={15} style={{ color: "var(--color-primary)" }} />
           </div>
           <div className="space-y-3">

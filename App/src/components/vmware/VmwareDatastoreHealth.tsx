@@ -37,7 +37,7 @@ export function VmwareDatastoreHealth({ datastores }: VmwareDatastoreHealthProps
     <div className="card p-5 flex flex-col gap-4 h-full">
       <div className="flex items-center justify-between">
         <div>
-          <p className="m-0 text-sm font-semibold text-white">Datastore Health</p>
+          <p className="m-0 text-sm font-semibold text-black dark:text-white">Datastore Health</p>
           <p className="m-0 text-xs mt-0.5" style={{ color: "var(--color-neutral-500)" }}>{datastores.length} datastores monitored</p>
         </div>
         <Database size={16} style={{ color: "var(--color-primary)" }} />

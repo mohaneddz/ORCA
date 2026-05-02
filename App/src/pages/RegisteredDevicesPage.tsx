@@ -64,21 +64,21 @@ export default function DevicesPage() {
 
       <section className="grid gap-3 xl:grid-cols-2">
         <section className="card p-5 min-h-[280px]">
-          <p className="m-0 text-sm font-semibold text-white">Compliance Snapshot</p>
+          <p className="m-0 text-sm font-semibold text-black dark:text-white">Compliance Snapshot</p>
           <p className="m-0 mt-1 text-xs text-slate-400">6-week endpoint posture (% of fleet)</p>
           <div className="mt-4 h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={complianceTrend} barCategoryGap="22%">
-                <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis dataKey="week" tick={{ fill: "#64748b", fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis domain={[80, 100]} tick={{ fill: "#64748b", fontSize: 11 }} tickLine={false} axisLine={false} width={32} />
+                <CartesianGrid stroke="var(--color-border-subtle)" vertical={false} />
+                <XAxis dataKey="week" tick={{ fill: "var(--color-neutral-500)", fontSize: 11 }} tickLine={false} axisLine={false} />
+                <YAxis domain={[80, 100]} tick={{ fill: "var(--color-neutral-500)", fontSize: 11 }} tickLine={false} axisLine={false} width={32} />
                 <Tooltip
-                  cursor={{ fill: "rgba(255,255,255,0.03)" }}
+                  cursor={{ fill: "var(--color-surface-hover)" }}
                   contentStyle={{
-                    background: "#0c1220",
-                    border: "1px solid rgba(148,163,184,0.2)",
+                    background: "color-mix(in srgb, var(--color-surface-1) 78%, transparent)",
+                    border: "1px solid var(--color-border-subtle)",
                     borderRadius: 10,
-                    color: "#e2e8f0",
+                    color: "var(--color-neutral-200)",
                     fontSize: 12,
                   }}
                 />
@@ -104,28 +104,28 @@ export default function DevicesPage() {
           </div>
         </section>
         <section className="card p-5 min-h-[280px]">
-          <p className="m-0 text-sm font-semibold text-white">Exposure Summary</p>
+          <p className="m-0 text-sm font-semibold text-black dark:text-white">Exposure Summary</p>
           <p className="m-0 mt-1 text-xs text-slate-400">Open findings by category (last scan)</p>
           <div className="mt-4 h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={exposureByType} layout="vertical" margin={{ left: 12, right: 8 }}>
-                <CartesianGrid stroke="rgba(255,255,255,0.05)" horizontal={false} />
-                <XAxis type="number" tick={{ fill: "#64748b", fontSize: 11 }} tickLine={false} axisLine={false} />
+                <CartesianGrid stroke="var(--color-border-subtle)" horizontal={false} />
+                <XAxis type="number" tick={{ fill: "var(--color-neutral-500)", fontSize: 11 }} tickLine={false} axisLine={false} />
                 <YAxis
                   type="category"
                   dataKey="name"
-                  tick={{ fill: "#94a3b8", fontSize: 11 }}
+                  tick={{ fill: "var(--color-neutral-400)", fontSize: 11 }}
                   tickLine={false}
                   axisLine={false}
                   width={92}
                 />
                 <Tooltip
-                  cursor={{ fill: "rgba(255,255,255,0.03)" }}
+                  cursor={{ fill: "var(--color-surface-hover)" }}
                   contentStyle={{
-                    background: "#0c1220",
-                    border: "1px solid rgba(148,163,184,0.2)",
+                    background: "color-mix(in srgb, var(--color-surface-1) 78%, transparent)",
+                    border: "1px solid var(--color-border-subtle)",
                     borderRadius: 10,
-                    color: "#e2e8f0",
+                    color: "var(--color-neutral-200)",
                     fontSize: 12,
                   }}
                 />

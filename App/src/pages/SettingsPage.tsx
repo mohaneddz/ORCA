@@ -103,7 +103,7 @@ function SettingSwitch({
   return (
     <div className="flex items-center justify-between gap-3 rounded-md border border-white/10 bg-white/4 px-4 py-3">
       <div>
-        <p className="m-0 text-sm font-semibold text-white">{label}</p>
+        <p className="m-0 text-sm font-semibold text-black dark:text-white">{label}</p>
         <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">{helper}</p>
       </div>
       <input
@@ -195,7 +195,7 @@ function ApiKeysPanel() {
   return (
     <section className="card p-4">
       <div className="mb-4">
-        <p className="m-0 text-sm font-semibold text-white">API Keys &amp; Integrations</p>
+        <p className="m-0 text-sm font-semibold text-black dark:text-white">API Keys &amp; Integrations</p>
         <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">
           Override the default environment values. Leave a field blank to use the built-in
           default. Values are persisted securely in the app store.
@@ -322,7 +322,7 @@ export default function SettingsPage() {
       {activeTab === "general" && (
         <section className="card p-4">
           <div className="mb-3">
-            <p className="m-0 text-sm font-semibold text-white">{t("settings.desktop.title")}</p>
+            <p className="m-0 text-sm font-semibold text-black dark:text-white">{t("settings.desktop.title")}</p>
             <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">{t("settings.desktop.description")}</p>
           </div>
 
@@ -330,7 +330,7 @@ export default function SettingsPage() {
             <div className="rounded-md border border-white/10 bg-white/4 px-4 py-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="m-0 text-sm font-semibold text-white">{t("settings.theme")}</p>
+                  <p className="m-0 text-sm font-semibold text-black dark:text-white">{t("settings.theme")}</p>
                   <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">{t("settings.theme.helper")}</p>
                 </div>
                 <select
@@ -347,7 +347,7 @@ export default function SettingsPage() {
             <div className="rounded-md border border-white/10 bg-white/4 px-4 py-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="m-0 text-sm font-semibold text-white">{t("settings.language")}</p>
+                  <p className="m-0 text-sm font-semibold text-black dark:text-white">{t("settings.language")}</p>
                   <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">{t("settings.language.helper")}</p>
                 </div>
                 <select
@@ -390,7 +390,7 @@ export default function SettingsPage() {
             />
 
             <div className="rounded-md border border-white/10 bg-white/4 px-4 py-3">
-              <p className="m-0 text-sm font-semibold text-white">{t("settings.globalShortcut")}</p>
+              <p className="m-0 text-sm font-semibold text-black dark:text-white">{t("settings.globalShortcut")}</p>
               <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">{t("settings.globalShortcut.helper")}</p>
               <code className="mt-3 inline-block rounded-md bg-slate-900/70 px-2 py-1 text-xs text-cyan-100">Ctrl + Shift + L</code>
             </div>
@@ -405,7 +405,7 @@ export default function SettingsPage() {
       {activeTab !== "general" && activeTab !== "api" && (
         <section className="card overflow-hidden">
           <div className="border-b border-white/10 px-4 py-3">
-            <p className="m-0 text-sm font-semibold text-white">{tabs.find((tab) => tab.key === activeTab)?.label}</p>
+            <p className="m-0 text-sm font-semibold text-black dark:text-white">{tabs.find((tab) => tab.key === activeTab)?.label}</p>
             <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">Configuration toggles for the selected settings area.</p>
           </div>
           <div>

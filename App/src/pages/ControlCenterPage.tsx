@@ -14,26 +14,26 @@ function SummaryPanel() {
       <div className="flex h-full flex-col">
         <div className="mb-3 flex items-start justify-between">
           <div>
-            <p className="m-0 text-sm font-semibold text-white">Approval Summary</p>
+            <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">Approval Summary</p>
             <p className="m-0 mt-1 text-xs text-slate-400">Current queue state</p>
           </div>
-          <div className="rounded-full border border-slate-700 px-2 py-1 text-xs text-slate-300">
-            Total: <span className="font-semibold text-white">{total}</span>
+          <div className="rounded-full border border-slate-700 px-2 py-1 text-xs text-[var(--color-neutral-300)]">
+            Total: <span className="font-semibold text-[var(--color-neutral-100)]">{total}</span>
           </div>
         </div>
 
         <div className="space-y-2 rounded-xl border border-slate-800/80 bg-slate-950/30 p-3">
           {totals.map((item) => (
             <div key={item.label} className="flex items-center justify-between rounded-md border border-slate-800/60 bg-slate-900/40 px-3 py-2 text-xs">
-              <span className="flex items-center gap-2 text-slate-300">
+              <span className="flex items-center gap-2 text-[var(--color-neutral-300)]">
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
                 {item.label}
               </span>
-              <span className="font-semibold text-white">{item.value}</span>
+              <span className="font-semibold text-[var(--color-neutral-100)]">{item.value}</span>
             </div>
           ))}
           <div className="rounded-md border border-slate-800/60 bg-slate-900/40 px-3 py-2 text-xs text-slate-400">
-            Highest load: <span className="font-semibold text-white">{topState.label}</span>
+            Highest load: <span className="font-semibold text-[var(--color-neutral-100)]">{topState.label}</span>
             {" "}
             ({topState.value})
           </div>
@@ -57,28 +57,28 @@ function ActionsPanel() {
     <section className="card h-full p-5">
       <div className="flex h-full flex-col">
         <div className="mb-3">
-          <p className="m-0 text-sm font-semibold text-white">Operations Console</p>
+          <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">Operations Console</p>
           <p className="m-0 mt-1 text-xs text-slate-400">Prioritized actions</p>
         </div>
 
         <div className="grid grid-cols-3 gap-2 text-xs">
           <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-2">
-            <p className="m-0 text-slate-300">SLA On Time</p>
+            <p className="m-0 text-[var(--color-neutral-300)]">SLA On Time</p>
             <p className="m-0 mt-1 text-sm font-semibold text-emerald-300">94.2%</p>
           </div>
           <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-2">
-            <p className="m-0 text-slate-300">At Risk</p>
+            <p className="m-0 text-[var(--color-neutral-300)]">At Risk</p>
             <p className="m-0 mt-1 text-sm font-semibold text-amber-300">6 items</p>
           </div>
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-2">
-            <p className="m-0 text-slate-300">ETA Clear</p>
+            <p className="m-0 text-[var(--color-neutral-300)]">ETA Clear</p>
             <p className="m-0 mt-1 text-sm font-semibold text-cyan-300">38 min</p>
           </div>
         </div>
 
         <div className="mt-3 rounded-xl border border-slate-800/80 bg-slate-950/30 p-3 text-xs text-slate-400">
           <p className="m-0">Pipeline</p>
-          <p className="m-0 mt-1 text-slate-300">Ingested 31, Validated 24, Approved 18, Executed 15</p>
+          <p className="m-0 mt-1 text-[var(--color-neutral-300)]">Ingested 31, Validated 24, Approved 18, Executed 15</p>
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-2">
