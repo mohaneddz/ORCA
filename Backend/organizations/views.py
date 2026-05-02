@@ -6,7 +6,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
-from .models import AuthToken, Employee, Organization
+from .models import AuthToken, Employee, EmployeeAuthToken, Organization
 
 
 # ---------------------------------------------------------------------------
@@ -220,4 +220,110 @@ class EmployeeDetailView(View):
             return err
         emp.delete()
         return JsonResponse({}, status=204)
+
+
+# ---------------------------------------------------------------------------
+# Employee authentication
+# ---------------------------------------------------------------------------
+
+def get_employee_from_request(request):
+    """
+    Resolve the Employee from `Authorization: EmployeeToken <key>`.
+    Returns (employee, None) on success or (None, JsonResponse) on failure.
+    """
+    header = request.headers.get("Authorization", "")
+    if not header.startswith("EmployeeToken "):
+        return None, JsonResponse({"error": "Authorization header missing or malformed."}, status=401)
+    key = header[len("EmployeeToken "):]
+    try:
+        token = EmployeeAuthToken.objects.select_related("employee").get(key=key)
+        return token.employee, None
+    except EmployeeAuthToken.DoesNotExist:
+        return None, JsonResponse({"error": "Invalid token."}, status=401)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class EmployeeLoginView(View):
+    """POST /api/auth/employee/login — authenticate an employee with email + password."""
+
+    def post(self, request):
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON."}, status=400)
+
+        email = (body.get("email") or "").strip().lower()
+        password = body.get("password") or ""
+
+        if not all([email, password]):
+            return JsonResponse({"error": "email and password are required."}, status=400)
+
+        try:
+            employee = Employee.objects.select_related("organization").get(
+                email=email, is_active=True
+            )
+        except Employee.DoesNotExist:
+            return JsonResponse({"error": "Invalid credentials."}, status=401)
+
+        if not employee.check_password(password):
+            return JsonResponse({"error": "Invalid credentials."}, status=401)
+
+        token = EmployeeAuthToken.objects.create(employee=employee)
+
+        return JsonResponse({
+            "token": token.key,
+            "employee": {
+                "id": str(employee.id),
+                "name": employee.name,
+                "email": employee.email,
+                "department": employee.department,
+                "role": employee.role,
+                "seniority": employee.seniority,
+                "organization": {
+                    "id": str(employee.organization.id),
+                    "name": employee.organization.name,
+                },
+            },
+        }, status=200)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class EmployeeLogoutView(View):
+    """POST /api/auth/employee/logout — revoke the current employee token."""
+
+    def post(self, request):
+        header = request.headers.get("Authorization", "")
+        if not header.startswith("EmployeeToken "):
+            return JsonResponse({"error": "Authorization header missing or malformed."}, status=401)
+
+        key = header[len("EmployeeToken "):]
+        deleted, _ = EmployeeAuthToken.objects.filter(key=key).delete()
+        if not deleted:
+            return JsonResponse({"error": "Invalid or already revoked token."}, status=401)
+
+        return JsonResponse({}, status=200)
+
+
+class EmployeeMeView(View):
+    """GET /api/auth/employee/me — return the current employee profile."""
+
+    def get(self, request):
+        employee, err = get_employee_from_request(request)
+        if err:
+            return err
+
+        return JsonResponse({
+            "id": str(employee.id),
+            "name": employee.name,
+            "email": employee.email,
+            "department": employee.department,
+            "role": employee.role,
+            "seniority": employee.seniority,
+            "is_active": employee.is_active,
+            "registered_at": employee.registered_at.isoformat(),
+            "organization": {
+                "id": str(employee.organization_id),
+                "name": employee.organization.name,
+            },
+        })
 
