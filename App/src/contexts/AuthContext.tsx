@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { APP_URLS } from "@/config/urls";
 import { supabase } from "@/lib/supabase";
 
 export type UserRole = "admin" | "staff";
@@ -66,7 +65,6 @@ type ProfileRow = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-const backendBaseUrl = APP_URLS.api.backendBase;
 
 function normalizeRole(value: string | undefined): UserRole {
   return value === "admin" ? "admin" : "staff";
@@ -158,31 +156,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signup: async ({ email, password, role, name, organizationName, phone }) => {
         if (!email.trim()) return { ok: false, message: "Email is required." };
         if (!password.trim()) return { ok: false, message: "Password is required." };
+        const normalizedEmail = email.trim().toLowerCase();
 
-        const createResponse = await fetch(`${backendBaseUrl}/accounts/create`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: email.trim(),
-            password,
-            role,
-            fullName: name?.trim() || "",
-            organizationName: organizationName?.trim() || "",
-            phone: phone?.trim() || "",
-          }),
-        });
-
-        const createPayload = (await createResponse.json()) as { ok?: boolean; message?: string };
-        if (!createResponse.ok || !createPayload.ok) {
-          return { ok: false, message: createPayload.message || "Failed to create account." };
+        if (role === "admin" && import.meta.env.VITE_ANONYMOUS_ADMINS === 'false') {
+          return { ok: false, message: "Anonymous admin creation is blocked by the server configuration." };
         }
 
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: normalizedEmail,
           password,
+          options: {
+            data: {
+              role,
+              full_name: name?.trim() || "",
+              organization_name: organizationName?.trim() || "InnovByte Organization",
+              phone: phone?.trim() || "",
+            },
+          },
         });
 
-        if (signInError) return { ok: false, message: signInError.message };
+        if (signUpError) return { ok: false, message: signUpError.message };
+
+        if (!signUpData.session) {
+          return {
+            ok: true,
+            message: "Account created. If email confirmation is enabled, verify your inbox before signing in.",
+          };
+        }
+
         return { ok: true };
       },
       updateProfile: async ({ name, email, organizationName, phone }) => {
@@ -249,21 +250,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
       deleteOwnAccount: async () => {
         const { data: sessionData } = await supabase.auth.getSession();
-        const accessToken = sessionData.session?.access_token;
-        if (!accessToken) return { ok: false, message: "No active session." };
+        const userSession = sessionData.session?.user;
+        if (!userSession) return { ok: false, message: "No active session." };
 
-        const response = await fetch(`${backendBaseUrl}/accounts/delete`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({}),
+        const { error } = await supabase.rpc("delete_account", {
+          p_target_user_id: userSession.id,
         });
 
-        const payload = (await response.json()) as { ok?: boolean; message?: string };
-        if (!response.ok || !payload.ok) {
-          return { ok: false, message: payload.message || "Failed to delete account." };
+        if (error) {
+          return { ok: false, message: error.message };
         }
 
         await supabase.auth.signOut();

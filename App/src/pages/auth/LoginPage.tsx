@@ -2,6 +2,7 @@ import { type FormEvent, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth, type UserRole } from "@/contexts/AuthContext";
 import { ROUTES } from "@/config/routes";
+import Titlebar from "@/components/layout/Titlebar";
 
 export default function LoginPage() {
   const { login, signup } = useAuth();
@@ -23,33 +24,40 @@ export default function LoginPage() {
     setError(null);
     setIsSubmitting(true);
 
-    const result =
-      mode === "signin"
-        ? await login({ email, password })
-        : await signup({
-            email,
-            password,
-            role,
-            name,
-            organizationName,
-            phone,
-          });
+    try {
+      const result =
+        mode === "signin"
+          ? await login({ email, password })
+          : await signup({
+              email,
+              password,
+              role,
+              name,
+              organizationName,
+              phone,
+            });
 
-    setIsSubmitting(false);
-    if (!result.ok) {
-      setError(result.message || "Sign in failed.");
-      return;
+      setIsSubmitting(false);
+      if (!result.ok) {
+        setError(result.message || "Sign in failed.");
+        return;
+      }
+
+      navigate(redirect, { replace: true });
+    } catch (err: any) {
+      setIsSubmitting(false);
+      setError(err.message || "An unexpected error occurred.");
     }
-
-    navigate(redirect, { replace: true });
   };
 
   return (
-    <div className="flex h-screen items-center justify-center p-6">
-      <div className="card w-full max-w-xl p-6">
-        <p className="m-0 text-xs uppercase tracking-[0.08em] text-cyan-200">
-          {mode === "signin" ? "Sign In" : "Create Account"}
-        </p>
+    <div className="flex h-screen flex-col overflow-hidden text-[var(--color-mist)]">
+      <Titlebar />
+      <div className="flex flex-1 items-center justify-center p-6">
+        <div className="card w-full max-w-xl p-6">
+          <p className="m-0 text-xs uppercase tracking-[0.08em] text-cyan-200">
+            {mode === "signin" ? "Sign In" : "Create Account"}
+          </p>
         <h1 className="m-0 mt-2 text-3xl font-bold text-white">InnovByte Console Access</h1>
         <p className="m-0 mt-2 text-sm text-[var(--color-dim)]">
           Create and sign in with real Supabase accounts. Account creation is auto-confirmed (no email verification).
@@ -162,6 +170,7 @@ export default function LoginPage() {
           </button>
         </form>
       </div>
+    </div>
     </div>
   );
 }
