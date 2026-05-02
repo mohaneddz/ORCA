@@ -15,7 +15,6 @@ export default function AccountsPage() {
           { label: "Total", value: "124" },
           { label: "Admins", value: "14" },
           { label: "Staff", value: "98" },
-          { label: "Dormant", value: "7", tone: "warn" },
           { label: "At Risk", value: "5", tone: "danger" },
         ]}
       />
