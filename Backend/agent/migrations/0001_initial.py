@@ -11,8 +11,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ("organizations", "0001_initial"),
-        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ("organizations", "0007_organization_is_staff_organization_is_superuser"),
     ]
 
     operations = [
