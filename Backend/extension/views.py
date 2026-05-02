@@ -3,7 +3,7 @@ from django.views import View
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 
-from organizations.models import Device
+from organizations.models import Employee
 
 from .models import AdminEvent, BlacklistLog, DLPLog, PhishingLog
 
@@ -32,9 +32,9 @@ class DLPLogView(View):
             )
 
         try:
-            device = Device.objects.get(id=employee_id)
-        except (Device.DoesNotExist, Exception):
-            return JsonResponse({"error": "Device not found."}, status=404)
+            device = Employee.objects.get(id=employee_id)
+        except (Employee.DoesNotExist, Exception):
+            return JsonResponse({"error": "Employee not found."}, status=404)
 
         DLPLog.objects.create(
             employee=device,
@@ -60,9 +60,9 @@ class BlacklistLogView(View):
             return JsonResponse({"error": "Missing required fields."}, status=400)
 
         try:
-            device = Device.objects.get(id=employee_id)
-        except (Device.DoesNotExist, Exception):
-            return JsonResponse({"error": "Device not found."}, status=404)
+            device = Employee.objects.get(id=employee_id)
+        except (Employee.DoesNotExist, Exception):
+            return JsonResponse({"error": "Employee not found."}, status=404)
 
         BlacklistLog.objects.create(employee=device, attempted_url=attempted_url)
         return JsonResponse({}, status=200)
@@ -76,9 +76,9 @@ class PollView(View):
             return JsonResponse({"error": "emp_id is required."}, status=400)
 
         try:
-            device = Device.objects.get(id=emp_id)
-        except (Device.DoesNotExist, Exception):
-            return JsonResponse({"error": "Device not found."}, status=404)
+            device = Employee.objects.get(id=emp_id)
+        except (Employee.DoesNotExist, Exception):
+            return JsonResponse({"error": "Employee not found."}, status=404)
 
         event = (
             AdminEvent.objects.filter(employee=device, is_delivered=False)
@@ -114,9 +114,9 @@ class PhishingLogView(View):
             return JsonResponse({"error": "Missing required fields."}, status=400)
 
         try:
-            device = Device.objects.get(id=employee_id)
-        except (Device.DoesNotExist, Exception):
-            return JsonResponse({"error": "Device not found."}, status=404)
+            device = Employee.objects.get(id=employee_id)
+        except (Employee.DoesNotExist, Exception):
+            return JsonResponse({"error": "Employee not found."}, status=404)
 
         PhishingLog.objects.create(
             employee=device,

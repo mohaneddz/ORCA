@@ -46,19 +46,26 @@ class Organization(AbstractBaseUser):
         return self.name
 
 
-class Device(models.Model):
+class Employee(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(
-        Organization, on_delete=models.CASCADE, related_name="devices"
+        Organization, on_delete=models.CASCADE, related_name="employees"
     )
-    employee_name = models.CharField(max_length=255)
-    employee_email = models.EmailField()
-    device_identifier = models.CharField(max_length=255, unique=True)
+    email = models.EmailField(unique=True)
+    password = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
     registered_at = models.DateTimeField(auto_now_add=True)
 
+    def set_password(self, raw_password):
+        from django.contrib.auth.hashers import make_password
+        self.password = make_password(raw_password)
+
+    def check_password(self, raw_password):
+        from django.contrib.auth.hashers import check_password as django_check_password
+        return django_check_password(raw_password, self.password)
+
     def __str__(self):
-        return f"{self.device_identifier} ({self.employee_name})"
+        return self.email
 
 
 class AuthToken(models.Model):
