@@ -67,9 +67,11 @@ INSTALLED_APPS = [
     "phishing",
     "agent",
     "datawarehouse",
+    "corsheaders",
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -252,3 +254,8 @@ REPUTATION_URLHAUS_REFRESH_SECONDS = _env_int(
     "REPUTATION_URLHAUS_REFRESH_SECONDS",
     1800,
 )
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = ["http://localhost:7777", "http://127.0.0.1:7777"]
+

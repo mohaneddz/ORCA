@@ -11,14 +11,14 @@ import {
 
 type SettingsTabKey = "general" | "api" | "security" | "network" | "mail" | "automation" | "integrations";
 
-const tabs: Array<{ key: SettingsTabKey; label: string }> = [
-  { key: "general", label: "General" },
-  { key: "api", label: "API Keys & Integrations" },
-  { key: "security", label: "Security Policy" },
-  { key: "network", label: "Network Rules" },
-  { key: "mail", label: "Mail Controls" },
-  { key: "automation", label: "Automation" },
-  { key: "integrations", label: "Integrations" },
+const tabs: Array<{ key: SettingsTabKey; labelKey: string }> = [
+  { key: "general", labelKey: "settings.tab.general" },
+  { key: "api", labelKey: "settings.tab.api" },
+  { key: "security", labelKey: "settings.tab.security" },
+  { key: "network", labelKey: "settings.tab.network" },
+  { key: "mail", labelKey: "settings.tab.mail" },
+  { key: "automation", labelKey: "settings.tab.automation" },
+  { key: "integrations", labelKey: "settings.tab.integrations" },
 ];
 
 const tabToggles: Record<Exclude<SettingsTabKey, "general" | "api">, string[]> = {
@@ -66,13 +66,13 @@ const tabToggles: Record<Exclude<SettingsTabKey, "general" | "api">, string[]> =
 
 function ToggleRow({ label, enabled }: { label: string; enabled: boolean }) {
   return (
-    <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3 last:border-b-0">
-      <p className="m-0 text-sm text-[var(--color-neutral-200)]">{label}</p>
+    <div className="flex items-center justify-between border-b border-white/8 px-4 py-3 last:border-b-0">
+      <p className="m-0 text-sm text-slate-200">{label}</p>
       <button
         type="button"
         className={[
           "h-6 w-11 rounded-full border transition-colors",
-          enabled ? "border-[var(--color-primary-glow)] bg-[var(--color-primary)]/40" : "border-[var(--color-border)] bg-[var(--color-surface-muted)]",
+          enabled ? "border-cyan-300/40 bg-cyan-400/40" : "border-white/20 bg-white/10",
         ].join(" ")}
         aria-pressed={enabled}
       >
@@ -101,16 +101,16 @@ function SettingSwitch({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3">
+    <div className="flex items-center justify-between gap-3 rounded-md border border-white/10 bg-white/4 px-4 py-3">
       <div>
-        <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">{label}</p>
+        <p className="m-0 text-sm font-semibold text-white">{label}</p>
         <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">{helper}</p>
       </div>
       <input
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
-        className="size-4 accent-[var(--color-primary)]"
+        className="size-4 accent-cyan-400"
         disabled={disabled}
       />
     </div>
@@ -128,16 +128,17 @@ type ApiKeyField = {
 };
 
 const API_KEY_FIELDS: ApiKeyField[] = [
-  { key: "pineconeApiKey", label: "Pinecone API Key", type: "password", helper: "Pinecone secret key (pcsk_…)" },
-  { key: "pineconeIndexName", label: "Pinecone Index Name", helper: "e.g. innov" },
-  { key: "pineconeNamespace", label: "Pinecone Namespace", helper: "Leave blank for default namespace" },
-  { key: "pineconeTopK", label: "Pinecone Top-K", type: "number", helper: "Number of results to retrieve" },
-  { key: "groqApiKey", label: "Groq API Key", type: "password", helper: "Groq secret key (gsk_…)" },
-  { key: "groqBaseUrl", label: "Groq Base URL", helper: "e.g. https://api.groq.com/openai/v1" },
-  { key: "groqChatModel", label: "Groq Chat Model", helper: "e.g. llama-3.3-70b-versatile" },
+  { key: "pineconeApiKey", label: "Pinecone API Key", type: "password", helperKey: "settings.api.helper.pineconeKey" },
+  { key: "pineconeIndexName", label: "Pinecone Index Name", helperKey: "settings.api.helper.pineconeIndex" },
+  { key: "pineconeNamespace", label: "Pinecone Namespace", helperKey: "settings.api.helper.pineconeNamespace" },
+  { key: "pineconeTopK", label: "Pinecone Top-K", type: "number", helperKey: "settings.api.helper.pineconeTopK" },
+  { key: "groqApiKey", label: "Groq API Key", type: "password", helperKey: "settings.api.helper.groqKey" },
+  { key: "groqBaseUrl", label: "Groq Base URL", helperKey: "settings.api.helper.groqBaseUrl" },
+  { key: "groqChatModel", label: "Groq Chat Model", helperKey: "settings.api.helper.groqModel" },
 ];
 
 function ApiKeysPanel() {
+  const { t } = useAppSettings();
   const [form, setForm] = useState<Partial<Record<keyof ApiKeysConfig, string>>>({}); 
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [isVisible, setIsVisible] = useState<Record<keyof ApiKeysConfig, boolean>>(
@@ -195,10 +196,9 @@ function ApiKeysPanel() {
   return (
     <section className="card p-4">
       <div className="mb-4">
-        <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">API Keys &amp; Integrations</p>
+        <p className="m-0 text-sm font-semibold text-white">{t("settings.api.title")}</p>
         <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">
-          Override the default environment values. Leave a field blank to use the built-in
-          default. Values are persisted securely in the app store.
+          {t("settings.api.description")}
         </p>
       </div>
 
@@ -215,18 +215,18 @@ function ApiKeysPanel() {
           return (
             <div
               key={field.key}
-              className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3"
+              className="rounded-md border border-white/10 bg-white/4 px-4 py-3"
             >
               <div className="mb-2 flex items-baseline justify-between">
                 <label
                   htmlFor={`api-key-${field.key}`}
-                  className="text-sm font-semibold text-[var(--color-neutral-100)]"
+                  className="text-sm font-semibold text-white"
                 >
                   {field.label}
                 </label>
-                {field.helper && (
+                {field.helperKey && (
                   <span className="text-xs text-[var(--color-neutral-500)]">
-                    {field.helper}
+                    {t(field.helperKey)}
                   </span>
                 )}
               </div>
@@ -236,17 +236,17 @@ function ApiKeysPanel() {
                   type={inputType}
                   value={form[field.key] ?? ""}
                   onChange={(e) => handleChange(field.key, e.target.value)}
-                  placeholder={envDefault || "(not set in .env)"}
-                  className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-[var(--color-neutral-100)] placeholder-slate-500 outline-none ring-[var(--color-primary-glow)] focus:ring font-mono"
+                  placeholder={envDefault || t("settings.api.placeholder")}
+                  className="w-full rounded-md border border-white/15 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder-slate-500 outline-none ring-cyan-300/40 focus:ring font-mono"
                 />
                 {field.type === "password" && (
                   <button
                     type="button"
                     onClick={() => toggleVisible(field.key)}
-                    className="shrink-0 text-xs text-[var(--color-neutral-400)] hover:text-[var(--color-primary)] transition-colors"
-                    aria-label={isVisible[field.key] ? "Hide" : "Reveal"}
+                    className="shrink-0 text-xs text-slate-400 hover:text-cyan-300 transition-colors"
+                    aria-label={isVisible[field.key] ? t("settings.api.hide") : t("settings.api.show")}
                   >
-                    {isVisible[field.key] ? "Hide" : "Show"}
+                    {isVisible[field.key] ? t("settings.api.hide") : t("settings.api.show")}
                   </button>
                 )}
               </div>
@@ -260,24 +260,24 @@ function ApiKeysPanel() {
           type="button"
           onClick={() => void handleSave()}
           disabled={status === "saving"}
-          className="rounded-md bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 px-4 py-2 text-sm font-semibold text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 transition-colors disabled:opacity-50"
+          className="rounded-md bg-cyan-500/20 border border-cyan-400/30 px-4 py-2 text-sm font-semibold text-cyan-100 hover:bg-cyan-500/30 transition-colors disabled:opacity-50"
         >
-          {status === "saving" ? "Saving…" : "Save overrides"}
+          {status === "saving" ? t("settings.api.saving") : t("settings.api.save")}
         </button>
 
         <button
           type="button"
           onClick={() => void handleReset()}
-          className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm font-semibold text-[var(--color-neutral-300)] hover:bg-[var(--color-surface-hover)] transition-colors"
+          className="rounded-md border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-white/10 transition-colors"
         >
-          Reset to defaults
+          {t("settings.api.reset")}
         </button>
 
         {status === "saved" && (
-          <span className="text-xs text-emerald-400">✓ Saved</span>
+          <span className="text-xs text-emerald-400">✓ {t("settings.api.saved")}</span>
         )}
         {status === "error" && (
-          <span className="text-xs text-red-400">Failed to save</span>
+          <span className="text-xs text-red-400">{t("settings.api.error")}</span>
         )}
       </div>
     </section>
@@ -310,10 +310,10 @@ export default function SettingsPage() {
               onClick={() => setActiveTab(tab.key)}
               className={[
                 "rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors",
-                activeTab === tab.key ? "bg-[var(--color-primary)] text-white" : "bg-[var(--color-surface-muted)] text-[var(--color-neutral-400)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-neutral-100)]",
+                activeTab === tab.key ? "bg-cyan-500/18 text-cyan-100" : "bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white",
               ].join(" ")}
             >
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </div>
@@ -322,21 +322,21 @@ export default function SettingsPage() {
       {activeTab === "general" && (
         <section className="card p-4">
           <div className="mb-3">
-            <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">{t("settings.desktop.title")}</p>
+            <p className="m-0 text-sm font-semibold text-white">{t("settings.desktop.title")}</p>
             <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">{t("settings.desktop.description")}</p>
           </div>
 
           <div className="grid gap-3">
-            <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3">
+            <div className="rounded-md border border-white/10 bg-white/4 px-4 py-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">{t("settings.theme")}</p>
+                  <p className="m-0 text-sm font-semibold text-white">{t("settings.theme")}</p>
                   <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">{t("settings.theme.helper")}</p>
                 </div>
                 <select
                   value={settings.theme}
                   onChange={(event) => void setTheme(event.target.value === "light" ? "light" : "dark")}
-                  className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-[var(--color-neutral-100)] outline-none ring-[var(--color-primary-glow)] focus:ring"
+                  className="rounded-md border border-white/15 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none ring-cyan-300/40 focus:ring"
                 >
                   <option value="dark">{t("settings.theme.dark")}</option>
                   <option value="light">{t("settings.theme.light")}</option>
@@ -344,16 +344,16 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3">
+            <div className="rounded-md border border-white/10 bg-white/4 px-4 py-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">{t("settings.language")}</p>
+                  <p className="m-0 text-sm font-semibold text-white">{t("settings.language")}</p>
                   <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">{t("settings.language.helper")}</p>
                 </div>
                 <select
                   value={settings.language}
                   onChange={(event) => void setLanguage(event.target.value === "fr" ? "fr" : "en")}
-                  className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-[var(--color-neutral-100)] outline-none ring-[var(--color-primary-glow)] focus:ring"
+                  className="rounded-md border border-white/15 bg-slate-900/60 px-3 py-2 text-sm text-white outline-none ring-cyan-300/40 focus:ring"
                 >
                   <option value="en">{t("settings.english")}</option>
                   <option value="fr">{t("settings.french")}</option>
@@ -389,13 +389,13 @@ export default function SettingsPage() {
               }}
             />
 
-            <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3">
-              <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">{t("settings.globalShortcut")}</p>
+            <div className="rounded-md border border-white/10 bg-white/4 px-4 py-3">
+              <p className="m-0 text-sm font-semibold text-white">{t("settings.globalShortcut")}</p>
               <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">{t("settings.globalShortcut.helper")}</p>
-              <code className="mt-3 inline-block rounded-md bg-[var(--color-surface-2)] px-2 py-1 text-xs text-[var(--color-primary)]">Ctrl + Shift + L</code>
+              <code className="mt-3 inline-block rounded-md bg-slate-900/70 px-2 py-1 text-xs text-cyan-100">Ctrl + Shift + L</code>
             </div>
 
-            {startupError ? <p className="m-0 text-xs text-red-500">{startupError}</p> : null}
+            {startupError ? <p className="m-0 text-xs text-red-300">{startupError}</p> : null}
           </div>
         </section>
       )}
@@ -404,9 +404,9 @@ export default function SettingsPage() {
 
       {activeTab !== "general" && activeTab !== "api" && (
         <section className="card overflow-hidden">
-          <div className="border-b border-[var(--color-border)] px-4 py-3">
-            <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">{tabs.find((tab) => tab.key === activeTab)?.label}</p>
-            <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">Configuration toggles for the selected settings area.</p>
+          <div className="border-b border-white/10 px-4 py-3">
+            <p className="m-0 text-sm font-semibold text-white">{t(tabs.find((tab) => tab.key === activeTab)?.labelKey || "")}</p>
+            <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">{t("settings.toggles.description")}</p>
           </div>
           <div>
             {tabToggles[activeTab as keyof typeof tabToggles]?.map((toggleLabel, index) => (

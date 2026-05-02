@@ -114,7 +114,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
           className={["rounded-xl border text-center text-xs font-semibold tracking-[0.08em]", expanded ? "px-3 py-3" : "px-2 py-2"].join(" ")}
           style={{ borderColor: "var(--color-border)", background: "var(--color-surface-muted)", color: "var(--color-neutral-300)" }}
         >
-          Admin Dashboard
+          {t("sidebar.adminDashboard")}
         </div>
       </div>
     </aside>

@@ -130,7 +130,8 @@ async function authRequest<T>(path: string, options?: RequestInit): Promise<{ ok
 
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      logger.warn("auth.request.failed", { path, status: response.status });
+      logger.warn("auth.request.failed", { path, status: response.status, data });
+      console.error("AUTH ERROR:", { path, status: response.status, data });
       return { ok: false, message: (data as { error?: string })?.error || `Request failed: ${response.status}` };
     }
 

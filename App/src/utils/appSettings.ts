@@ -15,7 +15,7 @@ export function readAppSettings(): AppSettings {
       launchAtStartup: typeof parsed.launchAtStartup === "boolean" ? parsed.launchAtStartup : DEFAULT_APP_SETTINGS.launchAtStartup,
       startMinimized: typeof parsed.startMinimized === "boolean" ? parsed.startMinimized : DEFAULT_APP_SETTINGS.startMinimized,
       hideToTray: typeof parsed.hideToTray === "boolean" ? parsed.hideToTray : DEFAULT_APP_SETTINGS.hideToTray,
-      language: parsed.language === "fr" ? "fr" : "en",
+      language: parsed.language === "en" ? "en" : "fr",
       theme: parsed.theme === "light" ? "light" : "dark",
     };
   } catch {

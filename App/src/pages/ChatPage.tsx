@@ -4,6 +4,7 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { Folder, ArrowUp } from "lucide-react";
+import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { runRag } from "@/lib/ragClient";
 import { logger } from "@/lib/logger";
 import DocumentsDialog from "@/components/ui/DocumentsDialog";
@@ -15,6 +16,7 @@ type ChatMessage = {
 };
 
 export default function ChatPage() {
+  const { t } = useAppSettings();
   const [showDocs, setShowDocs] = useState(false);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -22,7 +24,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
-      content: "I am your security assistant. Ask about devices, incidents, account exposure, or network posture.",
+      content: t("chat.welcome"),
     },
   ]);
 
@@ -76,7 +78,7 @@ export default function ChatPage() {
           style={{ background: "color-mix(in srgb, var(--color-surface-1) 80%, transparent)" }}
         >
           <Folder size={14} className="text-[#00c6c1]" />
-          Documents
+          {t("chat.documents")}
         </button>
       </div>
 
@@ -87,7 +89,7 @@ export default function ChatPage() {
               key={`${message.role}-${index}`}
               className={message.role === "user" ? "chat-message chat-message-user" : "chat-message chat-message-assistant"}
             >
-              <div className="chat-role">{message.role === "assistant" ? "Assistant" : "You"}</div>
+              <div className="chat-role">{message.role === "assistant" ? t("chat.assistant") : t("chat.you")}</div>
               <div className="chat-markdown prose prose-invert max-w-none text-sm leading-relaxed">
                 <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
                   {message.content}
@@ -98,7 +100,7 @@ export default function ChatPage() {
               )}
             </div>
           ))}
-          {isStreaming && <p className="chat-streaming">Assistant is thinking...</p>}
+          {isStreaming && <p className="chat-streaming">{t("chat.thinking")}</p>}
           <div ref={endOfMessagesRef} />
         </div>
       </div>
@@ -120,7 +122,7 @@ export default function ChatPage() {
               }
             }}
             rows={1}
-            placeholder="Message Security Assistant"
+            placeholder={t("chat.placeholder")}
             className="chat-composer-input"
           />
           <button type="button" className="chat-send-btn" disabled={!canSend} onClick={() => void onSend()} aria-label="Send message">
