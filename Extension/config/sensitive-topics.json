@@ -1,0 +1,28 @@
+{
+  "topics": [
+    {
+      "id": "credentials",
+      "text": "passwords api keys private keys secrets authentication tokens login credentials"
+    },
+    {
+      "id": "employee_data",
+      "text": "employee records personal identifiers social security passport date of birth hr files"
+    },
+    {
+      "id": "finance",
+      "text": "bank account iban swift payroll salary invoices financial statements revenue forecast"
+    },
+    {
+      "id": "legal",
+      "text": "nda contracts acquisition merger legal terms confidential agreement compliance investigation"
+    },
+    {
+      "id": "customer_data",
+      "text": "customer database pii phone email address support tickets private client information"
+    },
+    {
+      "id": "ip_strategy",
+      "text": "source code architecture roadmap unreleased product strategy internal planning proprietary design"
+    }
+  ]
+}

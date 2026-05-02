@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Accès bloqué — CyberBase</title>
+  <title>Access Blocked - CyberBase</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -11,7 +11,7 @@
       min-height: 100vh;
       background: #0f1117;
       color: #e2e8f0;
-      font-family: system-ui, 'Segoe UI', sans-serif;
+      font-family: system-ui, "Segoe UI", sans-serif;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -26,7 +26,7 @@
       max-width: 520px;
       width: 100%;
       text-align: center;
-      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
     }
 
     .badge {
@@ -36,8 +36,8 @@
       font-size: 10px;
       font-weight: 700;
       color: #fc8181;
-      background: rgba(229,62,62,0.1);
-      border: 1px solid rgba(229,62,62,0.25);
+      background: rgba(229, 62, 62, 0.1);
+      border: 1px solid rgba(229, 62, 62, 0.25);
       border-radius: 4px;
       padding: 3px 10px;
       text-transform: uppercase;
@@ -108,15 +108,15 @@
 <body>
   <div class="card">
     <div class="badge">&#9632; CyberBase Web Guard</div>
-    <h1>Accès bloqué par la politique de sécurité</h1>
+    <h1>Access blocked by security policy</h1>
     <p class="subtitle">
-      Ce site a été identifié comme un risque de sécurité.<br />
-      L'accès a été automatiquement bloqué.
+      This site has been identified as a security risk.<br />
+      Access was blocked automatically.
     </p>
-    <p class="url-label">URL tentée</p>
+    <p class="url-label">Blocked URL</p>
     <div class="url-box">{{ATTEMPTED_URL}}</div>
-    <button class="back-btn" onclick="history.back()">&#8592; Retour</button>
-    <p class="footer">CyberBase · Contactez votre administrateur IT si vous pensez que c'est une erreur.</p>
+    <button class="back-btn" onclick="history.back()">&#8592; Go back</button>
+    <p class="footer">CyberBase · Contact your IT administrator if you think this is an error.</p>
   </div>
 </body>
 </html>

@@ -7,8 +7,9 @@ from organizations.models import Employee
 
 class DLPLog(models.Model):
     ACTION_CHOICES = [
-        ("BLOCKED", "Blocked"),
-        ("BYPASSED", "Bypassed"),
+        ("allow", "Allow"),
+        ("cancel", "Cancel"),
+        ("force", "Force"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -39,7 +40,6 @@ class BlacklistLog(models.Model):
 class AdminEvent(models.Model):
     EVENT_TYPE_CHOICES = [
         ("QUIZ", "Quiz"),
-        ("FAKE_PHISHING", "Fake Phishing"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -48,7 +48,7 @@ class AdminEvent(models.Model):
     )
     event_type = models.CharField(max_length=20, choices=EVENT_TYPE_CHOICES)
     payload = models.JSONField(
-        help_text="For QUIZ: {question, options}. For FAKE_PHISHING: leave empty ({})."
+        help_text="For QUIZ: {question, options}."
     )
     is_delivered = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
