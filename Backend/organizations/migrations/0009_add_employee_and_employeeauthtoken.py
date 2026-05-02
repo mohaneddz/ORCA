@@ -6,13 +6,8 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("extension", "0003_add_employee_and_employeeauthtoken"),
         ("gamification", "0003_add_employee_and_employeeauthtoken"),
         ("organizations", "0008_add_employee_and_employeeauthtoken"),
     ]
 
-    operations = [
-        migrations.DeleteModel(
-            name="Device",
-        ),
-    ]
+    operations = []
