@@ -163,15 +163,19 @@ async function handleMessage(message) {
     }
 
     case "DLP_LOG": {
-      const ok = await postLog("/api/logs/dlp/", {
+      const dlpPayload = {
         employee_id: eid,
         filename: message.filename,
         website: message.website,
         action_taken: message.action_taken,
+        document_topic: message.document_topic,
+        risk_score: message.risk_score,
+        detection_reason: message.detection_reason,
+      };
+      const ok = await postLog("/api/logs/dlp/", {
+        ...dlpPayload,
       });
-      if (!ok) await queueLog("/api/logs/dlp/", {
-        filename: message.filename, website: message.website, action_taken: message.action_taken,
-      });
+      if (!ok) await queueLog("/api/logs/dlp/", dlpPayload);
       return { ok: true };
     }
 

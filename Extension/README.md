@@ -29,7 +29,15 @@ All routes are on the backend server. The extension assumes these exist and does
 
 ### `POST /api/logs/dlp`
 ```json
-{ "employee_id": "string", "filename": "string", "website": "string", "action_taken": "BLOCKED | BYPASSED" }
+{
+  "employee_id": "string",
+  "filename": "string",
+  "website": "string",
+  "action_taken": "allow | cancel | force",
+  "document_topic": "string",
+  "risk_score": 0.0,
+  "detection_reason": "filename_fallback | heuristic | model_plus_heuristic"
+}
 ```
 Response: `200 OK`
 

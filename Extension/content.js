@@ -87,54 +87,229 @@ function showBlockedPage(attemptedUrl) {
 // ─── Avertissement upload universel ──────────────────────────────────────────
 
 let dlpActive = false;
+let classifierPromise = null;
+
+const DLP_CONFIG = {
+  warningThreshold: 0.62,
+  sampleChars: 4000,
+  maxReadBytes: 120000,
+  modelId: "Xenova/distilbert-base-uncased-finetuned-sst-2-english",
+};
+
+const FILE_TEXT_TYPES = [
+  "text/plain",
+  "text/csv",
+  "application/json",
+  "application/xml",
+  "text/xml",
+  "text/markdown",
+  "application/javascript",
+  "text/javascript",
+];
+
+const SENSITIVE_HINTS = [
+  /confidential/i, /internal use only/i, /salary/i, /payroll/i, /customer list/i, /nda/i,
+  /trade secret/i, /credential/i, /password/i, /token/i, /iban/i, /swift/i, /invoice/i,
+  /contract/i, /roadmap/i, /proprietary/i, /financial report/i, /employee id/i,
+  /social security/i, /passport/i, /tax/i, /project x/i,
+];
 
 function attachDlpListeners() {
   document.addEventListener("change", handleFileChange, true);
   document.addEventListener("drop", handleFileDrop, true);
 }
 
-function handleFileChange(event) {
+async function handleFileChange(event) {
   const input = event.target;
   if (!input || input.type !== "file") return;
   if (!input.files || input.files.length === 0) return;
   if (dlpActive) return;
+
+  const file = input.files[0];
+  const analysis = await analyzeUploadRisk(file);
+
+  if (!analysis.shouldWarn) {
+    await sendDlpDecisionLog("allow", file.name, analysis);
+    return;
+  }
+
   event.preventDefault();
   event.stopPropagation();
-  triggerUploadWarning(input.files[0].name, input, () => {
-    dlpActive = true;
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-    dlpActive = false;
+
+  triggerUploadWarning({
+    filename: file.name,
+    analysis,
+    originalInput: input,
+    onProceed: () => {
+      dlpActive = true;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      dlpActive = false;
+    },
   });
 }
 
-function handleFileDrop(event) {
+async function handleFileDrop(event) {
   const files = event.dataTransfer && event.dataTransfer.files;
   if (!files || files.length === 0) return;
   if (dlpActive) return;
+
+  const file = files[0];
+  const analysis = await analyzeUploadRisk(file);
+
+  if (!analysis.shouldWarn) {
+    await sendDlpDecisionLog("allow", file.name, analysis);
+    return;
+  }
+
   event.preventDefault();
   event.stopPropagation();
-  triggerUploadWarning(files[0].name, null, null);
+
+  triggerUploadWarning({
+    filename: file.name,
+    analysis,
+    originalInput: null,
+    onProceed: null,
+  });
 }
 
-function triggerUploadWarning(filename, originalInput, onProceed) {
+async function analyzeUploadRisk(file) {
+  const text = await extractTextSample(file);
+  const topic = summarizeDocument(text, file.name);
+
+  if (!text) {
+    const nameRisk = scoreFromFilename(file.name);
+    return {
+      shouldWarn: nameRisk >= DLP_CONFIG.warningThreshold,
+      riskScore: nameRisk,
+      topic,
+      reason: "filename_fallback",
+    };
+  }
+
+  let modelRisk = null;
+  try {
+    const classifier = await loadLocalClassifier();
+    if (classifier) {
+      const result = await classifier(text, { topk: 1 });
+      const top = Array.isArray(result) ? result[0] : result;
+      if (top && typeof top.score === "number") modelRisk = top.score;
+    }
+  } catch (error) {
+    log("Local transformer unavailable, using heuristic fallback:", error.message || error);
+  }
+
+  const heuristicRisk = scoreFromText(text, file.name);
+  const riskScore = modelRisk == null
+    ? heuristicRisk
+    : Math.max(heuristicRisk, normalizeClassifierScore(modelRisk));
+
+  return {
+    shouldWarn: riskScore >= DLP_CONFIG.warningThreshold,
+    riskScore,
+    topic,
+    reason: modelRisk == null ? "heuristic" : "model_plus_heuristic",
+  };
+}
+
+function normalizeClassifierScore(rawScore) {
+  if (typeof rawScore !== "number") return 0;
+  if (rawScore < 0) return 0;
+  if (rawScore > 1) return 1;
+  return rawScore;
+}
+
+async function loadLocalClassifier() {
+  if (!classifierPromise) {
+    classifierPromise = (async () => {
+      const transformersUrl = chrome.runtime.getURL("lib/transformers.min.js");
+      const { pipeline, env } = await import(transformersUrl);
+      env.allowLocalModels = false;
+      env.useBrowserCache = true;
+      return pipeline("text-classification", DLP_CONFIG.modelId);
+    })().catch((error) => {
+      classifierPromise = null;
+      throw error;
+    });
+  }
+  return classifierPromise;
+}
+
+async function extractTextSample(file) {
+  if (!file) return "";
+
+  const lowerName = (file.name || "").toLowerCase();
+  const isTextLike =
+    FILE_TEXT_TYPES.includes(file.type) ||
+    lowerName.endsWith(".txt") || lowerName.endsWith(".csv") || lowerName.endsWith(".md") ||
+    lowerName.endsWith(".json") || lowerName.endsWith(".xml") || lowerName.endsWith(".log");
+
+  if (!isTextLike) return "";
+
+  const blob = file.slice(0, DLP_CONFIG.maxReadBytes);
+  const text = await blob.text();
+  return text.slice(0, DLP_CONFIG.sampleChars);
+}
+
+function scoreFromText(text, filename) {
+  const lowered = (text || "").toLowerCase();
+  let hits = 0;
+  for (const re of SENSITIVE_HINTS) {
+    if (re.test(lowered)) hits += 1;
+  }
+  const extra = scoreFromFilename(filename);
+  return Math.min(1, hits * 0.12 + extra * 0.45);
+}
+
+function scoreFromFilename(filename) {
+  const n = (filename || "").toLowerCase();
+  const sensitiveNameHints = [
+    "confidential", "private", "internal", "salary", "payroll", "invoice",
+    "contract", "employee", "customers", "roadmap", "finance", "secret",
+  ];
+  const matches = sensitiveNameHints.filter((k) => n.includes(k)).length;
+  return Math.min(1, matches * 0.24);
+}
+
+function summarizeDocument(text, filename) {
+  const base = (text || "").replace(/s+/g, " ").trim();
+  if (!base) return "File: " + sanitize(filename, 80);
+  return sanitize(base.slice(0, 180), 180);
+}
+
+async function sendDlpDecisionLog(action_taken, filename, analysis) {
+  chrome.runtime.sendMessage({
+    action: "DLP_LOG",
+    filename,
+    website: window.location.hostname,
+    action_taken,
+    document_topic: analysis.topic,
+    risk_score: Number((analysis.riskScore || 0).toFixed(3)),
+    detection_reason: analysis.reason,
+  });
+}
+
+function triggerUploadWarning({ filename, analysis, originalInput, onProceed }) {
   dlpActive = true;
+  const scorePct = Math.round((analysis.riskScore || 0) * 100);
+
   Swal.fire({
     html:
       '<div class="cb-dlp-modal">' +
       '<div class="cb-dlp-header">' +
         '<span class="cb-dlp-icon">&#9888;</span>' +
-        '<span class="cb-dlp-title">Avertissement téléversement</span>' +
-        '<span class="cb-dlp-badge">CyberBase</span>' +
+        '<span class="cb-dlp-title">Upload Risk Detected</span>' +
+        '<span class="cb-dlp-badge">CyberBase AI</span>' +
       "</div>" +
       '<div class="cb-dlp-body-wrap">' +
-        '<p class="cb-dlp-body">Fichier sélectionné&nbsp;:</p>' +
+        '<p class="cb-dlp-body">Selected file:</p>' +
         '<div class="cb-dlp-filename">' + sanitize(filename, 80) + "</div>" +
-        '<p class="cb-dlp-question">Assurez-vous que ce fichier ne contient pas de données confidentielles avant de l\'envoyer vers un site externe.</p>' +
+        '<p class="cb-dlp-question">This document appears company-related (' + scorePct + '% risk). Upload to external site only if you are sure.</p>' +
+        '<p class="cb-dlp-question">Document summary: ' + sanitize(analysis.topic, 180) + "</p>" +
       "</div>" +
       "</div>",
     showCancelButton: true,
-    confirmButtonText: "Annuler l'envoi",
-    cancelButtonText: "Envoyer quand même",
+    confirmButtonText: "Cancel upload",
+    cancelButtonText: "Force upload",
     cancelButtonColor: "#c53030",
     confirmButtonColor: "#276749",
     allowOutsideClick: false,
@@ -142,22 +317,24 @@ function triggerUploadWarning(filename, originalInput, onProceed) {
     customClass: { container: "cb-swal-container", popup: "cb-swal-popup" },
   }).then((result) => {
     dlpActive = false;
-    const action_taken = result.isConfirmed ? "BLOCKED" : "BYPASSED";
+    const action_taken = result.isConfirmed ? "cancel" : "force";
     chrome.runtime.sendMessage({
       action: "DLP_LOG",
       filename,
       website: window.location.hostname,
       action_taken,
+      document_topic: analysis.topic,
+      risk_score: Number((analysis.riskScore || 0).toFixed(3)),
+      detection_reason: analysis.reason,
     });
+
     if (result.isConfirmed) {
       if (originalInput) originalInput.value = "";
-    } else {
-      if (onProceed) onProceed();
+    } else if (onProceed) {
+      onProceed();
     }
   });
 }
-
-// ─── Déclencheurs administrateur ─────────────────────────────────────────────
 
 function listenForAdminTriggers() {
   chrome.runtime.onMessage.addListener((message) => {
