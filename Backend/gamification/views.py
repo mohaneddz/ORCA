@@ -6,11 +6,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
-from organizations.models import Employee
-from organizations.views import get_org_from_request
-
-from .models import Quiz, QuizBatch, QuizBatchAssignment, QuizSubmission
-
+from organizations.auth import get_employee_from_request
 
 def _get_org(request):
     return get_org_from_request(request)
@@ -121,22 +117,20 @@ class QuizDetailView(View):
 @method_decorator(csrf_exempt, name="dispatch")
 class SubmitQuizView(View):
     def post(self, request):
+        employee, err = get_employee_from_request(request)
+        if err:
+            return err
+
         try:
             body = json.loads(request.body)
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON."}, status=400)
 
-        employee_id = body.get("employee_id")
         quiz_id = body.get("quiz_id")
         answer_selected = body.get("answer_selected")
 
-        if not all([employee_id, quiz_id, answer_selected]):
+        if not all([quiz_id, answer_selected]):
             return JsonResponse({"error": "Missing required fields."}, status=400)
-
-        try:
-            employee = Employee.objects.get(id=employee_id)
-        except Employee.DoesNotExist:
-            return JsonResponse({"error": "Employee not found."}, status=404)
 
         try:
             quiz = Quiz.objects.get(id=quiz_id)

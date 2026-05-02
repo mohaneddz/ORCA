@@ -176,3 +176,21 @@ EXTENSION_BLACKLIST_DOMAINS = [
     "credential-harvest-test.local",
     "eicar.org",
 ]
+
+EXTENSION_AI_TARGET_DOMAINS = [
+    "chat.openai.com",
+    "chatgpt.com",
+    "claude.ai",
+    "gemini.google.com",
+    "copilot.microsoft.com",
+]
+
+EXTENSION_AI_TARGET_KEYWORDS = [
+    "chatgpt",
+    "claude",
+    "gemini",
+    "copilot",
+    "ai chat",
+    "assistant",
+    "prompt",
+]
