@@ -7,11 +7,24 @@ import { supabase } from "@/lib/supabase";
 
 const AVATARS_BUCKET = import.meta.env.VITE_SUPABASE_AVATARS_BUCKET || "staff-pfps";
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+const AUTH_STORAGE_KEY = "orca.auth.session";
 
 function getInitials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (!parts.length) return "U";
   return `${parts[0][0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase();
+}
+
+function getAuthTokenFromStorage(): string | null {
+  const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as { token?: string };
+    return parsed.token ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export default function AccountPage() {
@@ -81,17 +94,36 @@ export default function AccountPage() {
 
     setIsUploadingAvatar(true);
     try {
-      const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const objectPath = `staff/${user.id}/avatar.${extension}`;
-      const upload = await supabase.storage.from(AVATARS_BUCKET).upload(objectPath, file, {
-        upsert: true,
-        contentType: file.type,
+      const token = getAuthTokenFromStorage();
+      if (!token) {
+        setStatus("Session token is missing. Please sign in again.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/auth/profile/avatar", {
+        method: "POST",
+        headers: {
+          Authorization: `Token ${token}`,
+        },
+        body: formData,
       });
 
-      if (upload.error) throw upload.error;
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const details = (payload as { details?: { message?: string; error?: string }; error?: string })?.details;
+        const message = details?.message || details?.error || (payload as { error?: string }).error || "Failed to upload profile picture.";
+        throw new Error(message);
+      }
 
-      const { data } = supabase.storage.from(AVATARS_BUCKET).getPublicUrl(objectPath);
-      const nextAvatarUrl = `${data.publicUrl}?v=${Date.now()}`;
+      const uploadedAvatarUrl = (payload as { avatarUrl?: string }).avatarUrl;
+      if (!uploadedAvatarUrl) {
+        throw new Error("Upload succeeded but avatar URL was missing from server response.");
+      }
+
+      const nextAvatarUrl = `${uploadedAvatarUrl}?v=${Date.now()}`;
       setAvatarUrl(nextAvatarUrl);
       setAvatarLoadFailed(false);
 

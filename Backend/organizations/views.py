@@ -1,10 +1,13 @@
 import json
+from pathlib import Path
 
 from django.contrib.auth import authenticate
+from django.conf import settings
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
+import requests
 
 from .auth import get_employee_from_request
 from .models import AuthToken, Employee, EmployeeAuthToken, Organization
@@ -117,6 +120,90 @@ class MeView(View):
             "is_superuser": org.is_superuser,
             "created_at": org.created_at.isoformat(),
         })
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class ProfileAvatarUploadView(View):
+    """POST /api/auth/profile/avatar — upload org avatar to Supabase Storage via backend key."""
+
+    def post(self, request):
+        org, err = get_org_from_request(request)
+        if err:
+            return err
+
+        uploaded_file = request.FILES.get("file")
+        if uploaded_file is None:
+            return JsonResponse({"error": "file is required (multipart/form-data)."}, status=400)
+
+        if not (uploaded_file.content_type or "").startswith("image/"):
+            return JsonResponse({"error": "Only image files are allowed."}, status=400)
+
+        max_bytes = 5 * 1024 * 1024
+        if uploaded_file.size > max_bytes:
+            return JsonResponse({"error": "Profile picture must be under 5MB."}, status=400)
+
+        supabase_url = (settings.SUPABASE_URL or "").rstrip("/")
+        supabase_key = (
+            settings.SUPABASE_KEY
+            or getattr(settings, "SUPABASE_SECRET_KEY", None)
+            or getattr(settings, "SUPABASE_SERVICE_ROLE_KEY", None)
+        )
+        if not supabase_url or not supabase_key:
+            return JsonResponse(
+                {
+                    "error": (
+                        "Backend Supabase credentials are missing. "
+                        "Set SUPABASE_URL and SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_ROLE_KEY) in Backend/.env."
+                    )
+                },
+                status=500,
+            )
+
+        bucket = getattr(settings, "SUPABASE_AVATARS_BUCKET", None) or "staff-pfps"
+        extension = Path(uploaded_file.name or "avatar.jpg").suffix.lower() or ".jpg"
+        object_path = f"staff/{org.id}/avatar{extension}"
+        upload_url = f"{supabase_url}/storage/v1/object/{bucket}/{object_path}"
+
+        headers = {
+            "Authorization": f"Bearer {supabase_key}",
+            "apikey": supabase_key,
+            "x-upsert": "true",
+            "Content-Type": uploaded_file.content_type or "application/octet-stream",
+        }
+
+        try:
+            response = requests.post(
+                upload_url,
+                headers=headers,
+                data=uploaded_file.read(),
+                timeout=30,
+            )
+        except requests.RequestException as exc:
+            return JsonResponse({"error": f"Storage upload request failed: {exc}"}, status=502)
+
+        if response.status_code >= 400:
+            try:
+                error_payload = response.json()
+            except ValueError:
+                error_payload = {"raw": response.text}
+            return JsonResponse(
+                {
+                    "error": "Supabase storage rejected upload.",
+                    "status": response.status_code,
+                    "details": error_payload,
+                },
+                status=400,
+            )
+
+        avatar_url = f"{supabase_url}/storage/v1/object/public/{bucket}/{object_path}"
+        return JsonResponse(
+            {
+                "bucket": bucket,
+                "path": object_path,
+                "avatarUrl": avatar_url,
+            },
+            status=200,
+        )
 
 
 # ---------------------------------------------------------------------------

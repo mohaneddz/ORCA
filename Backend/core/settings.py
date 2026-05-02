@@ -155,6 +155,9 @@ AUTH_USER_MODEL = "organizations.Organization"
 # Supabase
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+SUPABASE_SECRET_KEY = os.environ.get("SUPABASE_SECRET_KEY")
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+SUPABASE_AVATARS_BUCKET = os.environ.get("SUPABASE_AVATARS_BUCKET", "staff-pfps")
 
 # -----------------------------------------------------------------
 # Email / SMTP
