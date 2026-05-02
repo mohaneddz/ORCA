@@ -5,7 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from organizations.models import Device
 
-from .models import AdminEvent, BlacklistLog, DLPLog
+from .models import AdminEvent, BlacklistLog, DLPLog, PhishingLog
 
 import json
 
@@ -96,3 +96,31 @@ class PollView(View):
         event.save(update_fields=["is_delivered"])
 
         return JsonResponse({"hasEvent": True, "eventPayload": payload})
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class PhishingLogView(View):
+    def post(self, request):
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON."}, status=400)
+
+        employee_id = body.get("employee_id")
+        clicked = body.get("clicked")
+        website = body.get("website")
+
+        if not all([employee_id, clicked is not None, website]):
+            return JsonResponse({"error": "Missing required fields."}, status=400)
+
+        try:
+            device = Device.objects.get(id=employee_id)
+        except (Device.DoesNotExist, Exception):
+            return JsonResponse({"error": "Device not found."}, status=404)
+
+        PhishingLog.objects.create(
+            employee=device,
+            clicked=clicked,
+            website=website,
+        )
+        return JsonResponse({}, status=200)
