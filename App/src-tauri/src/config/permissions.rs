@@ -90,6 +90,13 @@ pub fn collector_permissions() -> Vec<CollectorPermission> {
             enabled_by_default: false,
             notes: "Disabled by default.",
         },
+        CollectorPermission {
+            collector: "private_signal_collector",
+            scope: "Opt-in private telemetry metadata (anonymized)",
+            privacy_level: PrivacyLevel::High,
+            enabled_by_default: false,
+            notes: "Disabled by default. Metadata only with anonymization and redaction.",
+        },
     ]
 }
 

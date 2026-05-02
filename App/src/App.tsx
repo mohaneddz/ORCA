@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
+﻿import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import RequireAuth from "@/components/layout/RequireAuth";
 import NotFoundPage from "@/pages/NotFoundPage";
@@ -65,3 +65,4 @@ export default function App() {
     </Routes>
   );
 }
+

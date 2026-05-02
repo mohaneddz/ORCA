@@ -53,9 +53,12 @@ fn parse_netstat_output(output: Option<std::process::Output>) -> Vec<ListeningPo
     let Some(output) = output else {
         return Vec::new();
     };
-    let text = String::from_utf8_lossy(&output.stdout);
+    parse_netstat_text(&String::from_utf8_lossy(&output.stdout))
+}
 
+fn parse_netstat_text(text: &str) -> Vec<ListeningPort> {
     let mut ports = Vec::new();
+
     for line in text.lines() {
         let trimmed = line.trim();
         if trimmed.is_empty() {
@@ -68,17 +71,17 @@ fn parse_netstat_output(output: Option<std::process::Output>) -> Vec<ListeningPo
         }
 
         let parts: Vec<&str> = trimmed.split_whitespace().collect();
-        if parts.is_empty() {
+        if parts.len() < 2 {
             continue;
         }
 
         let protocol = parts[0].to_string();
-        let addr = parts
+        let port = parts
             .iter()
-            .find(|segment| segment.contains(':') || segment.contains('.'))
-            .copied();
-
-        let port = addr.and_then(extract_port).unwrap_or(0);
+            .skip(1)
+            .filter_map(|segment| extract_port(segment))
+            .find(|port| *port > 0)
+            .unwrap_or(0);
 
         if port == 0 {
             continue;
@@ -104,4 +107,41 @@ fn extract_port(address: &str) -> Option<u16> {
 
     let (_, port_text) = normalized.rsplit_once(':')?;
     port_text.parse::<u16>().ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{collect_network_info, parse_netstat_text};
+
+    #[test]
+    fn collects_network_info_shape() {
+        let network = collect_network_info().expect("network info should collect");
+        assert!(!network.notes.is_empty());
+    }
+
+    #[test]
+    fn parses_listening_ports_from_windows_output() {
+        let sample = r#"
+TCP    0.0.0.0:135         0.0.0.0:0              LISTENING       980
+TCP    127.0.0.1:7777      0.0.0.0:0              LISTENING       1234
+UDP    0.0.0.0:5353        *:*                                    2222
+"#;
+        let ports = parse_netstat_text(sample);
+        assert!(ports.iter().any(|p| p.protocol == "TCP" && p.port == 135));
+        assert!(ports.iter().any(|p| p.protocol == "TCP" && p.port == 7777));
+        assert!(ports.iter().any(|p| p.protocol == "UDP" && p.port == 5353));
+    }
+
+    #[test]
+    fn parses_listening_ports_from_linux_output() {
+        let sample = r#"
+tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN
+tcp6       0      0 :::3000                 :::*                    LISTEN
+udp        0      0 0.0.0.0:68              0.0.0.0:*
+"#;
+        let ports = parse_netstat_text(sample);
+        assert!(ports.iter().any(|p| p.protocol == "tcp" && p.port == 22));
+        assert!(ports.iter().any(|p| p.protocol == "tcp6" && p.port == 3000));
+        assert!(ports.iter().any(|p| p.protocol == "udp" && p.port == 68));
+    }
 }

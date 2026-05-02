@@ -22,7 +22,7 @@ export default function AppLayout() {
   }, []);
 
   return (
-    <div className="h-screen w-screen overflow-hidden text-[var(--color-mist)]">
+    <div className="h-screen w-screen overflow-hidden text-[var(--color-neutral-200)]">
       <Titlebar />
       <div className="relative flex h-[calc(100vh-2.5rem)] overflow-hidden">
         <div
@@ -37,9 +37,23 @@ export default function AppLayout() {
         <button
           type="button"
           onClick={() => setSidebarExpanded((prev) => !prev)}
-          className="absolute top-4 z-40 -translate-x-1/2 rounded-full border border-white/15 bg-slate-900/95 p-2 text-slate-200 shadow-lg transition-colors hover:bg-slate-800"
+          className="absolute top-4 z-40 -translate-x-1/2 rounded-full p-1.5 transition-colors"
           title={sidebarExpanded ? "Collapse sidebar" : "Expand sidebar"}
-          style={{ left: sidebarWidth }}
+          style={{
+            left: sidebarWidth,
+            background: "#0c1220",
+            border: "1px solid rgba(255,255,255,0.1)",
+            color: "#94a3b8",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(168,85,247,0.4)";
+            (e.currentTarget as HTMLButtonElement).style.color = "#c084fc";
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.1)";
+            (e.currentTarget as HTMLButtonElement).style.color = "#94a3b8";
+          }}
         >
           <Menu size={16} />
         </button>
@@ -51,3 +65,5 @@ export default function AppLayout() {
     </div>
   );
 }
+
+

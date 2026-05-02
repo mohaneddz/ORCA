@@ -1,4 +1,4 @@
-import * as React from "react";
+﻿import * as React from "react";
 
 type ChartConfig = Record<string, { label: string; color: string }>;
 
@@ -34,3 +34,4 @@ export function ChartTooltipContent({ active, payload }: ChartTooltipContentProp
     </div>
   );
 }
+

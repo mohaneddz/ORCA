@@ -1,6 +1,7 @@
 pub mod collectors;
 pub mod config;
 pub mod models;
+pub mod network_scan;
 pub mod services;
 pub mod utils;
 
@@ -15,13 +16,28 @@ use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_global_shortcut::{Shortcut, ShortcutState};
 
 use crate::config::app_config::AppConfig;
+use crate::models::antivirus::AntivirusStatus;
+use crate::models::encryption::DiskEncryptionStatus;
+use crate::models::hardware::HardwareInventory;
+use crate::models::lan::{LanScanReport, PeerOsFingerprint};
 use crate::models::network::NetworkInfo;
+use crate::models::patch::PatchStatus;
+use crate::models::ports::LocalPortsReport;
 use crate::models::posture::PostureReport;
+use crate::models::privacy::PrivacyConfig;
+use crate::models::private_signals::PrivateSignalsReport;
 use crate::models::process::ProcessInfo;
 use crate::models::risk::RiskScore;
 use crate::models::security::SecurityPosture;
+use crate::models::software::SoftwareInventory;
+use crate::models::startup::StartupPersistenceStatus;
+use crate::models::usb::UsbReport;
+use crate::models::wifi::WifiHistoryReport;
 use crate::services::posture_service;
+use crate::services::privacy_service;
 use crate::services::risk_service;
+use crate::services::telemetry_log_service::TelemetryLogEntry;
+use crate::services::wave3_posture_service::{self, Wave3PostureReport};
 
 const MAIN_WINDOW_LABEL: &str = "main";
 const SETTINGS_FILE_NAME: &str = "app-settings.json";
@@ -54,6 +70,11 @@ impl Default for RuntimeSettings {
 struct AppState {
     hide_to_tray: Arc<Mutex<bool>>,
     explicit_quit: Arc<Mutex<bool>>,
+}
+
+#[derive(Default)]
+struct PrivacyState {
+    config: Arc<Mutex<PrivacyConfig>>,
 }
 
 fn settings_file_path<R: Runtime>(app: &AppHandle<R>) -> Option<std::path::PathBuf> {
@@ -263,6 +284,141 @@ fn get_app_config_defaults() -> AppConfig {
     AppConfig::default()
 }
 
+#[tauri::command]
+fn get_privacy_config(state: State<'_, PrivacyState>) -> PrivacyConfig {
+    state
+        .config
+        .lock()
+        .map(|cfg| cfg.clone())
+        .unwrap_or_else(|_| PrivacyConfig::default())
+}
+
+#[tauri::command]
+fn update_privacy_config(
+    state: State<'_, PrivacyState>,
+    config: PrivacyConfig,
+) -> Result<PrivacyConfig, String> {
+    let sanitized = privacy_service::sanitize_privacy_config(config);
+    let mut guard = state
+        .config
+        .lock()
+        .map_err(|_| "privacy config state lock poisoned".to_string())?;
+    *guard = sanitized.clone();
+    Ok(sanitized)
+}
+
+#[tauri::command]
+fn collect_private_signals(state: State<'_, PrivacyState>) -> Result<PrivateSignalsReport, String> {
+    let config = state
+        .config
+        .lock()
+        .map(|cfg| cfg.clone())
+        .map_err(|_| "privacy config state lock poisoned".to_string())?;
+
+    collectors::private_signal_collector::collect_private_signals(config)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn anonymize_sample_value(value: String) -> String {
+    collectors::private_signal_collector::anonymize_sample_value(value)
+}
+
+#[tauri::command]
+fn get_telemetry_logs() -> Vec<TelemetryLogEntry> {
+    services::telemetry_log_service::get_telemetry_logs()
+}
+
+#[tauri::command]
+fn collect_hardware_inventory() -> Result<HardwareInventory, String> {
+    collectors::hardware_collector::collect_hardware_inventory().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn collect_patch_status() -> Result<PatchStatus, String> {
+    collectors::patch_collector::collect_patch_status().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn collect_installed_software() -> Result<SoftwareInventory, String> {
+    collectors::software_collector::collect_installed_software().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn scan_local_network_arp() -> Result<LanScanReport, String> {
+    collectors::lan_collector::scan_local_network_arp().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn scan_local_open_ports() -> Result<LocalPortsReport, String> {
+    collectors::ports_collector::scan_local_open_ports().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn detect_antivirus() -> Result<AntivirusStatus, String> {
+    collectors::antivirus_collector::detect_antivirus().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn collect_usb_events(config: Option<AppConfig>) -> Result<UsbReport, String> {
+    collectors::usb_collector::collect_usb_events(config.unwrap_or_default().enable_usb_watcher)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn collect_wifi_history() -> Result<WifiHistoryReport, String> {
+    collectors::wifi_collector::collect_wifi_history().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn collect_disk_encryption_status() -> Result<DiskEncryptionStatus, String> {
+    collectors::encryption_collector::collect_disk_encryption_status().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn fingerprint_network_peers(config: Option<AppConfig>) -> Result<Vec<PeerOsFingerprint>, String> {
+    collectors::peer_fingerprint_collector::fingerprint_network_peers(
+        config.unwrap_or_default().enable_peer_os_fingerprinting,
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn get_startup_persistence_status(
+    config: Option<AppConfig>,
+) -> Result<StartupPersistenceStatus, String> {
+    collectors::startup_collector::get_startup_persistence_status(
+        config.unwrap_or_default().enable_startup_persistence,
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn enable_startup_persistence(
+    config: Option<AppConfig>,
+) -> Result<StartupPersistenceStatus, String> {
+    collectors::startup_collector::enable_startup_persistence(
+        config.unwrap_or_default().enable_startup_persistence,
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn disable_startup_persistence(
+    config: Option<AppConfig>,
+) -> Result<StartupPersistenceStatus, String> {
+    collectors::startup_collector::disable_startup_persistence(
+        config.unwrap_or_default().enable_startup_persistence,
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn collect_wave3_posture(config: Option<AppConfig>) -> Result<Wave3PostureReport, String> {
+    wave3_posture_service::collect_wave3_posture(config.unwrap_or_default())
+        .map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let toggle_shortcut = GLOBAL_TOGGLE_SHORTCUT
@@ -285,6 +441,9 @@ pub fn run() {
 
     tauri::Builder::default()
         .manage(AppState::default())
+        .manage(PrivacyState {
+            config: Arc::new(Mutex::new(PrivacyConfig::default())),
+        })
         .plugin({
             #[cfg(target_os = "macos")]
             {
@@ -339,7 +498,31 @@ pub fn run() {
             collect_security_posture,
             collect_full_posture,
             calculate_risk_score,
-            get_app_config_defaults
+            get_app_config_defaults,
+            get_privacy_config,
+            update_privacy_config,
+            collect_private_signals,
+            anonymize_sample_value,
+            get_telemetry_logs,
+            collect_hardware_inventory,
+            collect_patch_status,
+            collect_installed_software,
+            scan_local_network_arp,
+            scan_local_open_ports,
+            detect_antivirus,
+            collect_usb_events,
+            collect_wifi_history,
+            collect_disk_encryption_status,
+            fingerprint_network_peers,
+            get_startup_persistence_status,
+            enable_startup_persistence,
+            disable_startup_persistence,
+            collect_wave3_posture,
+            network_scan::scan_network,
+            network_scan::get_router_mock_data,
+            network_scan::get_local_network_info,
+            network_scan::scan_common_ports,
+            network_scan::discover_devices
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

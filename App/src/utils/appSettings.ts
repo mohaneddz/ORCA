@@ -1,4 +1,4 @@
-import { DEFAULT_APP_SETTINGS, type AppSettings } from "@/types/settings";
+﻿import { DEFAULT_APP_SETTINGS, type AppSettings } from "@/types/settings";
 
 const SETTINGS_STORAGE_KEY = "innovbyte-app-settings-v1";
 
@@ -24,3 +24,5 @@ export function readAppSettings(): AppSettings {
 export function persistAppSettings(settings: AppSettings): void {
   localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
 }
+
+

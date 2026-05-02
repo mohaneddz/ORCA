@@ -3,5 +3,11 @@ type SkeletonProps = {
 };
 
 export default function Skeleton({ className = "" }: SkeletonProps) {
-  return <div className={["animate-pulse rounded-md bg-white/10", className].join(" ")} />;
+  return (
+    <div
+      className={["animate-pulse rounded-xl", className].join(" ")}
+      style={{ background: "rgba(168,85,247,0.07)" }}
+    />
+  );
 }
+

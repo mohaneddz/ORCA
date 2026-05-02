@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { ROUTES } from "@/config/routes";
 
 export default function NotFoundPage() {
@@ -6,7 +6,7 @@ export default function NotFoundPage() {
     <div className="page-content h-full items-center justify-center">
       <div className="card page-section max-w-xl p-8 text-center">
         <h1 className="m-0 text-3xl font-semibold text-white">Page not found</h1>
-        <p className="m-0 text-sm text-[var(--color-dim)]">The URL does not match any configured route.</p>
+        <p className="m-0 text-sm text-[var(--color-neutral-500)]">The URL does not match any configured route.</p>
         <div className="page-actions justify-center">
           <Link
             to={ROUTES.controlCenter}
@@ -19,3 +19,4 @@ export default function NotFoundPage() {
     </div>
   );
 }
+

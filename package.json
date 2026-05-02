@@ -1,0 +1,12 @@
+{
+  "name": "innov-root",
+  "private": true,
+  "scripts": {
+    "go": "concurrently -k -n BACK,APP -c yellow,cyan \"pnpm back\" \"pnpm app\"",
+    "back": "python Backend/manage.py runserver",
+    "app": "pnpm --dir App tauri dev"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

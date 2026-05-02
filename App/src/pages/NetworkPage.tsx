@@ -66,10 +66,10 @@ const liveDevices: LiveDevice[] = [
 ];
 
 function DeviceIcon({ kind }: { kind: LiveDevice["kind"] }) {
-  if (kind === "laptop") return <Laptop size={15} className="text-cyan-100" />;
-  if (kind === "phone") return <Smartphone size={15} className="text-cyan-100" />;
-  if (kind === "server") return <Server size={15} className="text-cyan-100" />;
-  return <Router size={15} className="text-cyan-100" />;
+  if (kind === "laptop") return <Laptop size={15} style={{ color: "#a855f7" }} />;
+  if (kind === "phone")  return <Smartphone size={15} style={{ color: "#22d3ee" }} />;
+  if (kind === "server") return <Server size={15} style={{ color: "#3b82f6" }} />;
+  return <Router size={15} style={{ color: "#c084fc" }} />;
 }
 
 export default function NetworkPage() {
@@ -82,75 +82,80 @@ export default function NetworkPage() {
       />
       <StatGrid
         stats={[
-          { label: "Connected Now", value: "38" },
-          { label: "Trusted", value: "29", tone: "ok" },
-          { label: "Needs Review", value: "6" },
-          { label: "Blocked", value: "3", tone: "danger" },
-          { label: "Unassigned Devices", value: "4", tone: "danger" },
-          { label: "Guest Segment Devices", value: "5" },
+          { label: "Connected Now",         value: "38", trend: 5.2 },
+          { label: "Trusted",               value: "29", tone: "ok",     trend: 3.4 },
+          { label: "Needs Review",          value: "6",  trend: -10.0 },
+          { label: "Blocked",               value: "3",  tone: "danger", trend: 50.0 },
+          { label: "Unassigned Devices",    value: "4",  tone: "danger", trend: 33.3 },
+          { label: "Guest Segment Devices", value: "5",  trend: 0 },
         ]}
       />
 
       <section className="card overflow-hidden">
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+        <div
+          className="flex items-center justify-between px-5 py-3.5"
+          style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+        >
           <p className="m-0 text-sm font-semibold text-white">Current Connected Devices</p>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-md border border-cyan-400/30 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-cyan-100 transition-colors hover:bg-cyan-500/20"
-          >
+          <button type="button" className="btn-primary text-xs">
             <Wifi size={13} />
             Create Device Entry
           </button>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] border-collapse text-sm">
+          <table className="data-table" style={{ minWidth: 980 }}>
             <thead>
-              <tr className="text-left text-[var(--color-dim)]">
-                <th className="px-4 py-2 font-medium">Type</th>
-                <th className="px-4 py-2 font-medium">Name</th>
-                <th className="px-4 py-2 font-medium">MAC</th>
-                <th className="px-4 py-2 font-medium">IP</th>
-                <th className="px-4 py-2 font-medium">Assigned User</th>
-                <th className="px-4 py-2 font-medium">Segment</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 font-medium">Actions</th>
+              <tr>
+                <th>Type</th>
+                <th>Name</th>
+                <th>MAC</th>
+                <th>IP</th>
+                <th>Assigned User</th>
+                <th>Segment</th>
+                <th>Status</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {liveDevices.map((device) => (
-                <tr key={device.id} className="border-t border-white/8">
-                  <td className="px-4 py-2">
+                <tr key={device.id}>
+                  <td>
                     <div className="inline-flex items-center gap-2 text-white">
                       <DeviceIcon kind={device.kind} />
                       <span className="capitalize">{device.kind}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-2 text-white">{device.name}</td>
-                  <td className="px-4 py-2 text-[var(--color-dim)]">{device.mac}</td>
-                  <td className="px-4 py-2 text-[var(--color-dim)]">{device.ip}</td>
-                  <td className="px-4 py-2 text-[var(--color-dim)]">{device.assignedUser}</td>
-                  <td className="px-4 py-2 text-[var(--color-dim)]">{device.segment}</td>
-                  <td className="px-4 py-2">
+                  <td>{device.name}</td>
+                  <td>{device.mac}</td>
+                  <td>{device.ip}</td>
+                  <td>{device.assignedUser}</td>
+                  <td>{device.segment}</td>
+                  <td>
                     <span
-                      className={[
-                        "rounded-full px-2 py-1 text-xs font-semibold uppercase tracking-wide",
+                      className={
                         device.status === "trusted"
-                          ? "bg-emerald-500/18 text-emerald-200"
+                          ? "status-ok"
                           : device.status === "review"
-                            ? "bg-amber-500/18 text-amber-200"
-                            : "bg-red-500/18 text-red-200",
-                      ].join(" ")}
+                          ? "status-warn"
+                          : "status-danger"
+                      }
                     >
                       {device.status}
                     </span>
                   </td>
-                  <td className="px-4 py-2">
+                  <td>
                     <div className="flex flex-wrap gap-1.5">
-                      <button type="button" className="rounded-md border border-white/15 px-2 py-1 text-xs text-slate-200 hover:bg-white/10">Read</button>
-                      <button type="button" className="rounded-md border border-white/15 px-2 py-1 text-xs text-slate-200 hover:bg-white/10">Update</button>
-                      <button type="button" className="rounded-md border border-white/15 px-2 py-1 text-xs text-slate-200 hover:bg-white/10">Assign</button>
-                      <button type="button" className="rounded-md border border-red-400/30 px-2 py-1 text-xs text-red-200 hover:bg-red-500/10">Delete</button>
+                      <button type="button" className="btn-ghost" style={{ fontSize: "0.72rem", padding: "0.2rem 0.6rem" }}>Read</button>
+                      <button type="button" className="btn-ghost" style={{ fontSize: "0.72rem", padding: "0.2rem 0.6rem" }}>Update</button>
+                      <button type="button" className="btn-ghost" style={{ fontSize: "0.72rem", padding: "0.2rem 0.6rem" }}>Assign</button>
+                      <button
+                        type="button"
+                        className="btn-ghost"
+                        style={{ fontSize: "0.72rem", padding: "0.2rem 0.6rem", borderColor: "rgba(244,63,94,0.3)", color: "#fb7185" }}
+                      >
+                        Delete
+                      </button>
                     </div>
                   </td>
                 </tr>

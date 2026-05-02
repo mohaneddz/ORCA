@@ -1,3 +1,5 @@
 **/**.env
 **/INSTRUCTIONS.md
 **/**.sql
+**/**.pyc
+**/__pycache__/

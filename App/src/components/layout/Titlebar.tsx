@@ -9,7 +9,13 @@ export default function Titlebar() {
   const { settings, t } = useAppSettings();
 
   return (
-    <header className="h-10 border-b border-white/10 bg-slate-950/55 backdrop-blur-xl">
+    <header
+      className="h-10 backdrop-blur-xl"
+      style={{
+        background: "rgba(7, 11, 20, 0.9)",
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
+      }}
+    >
       <div data-tauri-drag-region className="mx-auto flex h-full max-w-[1600px] items-center justify-between px-3">
         <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-300">{t("app.name")}</div>
         {inTauri && appWindow && (
@@ -60,3 +66,5 @@ export default function Titlebar() {
     </header>
   );
 }
+
+
