@@ -2,7 +2,7 @@ import uuid
 
 from django.db import models
 
-from organizations.models import Device
+from organizations.models import Employee
 
 
 class Quiz(models.Model):
@@ -21,7 +21,7 @@ class Quiz(models.Model):
 class QuizSubmission(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     employee = models.ForeignKey(
-        Device, on_delete=models.CASCADE, related_name="quiz_submissions"
+        Employee, on_delete=models.CASCADE, related_name="quiz_submissions"
     )
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="submissions")
     answer_selected = models.CharField(max_length=255)

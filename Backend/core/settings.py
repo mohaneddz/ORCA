@@ -168,3 +168,9 @@ EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "False") == "True"
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 
 PHISHING_BASE_URL = os.environ.get("PHISHING_BASE_URL", "http://localhost:8000")
+
+EXTENSION_BLACKLIST_DOMAINS = [
+    "malware-test.local",
+    "credential-harvest-test.local",
+    "eicar.org",
+]

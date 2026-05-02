@@ -47,12 +47,25 @@ class Organization(AbstractBaseUser):
 
 
 class Employee(models.Model):
+    SENIORITY_CHOICES = [
+        ("junior", "Junior"),
+        ("mid", "Mid"),
+        ("senior", "Senior"),
+        ("lead", "Lead"),
+        ("manager", "Manager"),
+        ("executive", "Executive"),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(
         Organization, on_delete=models.CASCADE, related_name="employees"
     )
+    name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=255)
+    department = models.CharField(max_length=255, blank=True, default="")
+    role = models.CharField(max_length=255, blank=True, default="")
+    seniority = models.CharField(max_length=20, choices=SENIORITY_CHOICES, default="mid")
     is_active = models.BooleanField(default=True)
     registered_at = models.DateTimeField(auto_now_add=True)
 
@@ -65,7 +78,7 @@ class Employee(models.Model):
         return django_check_password(raw_password, self.password)
 
     def __str__(self):
-        return self.email
+        return f"{self.name} <{self.email}>"
 
 
 class AuthToken(models.Model):

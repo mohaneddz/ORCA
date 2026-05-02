@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+﻿import { type FormEvent, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth, type UserRole } from "@/contexts/AuthContext";
 import { ROUTES } from "@/config/routes";
@@ -51,7 +51,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden text-[var(--color-mist)]">
+    <div className="flex h-screen flex-col overflow-hidden text-[var(--color-neutral-200)]">
       <Titlebar />
       <div className="flex flex-1 items-center justify-center p-6">
         <div className="card w-full max-w-xl p-6">
@@ -59,8 +59,8 @@ export default function LoginPage() {
             {mode === "signin" ? "Sign In" : "Create Account"}
           </p>
         <h1 className="m-0 mt-2 text-3xl font-bold text-white">InnovByte Console Access</h1>
-        <p className="m-0 mt-2 text-sm text-[var(--color-dim)]">
-          Create and sign in with real Supabase accounts. Account creation is auto-confirmed (no email verification).
+        <p className="m-0 mt-2 text-sm text-[var(--color-neutral-500)]">
+          Authenticate against backend auth endpoints for your organization account.
         </p>
 
         <div className="mt-5 grid grid-cols-2 gap-2 rounded-md bg-slate-900/50 p-1">
@@ -174,3 +174,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+

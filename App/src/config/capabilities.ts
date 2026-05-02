@@ -1,4 +1,4 @@
-export const TAURI_CAPABILITIES = {
+﻿export const TAURI_CAPABILITIES = {
   window: {
     dragRegion: true,
     controls: true,
@@ -15,3 +15,4 @@ export const TAURI_CAPABILITIES = {
     opener: true,
   },
 } as const;
+

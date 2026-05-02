@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+﻿import { useQuery } from "@tanstack/react-query";
 
 export type PageDummyData = {
   kpis: Array<{ label: string; value: string }>;
@@ -35,3 +35,4 @@ export function usePageDummyQuery(pageKey: string) {
     staleTime: 60_000,
   });
 }
+

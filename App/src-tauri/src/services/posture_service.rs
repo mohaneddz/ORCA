@@ -101,4 +101,16 @@ mod tests {
         assert!(report.event_logs.is_none());
         assert!(report.usb.is_none());
     }
+
+    #[test]
+    fn full_posture_collects_default_enabled_modules() {
+        let report =
+            collect_full_posture(AppConfig::default()).expect("full posture should collect");
+        assert!(!report.collected_at_utc.is_empty());
+        assert!(report.security.is_some());
+        assert!(!report.processes.is_empty());
+        assert!(report.network.is_some());
+        assert!(report.software.is_some());
+        assert!(report.risk.is_some());
+    }
 }

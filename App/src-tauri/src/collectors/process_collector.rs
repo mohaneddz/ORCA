@@ -45,3 +45,25 @@ pub fn collect_processes(include_command_line: bool) -> AppResult<Vec<ProcessInf
 
     Ok(processes)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::collect_processes;
+
+    #[test]
+    fn collects_processes_without_command_line() {
+        let processes = collect_processes(false).expect("process collection should succeed");
+        assert!(!processes.is_empty());
+        assert!(processes.iter().all(|p| p.command_line.is_none()));
+        assert!(processes.iter().all(|p| p.pid >= 0));
+        assert!(processes.iter().any(|p| p.pid > 0));
+    }
+
+    #[test]
+    fn collects_processes_with_command_line_toggle() {
+        let processes = collect_processes(true).expect("process collection should succeed");
+        assert!(!processes.is_empty());
+        assert!(processes.iter().all(|p| p.pid >= 0));
+        assert!(processes.iter().any(|p| p.pid > 0));
+    }
+}

@@ -1,4 +1,4 @@
-import { Navigate, Outlet, useLocation } from "react-router-dom";
+﻿import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { ROUTES } from "@/config/routes";
 
@@ -17,3 +17,5 @@ export default function RequireAuth() {
 
   return <Outlet />;
 }
+
+

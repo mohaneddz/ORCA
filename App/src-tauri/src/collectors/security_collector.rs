@@ -49,6 +49,23 @@ fn collect_antivirus_info() -> Vec<AntivirusInfo> {
     }]
 }
 
+#[cfg(test)]
+mod tests {
+    use super::collect_security_posture;
+    use crate::models::security::FirewallStatus;
+
+    #[test]
+    fn collects_security_posture_shape() {
+        let security = collect_security_posture().expect("security posture should collect");
+        assert!(!security.antivirus.is_empty());
+        assert!(matches!(
+            security.firewall_status,
+            FirewallStatus::Enabled | FirewallStatus::Disabled | FirewallStatus::Unknown
+        ));
+        assert!(!security.notes.is_empty());
+    }
+}
+
 #[cfg(not(target_os = "windows"))]
 fn collect_antivirus_info() -> Vec<AntivirusInfo> {
     vec![AntivirusInfo {

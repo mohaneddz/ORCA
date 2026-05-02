@@ -196,4 +196,3 @@ Your backend developer needs to build these specific endpoints to support the ex
 4.  **`POST /api/gamification/submit-quiz`**
     *   *Input:* `employee_id`, `quiz_id`, `answer_selected`. (Updates leaderboard).
 
----

@@ -1,4 +1,4 @@
-export type AppLanguage = "en" | "fr";
+﻿export type AppLanguage = "en" | "fr";
 
 export type AppSettings = {
   launchAtStartup: boolean;
@@ -13,3 +13,5 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   hideToTray: true,
   language: "en",
 };
+
+

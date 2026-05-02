@@ -1,4 +1,4 @@
-import type { AppLanguage } from "@/types/settings";
+﻿import type { AppLanguage } from "@/types/settings";
 
 type TranslationMap = Record<string, string>;
 
@@ -73,3 +73,5 @@ const translationsByLanguage: Record<AppLanguage, TranslationMap> = { en, fr };
 export function translate(language: AppLanguage, key: string): string {
   return translationsByLanguage[language][key] ?? translationsByLanguage.en[key] ?? key;
 }
+
+

@@ -45,56 +45,84 @@ export default function Sidebar({ expanded }: SidebarProps) {
   return (
     <aside
       className={[
-        "relative h-full bg-slate-950/60 py-5 transition-[padding] duration-300",
-        expanded ? "px-4" : "px-2",
+        "relative h-full flex flex-col overflow-hidden transition-[padding] duration-300",
+        "border-r",
+        expanded ? "px-4 py-5" : "px-2 py-5",
       ].join(" ")}
+      style={{
+        background: "linear-gradient(180deg, #0a0f1e 0%, #080c18 100%)",
+        borderColor: "rgba(255,255,255,0.06)",
+      }}
     >
+      {/* Logo / Brand */}
       <NavLink
         to={ROUTES.home}
-        className={[
-          "block text-center font-bold tracking-tight text-white transition-colors hover:text-cyan-200",
-          expanded ? "text-3xl" : "text-lg",
-        ].join(" ")}
         title={t("sidebar.item.home")}
+        className={[
+          "flex items-center shrink-0 font-bold tracking-tight text-white transition-opacity hover:opacity-80",
+          expanded ? "gap-2.5 mb-6" : "justify-center mb-5",
+        ].join(" ")}
       >
-        {expanded ? "InnovByte" : "IB"}
+        {/* Icon mark */}
+        <span
+          className="flex items-center justify-center rounded-lg shrink-0 text-white font-black text-xs"
+          style={{
+            width: 30,
+            height: 30,
+            background: "linear-gradient(135deg, #7c3aed, #a855f7)",
+            boxShadow: "0 4px 12px rgba(124,58,237,0.45)",
+          }}
+        >
+          IB
+        </span>
+        {expanded && (
+          <span
+            className="text-base font-extrabold"
+            style={{
+              background: "linear-gradient(90deg, #fff 30%, #c084fc)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
+          >
+            InnovByte
+          </span>
+        )}
       </NavLink>
-      {expanded && (
-        <p className="mx-0 mt-1 mb-4 text-center text-xs uppercase tracking-[0.1em] text-[var(--color-dim)]">
-          {t("app.console")}
-        </p>
-      )}
 
-      <nav className={["overflow-y-auto pb-16", expanded ? "mt-6 space-y-6" : "mt-4 space-y-5"].join(" ")}>
+      {/* Nav */}
+      <nav className={["flex-1 overflow-y-auto no-scrollbar", expanded ? "space-y-6" : "space-y-4"].join(" ")}>
         {SIDEBAR_SECTIONS.map((section, sectionIndex) => (
           <div key={section.key}>
-            {sectionIndex > 0 && <div className="mb-4 border-t border-white/10" />}
+            {sectionIndex > 0 && (
+              <div className="mb-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }} />
+            )}
             {expanded && (
-              <p className="m-0 px-1 pb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-dim)]">
+              <p
+                className="m-0 mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.1em]"
+                style={{ color: "#475569" }}
+              >
                 {t(`sidebar.section.${section.key}`)}
               </p>
             )}
-            <div className={expanded ? "space-y-2" : "space-y-3"}>
+            <div className={expanded ? "space-y-0.5" : "space-y-2"}>
               {section.items.map((item) => {
                 const Icon = sidebarIcons[item.key] ?? UserCog;
                 return (
-                <NavLink
-                  key={item.key}
-                  to={item.href}
-                  title={t(`sidebar.item.${item.key}`)}
-                  className={({ isActive }) =>
-                    [
-                      "flex items-center rounded-md transition-colors",
-                      expanded ? "gap-3 px-2.5 py-2.5 text-sm" : "justify-center px-2 py-2.5",
-                      isActive
-                        ? "bg-cyan-500/14 text-cyan-100"
-                        : "text-slate-300 hover:bg-white/8 hover:text-white",
-                    ].join(" ")
-                  }
-                >
-                  <Icon size={16} className="shrink-0" />
-                  {expanded && <span>{t(`sidebar.item.${item.key}`)}</span>}
-                </NavLink>
+                  <NavLink
+                    key={item.key}
+                    to={item.href}
+                    title={t(`sidebar.item.${item.key}`)}
+                    className={({ isActive }) =>
+                      [
+                        "nav-item",
+                        expanded ? "gap-3 px-3 py-2 text-sm" : "justify-center px-2 py-2.5",
+                        isActive ? "active" : "",
+                      ].join(" ")
+                    }
+                  >
+                    <Icon size={15} className="shrink-0" />
+                    {expanded && <span className="font-medium">{t(`sidebar.item.${item.key}`)}</span>}
+                  </NavLink>
                 );
               })}
             </div>
@@ -102,17 +130,23 @@ export default function Sidebar({ expanded }: SidebarProps) {
         ))}
       </nav>
 
-      <div className={["absolute bottom-4 border-t border-white/10 pt-4", expanded ? "inset-x-4" : "inset-x-2"].join(" ")}>
+      {/* Sign Out */}
+      <div
+        className={["shrink-0 pt-4 mt-2", expanded ? "" : ""].join(" ")}
+        style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+      >
         <button
           type="button"
           onClick={onSignOut}
           title={t("action.signout")}
           className={[
-            "flex w-full items-center justify-center rounded-md text-sm font-medium text-red-200 transition-colors hover:bg-red-500/12",
-            expanded ? "gap-2 px-3 py-2" : "px-2 py-2.5",
+            "flex w-full items-center justify-center rounded-md text-xs font-medium transition-colors",
+            "hover:bg-red-500/10",
+            expanded ? "gap-2 px-3 py-2" : "px-2 py-2",
           ].join(" ")}
+          style={{ color: "#fb7185" }}
         >
-          <LogOut size={14} />
+          <LogOut size={13} />
           {expanded && <span>{t("action.signout")}</span>}
         </button>
       </div>

@@ -48,3 +48,17 @@ fn detect_admin_estimate() -> Option<bool> {
 fn detect_admin_estimate() -> Option<bool> {
     None
 }
+
+#[cfg(test)]
+mod tests {
+    use super::collect_user_posture;
+
+    #[test]
+    fn collects_user_posture_shape() {
+        let user = collect_user_posture().expect("user posture should collect");
+        assert!(!user.username.is_empty());
+        assert!(!user.current_user.is_empty());
+        assert!(!user.local_users.is_empty());
+        assert_eq!(user.local_users[0].username, user.username);
+    }
+}

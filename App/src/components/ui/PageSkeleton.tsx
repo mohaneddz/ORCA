@@ -1,4 +1,4 @@
-import Skeleton from "@/components/ui/Skeleton";
+﻿import Skeleton from "@/components/ui/Skeleton";
 
 export default function PageSkeleton() {
   return (
@@ -14,3 +14,4 @@ export default function PageSkeleton() {
     </div>
   );
 }
+

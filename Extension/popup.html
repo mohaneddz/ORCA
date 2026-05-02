@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,12 +11,11 @@
       width: 296px;
       background: #0f1117;
       color: #e2e8f0;
-      font-family: system-ui, 'Segoe UI', sans-serif;
+      font-family: system-ui, "Segoe UI", sans-serif;
       font-size: 13px;
       line-height: 1.5;
     }
 
-    /* Header */
     .header {
       padding: 14px 16px 12px;
       display: flex;
@@ -51,7 +50,6 @@
       margin-top: 1px;
     }
 
-    /* Status */
     .status-row {
       display: flex;
       align-items: center;
@@ -69,15 +67,14 @@
       transition: background 0.2s;
     }
 
-    .dot.on  { background: #38a169; box-shadow: 0 0 5px rgba(56,161,105,0.6); }
-    .dot.off { background: #e53e3e; box-shadow: 0 0 5px rgba(229,62,62,0.5); }
+    .dot.on  { background: #38a169; box-shadow: 0 0 5px rgba(56, 161, 105, 0.6); }
+    .dot.off { background: #e53e3e; box-shadow: 0 0 5px rgba(229, 62, 62, 0.5); }
 
     .status-label {
       font-size: 11px;
       color: #718096;
     }
 
-    /* Alert band */
     .alert-band {
       background: #2d1515;
       color: #fc8181;
@@ -91,7 +88,6 @@
 
     .alert-band.visible { display: block; }
 
-    /* Section */
     .section {
       padding: 14px 16px;
       border-bottom: 1px solid #2d3748;
@@ -125,7 +121,6 @@
     }
 
     input[type="text"]:focus { border-color: #4299e1; }
-
     input[type="text"]::placeholder { color: #4a5568; }
 
     .btn-save {
@@ -153,7 +148,6 @@
     .hint.error   { color: #fc8181; }
     .hint.success { color: #68d391; }
 
-    /* Meta footer */
     .meta {
       padding: 10px 16px 12px;
       display: flex;
@@ -172,41 +166,40 @@
   </style>
 </head>
 <body>
-
   <div class="header">
     <div class="header-shield">&#9632;</div>
     <div class="header-text">
       <h1>CyberBase Web Guard</h1>
-      <p>Protection Zero-Trust des endpoints</p>
+      <p>Zero-trust browser protection</p>
     </div>
   </div>
 
   <div class="status-row">
     <div class="dot" id="statusDot"></div>
-    <span class="status-label" id="statusText">Chargement…</span>
+    <span class="status-label" id="statusText">Loading...</span>
   </div>
 
   <div class="alert-band" id="alertBand">
-    Non configuré — veuillez saisir votre identifiant
+    Not configured - enter your employee ID
   </div>
 
   <div class="section">
-    <div class="field-label">Identifiant employé</div>
+    <div class="field-label">Employee ID</div>
     <div class="input-row">
-      <input type="text" id="empIdInput" placeholder="ex. EMP001" maxlength="64" autocomplete="off" spellcheck="false" />
-      <button class="btn-save" id="saveBtn">Enregistrer</button>
+      <input type="text" id="empIdInput" placeholder="e.g. EMP001" maxlength="64" autocomplete="off" spellcheck="false" />
+      <button class="btn-save" id="saveBtn">Save</button>
     </div>
     <div class="hint" id="fieldHint"></div>
   </div>
 
   <div class="meta">
     <div class="meta-row">
-      <span class="meta-key">Dernier sondage</span>
-      <span class="meta-val" id="lastPoll">—</span>
+      <span class="meta-key">Last poll</span>
+      <span class="meta-val" id="lastPoll">-</span>
     </div>
     <div class="meta-row">
       <span class="meta-key">Version</span>
-      <span class="meta-val" id="extVersion">—</span>
+      <span class="meta-val" id="extVersion">-</span>
     </div>
   </div>
 

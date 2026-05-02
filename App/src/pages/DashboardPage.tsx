@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePageDummyQuery } from "@/utils/usePageDummyQuery";
-import TrendChart from "@/components/ui/TrendChart";
+import TrendChart, { DualAreaChart, GroupedBarChart, DonutGauge } from "@/components/ui/TrendChart";
 import PageSkeleton from "@/components/ui/PageSkeleton";
+import { PageHeader, StatGrid } from "@/components/cards/BaseCards";
 
 type DashboardPageProps = {
   pageKey: string;
@@ -16,38 +17,43 @@ type Item = {
   status: string;
 };
 
-function SectionHeader({ title, description }: { title: string; description: string }) {
-  return (
-    <header className="page-section">
-      <h1 className="m-0 text-3xl font-bold tracking-tight text-white">{title}</h1>
-      <p className="m-0 max-w-[74ch] text-sm text-[var(--color-dim)]">{description}</p>
-    </header>
-  );
-}
-
-function KpiGrid({ items }: { items: Array<{ label: string; value: string }> }) {
-  return (
-    <section className="grid gap-3 md:grid-cols-3">
-      {items.map((item) => (
-        <article key={item.label} className="card p-4">
-          <p className="m-0 text-xs uppercase tracking-[0.07em] text-[var(--color-dim)]">{item.label}</p>
-          <p className="m-0 mt-2 text-2xl font-semibold text-white">{item.value}</p>
-        </article>
-      ))}
-    </section>
-  );
-}
+const STATUS_COLORS: Record<string, string> = {
+  high:        "status-danger",
+  medium:      "status-warn",
+  low:         "status-neutral",
+  todo:        "status-neutral",
+  "in progress": "status-warn",
+  scheduled:   "status-neutral",
+  Healthy:     "status-ok",
+  "Needs Review": "status-warn",
+  Escalated:   "status-danger",
+};
 
 function AlertsPanel({ items }: { items: Item[] }) {
   return (
-    <section className="card p-4">
+    <section className="card p-5">
       <p className="m-0 mb-3 text-sm font-semibold text-white">Priority Alerts</p>
       <div className="flex flex-col gap-2">
         {items.map((item) => (
-          <div key={item.title} className="rounded-md border border-white/10 bg-white/3 px-3 py-2">
-            <p className="m-0 text-sm font-medium text-white">{item.title}</p>
-            <p className="m-0 text-xs text-[var(--color-dim)]">{item.subtitle}</p>
-            <p className="m-0 mt-1 text-[11px] uppercase tracking-wide text-amber-200">{item.status}</p>
+          <div
+            key={item.title}
+            className="rounded-xl px-4 py-3 transition-colors"
+            style={{
+              background: "rgba(255,255,255,0.025)",
+              border: "1px solid rgba(255,255,255,0.06)",
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = "rgba(168,85,247,0.06)")}
+            onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.025)")}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="m-0 text-sm font-medium text-white">{item.title}</p>
+                <p className="m-0 mt-0.5 text-xs" style={{ color: "#64748b" }}>{item.subtitle}</p>
+              </div>
+              <span className={STATUS_COLORS[item.status] ?? "status-neutral"}>
+                {item.status}
+              </span>
+            </div>
           </div>
         ))}
       </div>
@@ -57,16 +63,27 @@ function AlertsPanel({ items }: { items: Item[] }) {
 
 function TasksPanel({ items }: { items: Item[] }) {
   return (
-    <section className="card p-4">
+    <section className="card p-5">
       <p className="m-0 mb-3 text-sm font-semibold text-white">Next Actions</p>
       <div className="space-y-2">
         {items.map((item) => (
-          <div key={item.title} className="flex items-start justify-between rounded-md border border-white/10 px-3 py-2">
+          <div
+            key={item.title}
+            className="flex items-center justify-between rounded-xl px-4 py-3 transition-colors"
+            style={{
+              background: "rgba(255,255,255,0.025)",
+              border: "1px solid rgba(255,255,255,0.06)",
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = "rgba(34,211,238,0.05)")}
+            onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.025)")}
+          >
             <div>
               <p className="m-0 text-sm font-medium text-white">{item.title}</p>
-              <p className="m-0 text-xs text-[var(--color-dim)]">{item.subtitle}</p>
+              <p className="m-0 text-xs" style={{ color: "#64748b" }}>{item.subtitle}</p>
             </div>
-            <span className="pill">{item.status}</span>
+            <span className={STATUS_COLORS[item.status] ?? "status-neutral"}>
+              {item.status}
+            </span>
           </div>
         ))}
       </div>
@@ -77,24 +94,31 @@ function TasksPanel({ items }: { items: Item[] }) {
 function EntityTable({ rows }: { rows: Array<{ name: string; owner: string; state: string }> }) {
   return (
     <section className="card overflow-hidden">
-      <div className="border-b border-white/10 px-4 py-3">
+      <div
+        className="px-5 py-3.5"
+        style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+      >
         <p className="m-0 text-sm font-semibold text-white">Entity Snapshot</p>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[560px] border-collapse text-sm">
+        <table className="data-table" style={{ minWidth: 380 }}>
           <thead>
-            <tr className="text-left text-[var(--color-dim)]">
-              <th className="px-4 py-2 font-medium">Name</th>
-              <th className="px-4 py-2 font-medium">Owner</th>
-              <th className="px-4 py-2 font-medium">State</th>
+            <tr>
+              <th>Name</th>
+              <th>Owner</th>
+              <th>State</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.name} className="border-t border-white/8">
-                <td className="px-4 py-2 text-white">{row.name}</td>
-                <td className="px-4 py-2 text-[var(--color-dim)]">{row.owner}</td>
-                <td className="px-4 py-2 text-cyan-200">{row.state}</td>
+              <tr key={row.name}>
+                <td>{row.name}</td>
+                <td>{row.owner}</td>
+                <td>
+                  <span className={STATUS_COLORS[row.state] ?? "status-neutral"}>
+                    {row.state}
+                  </span>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -119,8 +143,8 @@ export default function DashboardPage({ pageKey, title, description }: Dashboard
 
   const tasks = useMemo<Item[]>(
     () => [
-      { title: "Validate open incidents", subtitle: "Ensure ticket severity is still accurate.", status: "todo" },
-      { title: "Cross-check ownership", subtitle: "Map entities to the right team member.", status: "in progress" },
+      { title: "Validate open incidents", subtitle: "Ensure ticket severity is still accurate.", status: "in progress" },
+      { title: "Cross-check ownership", subtitle: "Map entities to the right team member.", status: "todo" },
       { title: "Publish weekly digest", subtitle: "Summarize status for stakeholder channel.", status: "scheduled" },
     ],
     [],
@@ -128,13 +152,35 @@ export default function DashboardPage({ pageKey, title, description }: Dashboard
 
   const rows = useMemo(
     () => [
-      { name: `${title} Node A`, owner: "Ops Team", state: "Healthy" },
+      { name: `${title} Node A`, owner: "Ops Team",      state: "Healthy" },
       { name: `${title} Node B`, owner: "Security Team", state: "Needs Review" },
-      { name: `${title} Node C`, owner: "IT Team", state: "Healthy" },
-      { name: `${title} Node D`, owner: "Compliance", state: "Escalated" },
+      { name: `${title} Node C`, owner: "IT Team",       state: "Healthy" },
+      { name: `${title} Node D`, owner: "Compliance",    state: "Escalated" },
     ],
     [title],
   );
+
+  // Dual area chart data
+  const dualData = useMemo(() => [
+    { name: "Jan", primary: 40, secondary: 28 },
+    { name: "Feb", primary: 55, secondary: 35 },
+    { name: "Mar", primary: 48, secondary: 42 },
+    { name: "Apr", primary: 70, secondary: 50 },
+    { name: "May", primary: 63, secondary: 55 },
+    { name: "Jun", primary: 80, secondary: 60 },
+    { name: "Jul", primary: 72, secondary: 65 },
+  ], []);
+
+  // Grouped bar chart data
+  const barData = useMemo(() => [
+    { name: "Mon", primary: 20, secondary: 14 },
+    { name: "Tue", primary: 35, secondary: 22 },
+    { name: "Wed", primary: 28, secondary: 30 },
+    { name: "Thu", primary: 45, secondary: 25 },
+    { name: "Fri", primary: 38, secondary: 35 },
+    { name: "Sat", primary: 15, secondary: 10 },
+    { name: "Sun", primary: 22, secondary: 18 },
+  ], []);
 
   if (isLoading || !data) {
     return <PageSkeleton />;
@@ -142,16 +188,50 @@ export default function DashboardPage({ pageKey, title, description }: Dashboard
 
   return (
     <div className="page-section">
-      <SectionHeader title={title} description={description} />
-      <KpiGrid items={data.kpis} />
+      <PageHeader title={title} description={description} />
+
+      <StatGrid
+        stats={data.kpis.map((k, i) => ({
+          ...k,
+          trend: [28.4, -12.6, 3.1, 11.3][i % 4],
+          tone: i === 2 ? "danger" : i === 1 ? "warn" : "default",
+        }))}
+      />
+
+      {/* Charts row */}
+      <section className="grid gap-3 xl:grid-cols-[1.4fr_1fr]">
+        <DualAreaChart
+          data={dualData}
+          title="Activity Overview"
+          primaryLabel="Incidents"
+          secondaryLabel="Resolved"
+        />
+        <DonutGauge
+          title="Risk Distribution"
+          value={64}
+          max={100}
+          label="Risk Score"
+          breakdown={[
+            { label: "Critical",  value: 3,  color: "#fb7185" },
+            { label: "High",      value: 9,  color: "#fbbf24" },
+            { label: "Medium",    value: 21, color: "#a855f7" },
+            { label: "Low",       value: 31, color: "#22d3ee" },
+          ]}
+        />
+      </section>
 
       <section className="grid gap-3 xl:grid-cols-2">
         <AlertsPanel items={alerts} />
         <TasksPanel items={tasks} />
       </section>
 
-      <section className="grid gap-3 xl:grid-cols-[1.3fr_1fr]">
-        <TrendChart data={data.trend} />
+      <section className="grid gap-3 xl:grid-cols-[1.2fr_1fr]">
+        <GroupedBarChart
+          data={barData}
+          title="Weekly Activity"
+          primaryLabel="Events"
+          secondaryLabel="Resolved"
+        />
         <EntityTable rows={rows} />
       </section>
     </div>

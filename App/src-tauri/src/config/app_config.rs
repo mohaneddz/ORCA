@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::models::privacy::PrivacyConfig;
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AppConfig {
@@ -12,6 +14,10 @@ pub struct AppConfig {
     pub collect_software: bool,
     pub collect_security_posture: bool,
     pub include_process_command_line: bool,
+    pub enable_usb_watcher: bool,
+    pub enable_peer_os_fingerprinting: bool,
+    pub enable_startup_persistence: bool,
+    pub privacy: PrivacyConfig,
 }
 
 impl Default for AppConfig {
@@ -26,6 +32,10 @@ impl Default for AppConfig {
             collect_software: true,
             collect_security_posture: true,
             include_process_command_line: true,
+            enable_usb_watcher: false,
+            enable_peer_os_fingerprinting: false,
+            enable_startup_persistence: false,
+            privacy: PrivacyConfig::default(),
         }
     }
 }
@@ -50,5 +60,8 @@ mod tests {
         assert!(cfg.collect_network);
         assert!(cfg.collect_software);
         assert!(cfg.collect_security_posture);
+        assert!(!cfg.enable_usb_watcher);
+        assert!(!cfg.enable_peer_os_fingerprinting);
+        assert!(!cfg.enable_startup_persistence);
     }
 }

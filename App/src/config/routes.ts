@@ -1,4 +1,4 @@
-export const ROUTES = {
+﻿export const ROUTES = {
   root: "/",
   login: "/login",
   home: "/home",
@@ -13,3 +13,4 @@ export const ROUTES = {
 } as const;
 
 export type AppRouteKey = keyof typeof ROUTES;
+

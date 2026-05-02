@@ -74,3 +74,15 @@ fn downloads_dir() -> Option<PathBuf> {
             .map(|path| path.join("Downloads"))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::collect_downloads_metadata;
+
+    #[test]
+    fn respects_disabled_filesystem_collection() {
+        let report = collect_downloads_metadata(false).expect("filesystem report should collect");
+        assert!(!report.enabled);
+        assert!(report.events.is_empty());
+    }
+}

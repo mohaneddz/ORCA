@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+﻿import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { isTauri, invoke } from "@tauri-apps/api/core";
 import {
   disable as disableAutostart,
@@ -32,7 +32,12 @@ async function syncRuntimeSettings(settings: AppSettings): Promise<void> {
 
 export function AppSettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(() => readAppSettings());
+  const settingsRef = useRef<AppSettings>(settings);
   const [startupError, setStartupError] = useState<string | null>(null);
+
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
 
   useEffect(() => {
     void syncRuntimeSettings(settings).catch(() => {
@@ -66,16 +71,11 @@ export function AppSettingsProvider({ children }: { children: React.ReactNode })
   }, []);
 
   const patchSettings = async (updates: Partial<AppSettings>) => {
-    let nextSettings: AppSettings | null = null;
-    setSettings((current) => {
-      const next = { ...current, ...updates };
-      nextSettings = next;
-      persistAppSettings(next);
-      return next;
-    });
-    if (nextSettings) {
-      await syncRuntimeSettings(nextSettings);
-    }
+    const nextSettings = { ...settingsRef.current, ...updates };
+    settingsRef.current = nextSettings;
+    setSettings(nextSettings);
+    persistAppSettings(nextSettings);
+    await syncRuntimeSettings(nextSettings);
   };
 
   const value = useMemo<AppSettingsContextValue>(
@@ -124,3 +124,5 @@ export function useAppSettings() {
   }
   return context;
 }
+
+

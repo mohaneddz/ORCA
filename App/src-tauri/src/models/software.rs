@@ -8,6 +8,8 @@ pub struct InstalledSoftware {
     pub vendor: Option<String>,
     pub install_location: Option<String>,
     pub source: Option<String>,
+    #[serde(default)]
+    pub risk_flag: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

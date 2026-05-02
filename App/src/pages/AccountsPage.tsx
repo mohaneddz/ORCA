@@ -51,12 +51,12 @@ export default function AccountsPage() {
 
   const stats = useMemo(() => {
     const admins = accounts.filter((account) => account.role === "admin").length;
-    const staff = accounts.filter((account) => account.role === "staff").length;
+    const staff  = accounts.filter((account) => account.role === "staff").length;
 
     return [
-      { label: "Total Accounts", value: String(accounts.length) },
+      { label: "Total Accounts", value: String(accounts.length), trend: 2.4 },
       { label: "Admin Accounts", value: String(admins) },
-      { label: "Staff Accounts", value: String(staff) },
+      { label: "Staff Accounts", value: String(staff),  trend: 1.1 },
       { label: "Your Access", value: isAdmin ? "Admin" : "Staff", tone: isAdmin ? ("ok" as const) : undefined },
     ];
   }, [accounts, isAdmin]);
@@ -172,72 +172,58 @@ export default function AccountsPage() {
       />
 
       {isAdmin && (
-        <section className="card p-4">
-          <p className="m-0 text-sm font-semibold text-white">Create Account</p>
-          <form className="mt-3 grid gap-3 md:grid-cols-2" onSubmit={onCreateAccount}>
-            <label className="grid gap-1 text-sm text-slate-200">
-              Email
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="rounded-md border border-white/15 bg-slate-900/60 px-3 py-2 text-white outline-none ring-cyan-300/40 focus:ring"
-                required
-              />
-            </label>
-            <label className="grid gap-1 text-sm text-slate-200">
-              Password
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="rounded-md border border-white/15 bg-slate-900/60 px-3 py-2 text-white outline-none ring-cyan-300/40 focus:ring"
-                minLength={8}
-                required
-              />
-            </label>
-            <label className="grid gap-1 text-sm text-slate-200">
-              Full name
-              <input
-                type="text"
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
-                className="rounded-md border border-white/15 bg-slate-900/60 px-3 py-2 text-white outline-none ring-cyan-300/40 focus:ring"
-              />
-            </label>
-            <label className="grid gap-1 text-sm text-slate-200">
-              Phone
-              <input
-                type="tel"
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-                className="rounded-md border border-white/15 bg-slate-900/60 px-3 py-2 text-white outline-none ring-cyan-300/40 focus:ring"
-              />
-            </label>
-            <label className="grid gap-1 text-sm text-slate-200">
-              Organization
-              <input
-                type="text"
-                value={organizationName}
-                onChange={(event) => setOrganizationName(event.target.value)}
-                className="rounded-md border border-white/15 bg-slate-900/60 px-3 py-2 text-white outline-none ring-cyan-300/40 focus:ring"
-              />
-            </label>
-            <label className="grid gap-1 text-sm text-slate-200">
+        <section className="card p-5">
+          <p className="m-0 mb-4 text-sm font-semibold text-white">Create Account</p>
+          <form className="grid gap-3 md:grid-cols-2" onSubmit={onCreateAccount}>
+            {[
+              { label: "Email",        type: "email",    value: email,            setter: setEmail,            required: true },
+              { label: "Password",     type: "password", value: password,         setter: setPassword,         required: true },
+              { label: "Full Name",    type: "text",     value: fullName,         setter: setFullName,         required: false },
+              { label: "Phone",        type: "tel",      value: phone,            setter: setPhone,            required: false },
+              { label: "Organization", type: "text",     value: organizationName, setter: setOrganizationName, required: false },
+            ].map(({ label, type, value, setter, required }) => (
+              <label key={label} className="grid gap-1.5" style={{ fontSize: "0.82rem", color: "#94a3b8" }}>
+                {label}
+                <input
+                  type={type}
+                  value={value}
+                  onChange={(e) => setter(e.target.value)}
+                  required={required}
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: 10,
+                    padding: "0.5rem 0.75rem",
+                    color: "#fff",
+                    fontSize: "0.84rem",
+                    outline: "none",
+                    transition: "border-color 0.15s",
+                  }}
+                  onFocus={e => { e.target.style.borderColor = "rgba(168,85,247,0.5)"; }}
+                  onBlur={e  => { e.target.style.borderColor = "rgba(255,255,255,0.1)"; }}
+                />
+              </label>
+            ))}
+            <label className="grid gap-1.5" style={{ fontSize: "0.82rem", color: "#94a3b8" }}>
               Role
               <select
                 value={role}
                 onChange={(event) => setRole(event.target.value as UserRole)}
-                className="rounded-md border border-white/15 bg-slate-900/60 px-3 py-2 text-white outline-none ring-cyan-300/40 focus:ring"
+                style={{
+                  background: "#0c1220",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 10,
+                  padding: "0.5rem 0.75rem",
+                  color: "#fff",
+                  fontSize: "0.84rem",
+                  outline: "none",
+                }}
               >
                 <option value="staff">Staff</option>
                 <option value="admin">Admin</option>
               </select>
             </label>
-            <button
-              type="submit"
-              className="rounded-md border border-cyan-400/35 bg-cyan-500/12 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-cyan-100 hover:bg-cyan-500/20 md:col-span-2"
-            >
+            <button type="submit" className="btn-primary md:col-span-2 justify-center">
               Create Account
             </button>
           </form>
@@ -245,33 +231,36 @@ export default function AccountsPage() {
       )}
 
       <section className="card overflow-hidden">
-        <div className="border-b border-white/10 px-4 py-3">
+        <div
+          className="flex items-center justify-between px-5 py-3.5"
+          style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+        >
           <p className="m-0 text-sm font-semibold text-white">Managed Accounts</p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] border-collapse text-sm">
+          <table className="data-table" style={{ minWidth: 980 }}>
             <thead>
-              <tr className="text-left text-[var(--color-dim)]">
-                <th className="px-4 py-2 font-medium">Name</th>
-                <th className="px-4 py-2 font-medium">Email</th>
-                <th className="px-4 py-2 font-medium">Role</th>
-                <th className="px-4 py-2 font-medium">Organization</th>
-                <th className="px-4 py-2 font-medium">Phone</th>
-                <th className="px-4 py-2 font-medium">Actions</th>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Organization</th>
+                <th>Phone</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {isLoading && (
-                <tr className="border-t border-white/8">
-                  <td className="px-4 py-3 text-[var(--color-dim)]" colSpan={6}>
+                <tr>
+                  <td colSpan={6} style={{ textAlign: "center", color: "#475569", padding: "1.5rem" }}>
                     Loading accounts...
                   </td>
                 </tr>
               )}
 
               {!isLoading && accounts.length === 0 && (
-                <tr className="border-t border-white/8">
-                  <td className="px-4 py-3 text-[var(--color-dim)]" colSpan={6}>
+                <tr>
+                  <td colSpan={6} style={{ textAlign: "center", color: "#475569", padding: "1.5rem" }}>
                     No accounts found.
                   </td>
                 </tr>
@@ -279,29 +268,23 @@ export default function AccountsPage() {
 
               {!isLoading &&
                 accounts.map((account) => (
-                  <tr key={account.id} className="border-t border-white/8">
-                    <td className="px-4 py-2 text-white">{account.full_name}</td>
-                    <td className="px-4 py-2 text-[var(--color-dim)]">{account.email}</td>
-                    <td className="px-4 py-2">
-                      <span
-                        className={[
-                          "rounded-full px-2 py-1 text-xs font-semibold uppercase tracking-wide",
-                          account.role === "admin"
-                            ? "bg-cyan-500/18 text-cyan-100"
-                            : "bg-white/10 text-slate-200",
-                        ].join(" ")}
-                      >
+                  <tr key={account.id}>
+                    <td>{account.full_name}</td>
+                    <td>{account.email}</td>
+                    <td>
+                      <span className={account.role === "admin" ? "status-ok" : "status-neutral"}>
                         {account.role}
                       </span>
                     </td>
-                    <td className="px-4 py-2 text-[var(--color-dim)]">{account.organization_name}</td>
-                    <td className="px-4 py-2 text-[var(--color-dim)]">{account.phone || "-"}</td>
-                    <td className="px-4 py-2">
+                    <td>{account.organization_name}</td>
+                    <td>{account.phone || "-"}</td>
+                    <td>
                       <button
                         type="button"
                         onClick={() => void onDeleteAccount(account.id)}
                         disabled={!isAdmin || account.id === user?.id}
-                        className="rounded-md border border-red-400/35 bg-red-500/10 px-2 py-1 text-xs text-red-200 disabled:cursor-not-allowed disabled:opacity-45 hover:bg-red-500/20"
+                        className="btn-ghost disabled:cursor-not-allowed disabled:opacity-40"
+                        style={{ fontSize: "0.72rem", padding: "0.2rem 0.6rem", borderColor: "rgba(244,63,94,0.3)", color: "#fb7185" }}
                       >
                         Delete
                       </button>
@@ -314,10 +297,22 @@ export default function AccountsPage() {
       </section>
 
       {status && (
-        <section className="card px-4 py-3">
-          <p className="m-0 text-sm text-slate-200">{status}</p>
+        <section
+          className="card px-5 py-3"
+          style={{
+            borderColor: status.includes("success") ? "rgba(16,185,129,0.3)" : "rgba(244,63,94,0.3)",
+          }}
+        >
+          <p
+            className="m-0 text-sm"
+            style={{ color: status.includes("success") ? "#34d399" : "#fb7185" }}
+          >
+            {status}
+          </p>
         </section>
       )}
     </div>
   );
 }
+
+

@@ -1,4 +1,4 @@
-import { DataTable, PageHeader, SplitCards, StatGrid, BulletActions } from "@/components/cards/BaseCards";
+﻿import { DataTable, PageHeader, SplitCards, StatGrid, BulletActions } from "@/components/cards/BaseCards";
 
 export default function RegisteredDevicesPage() {
   return (
@@ -58,3 +58,5 @@ export default function RegisteredDevicesPage() {
     </div>
   );
 }
+
+

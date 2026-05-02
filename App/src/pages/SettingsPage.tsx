@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { PageHeader } from "@/components/cards/BaseCards";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
 
@@ -97,7 +97,7 @@ function SettingSwitch({
     <div className="flex items-center justify-between gap-3 rounded-md border border-white/10 bg-white/4 px-4 py-3">
       <div>
         <p className="m-0 text-sm font-semibold text-white">{label}</p>
-        <p className="m-0 mt-1 text-xs text-[var(--color-dim)]">{helper}</p>
+        <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">{helper}</p>
       </div>
       <input
         type="checkbox"
@@ -133,7 +133,7 @@ export default function SettingsPage() {
       <section className="card p-4">
         <div className="mb-3">
           <p className="m-0 text-sm font-semibold text-white">{t("settings.desktop.title")}</p>
-          <p className="m-0 mt-1 text-xs text-[var(--color-dim)]">{t("settings.desktop.description")}</p>
+          <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">{t("settings.desktop.description")}</p>
         </div>
 
         <div className="grid gap-3">
@@ -141,7 +141,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="m-0 text-sm font-semibold text-white">{t("settings.language")}</p>
-                <p className="m-0 mt-1 text-xs text-[var(--color-dim)]">{t("settings.language.helper")}</p>
+                <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">{t("settings.language.helper")}</p>
               </div>
               <select
                 value={settings.language}
@@ -184,7 +184,7 @@ export default function SettingsPage() {
 
           <div className="rounded-md border border-white/10 bg-white/4 px-4 py-3">
             <p className="m-0 text-sm font-semibold text-white">{t("settings.globalShortcut")}</p>
-            <p className="m-0 mt-1 text-xs text-[var(--color-dim)]">{t("settings.globalShortcut.helper")}</p>
+            <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">{t("settings.globalShortcut.helper")}</p>
             <code className="mt-3 inline-block rounded-md bg-slate-900/70 px-2 py-1 text-xs text-cyan-100">
               Ctrl + Shift + L
             </code>
@@ -219,7 +219,7 @@ export default function SettingsPage() {
           <p className="m-0 text-sm font-semibold text-white">
             {tabs.find((tab) => tab.key === activeTab)?.label}
           </p>
-          <p className="m-0 mt-1 text-xs text-[var(--color-dim)]">
+          <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">
             Configuration toggles for the selected settings area.
           </p>
         </div>
@@ -232,3 +232,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+

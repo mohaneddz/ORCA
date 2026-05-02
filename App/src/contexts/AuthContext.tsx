@@ -1,6 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase";
+﻿import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { APP_URLS } from "@/config/urls";
 
 export type UserRole = "admin" | "staff";
 
@@ -55,86 +54,104 @@ type AuthContextValue = {
   logout: () => Promise<AuthResult>;
 };
 
-type ProfileRow = {
-  id: string;
-  email: string;
-  full_name: string;
-  organization_name: string;
-  phone: string;
-  role: UserRole;
+type StoredSession = {
+  token: string;
+  user: SessionUser;
+};
+
+type AuthApiResponse = {
+  token: string;
+  organization: {
+    id: string;
+    name: string;
+    email: string;
+  };
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const AUTH_STORAGE_KEY = "innov.auth.session";
+const DEFAULT_ORG_NAME = "InnovByte Organization";
 
 function normalizeRole(value: string | undefined): UserRole {
   return value === "admin" ? "admin" : "staff";
 }
 
-async function readProfile(userId: string): Promise<ProfileRow | null> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id,email,full_name,organization_name,phone,role")
-    .eq("id", userId)
-    .maybeSingle();
+function loadStoredSession(): StoredSession | null {
+  const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+  if (!raw) return null;
 
-  if (error) {
+  try {
+    return JSON.parse(raw) as StoredSession;
+  } catch {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
     return null;
   }
-
-  return data as ProfileRow | null;
 }
 
-function mapSessionUser(session: Session, profile: ProfileRow | null): SessionUser {
-  const authUser = session.user;
-  const roleFromMeta = typeof authUser.user_metadata?.role === "string" ? authUser.user_metadata.role : undefined;
-  const role = normalizeRole(profile?.role || roleFromMeta);
+function saveStoredSession(session: StoredSession | null) {
+  if (!session) {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    return;
+  }
 
+  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+}
+
+function mapOrganizationToUser(
+  organization: { id: string; name: string; email: string },
+  role: UserRole,
+  phone = "",
+): SessionUser {
   return {
-    id: authUser.id,
-    name: profile?.full_name || authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "User",
-    email: profile?.email || authUser.email || "unknown@local",
-    organizationName: profile?.organization_name || authUser.user_metadata?.organization_name || "InnovByte Organization",
-    phone: profile?.phone || authUser.user_metadata?.phone || "",
+    id: organization.id,
+    name: organization.name || organization.email.split("@")[0] || "User",
+    email: organization.email,
+    organizationName: organization.name || DEFAULT_ORG_NAME,
+    phone,
     role,
-    lastLoginAt: authUser.last_sign_in_at || new Date().toISOString(),
+    lastLoginAt: new Date().toISOString(),
+  };
+}
+
+async function authRequest<T>(path: string, options?: RequestInit): Promise<{ ok: boolean; data?: T; message?: string }> {
+  try {
+    const response = await fetch(`${APP_URLS.api.backendBase}${path}`, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(options?.headers ?? {}),
+      },
+      ...options,
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return { ok: false, message: (data as { error?: string })?.error || `Request failed: ${response.status}` };
+    }
+
+    return { ok: true, data: data as T };
+  } catch (error: any) {
+    return { ok: false, message: error?.message || "Network error." };
+  }
+}
+
+function withAuthHeaders(token: string): HeadersInit {
+  return {
+    Authorization: `Token ${token}`,
   };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
-    let active = true;
-
-    const hydrate = async (session: Session | null) => {
-      if (!active) return;
-
-      if (!session?.user) {
-        setUser(null);
-        setIsInitializing(false);
-        return;
-      }
-
-      const profile = await readProfile(session.user.id);
-      if (!active) return;
-      setUser(mapSessionUser(session, profile));
-      setIsInitializing(false);
-    };
-
-    void (async () => {
-      const { data } = await supabase.auth.getSession();
-      await hydrate(data.session);
-    })();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      void hydrate(session);
-    });
-
-    return () => {
-      active = false;
-      authListener.subscription.unsubscribe();
-    };
+    const session = loadStoredSession();
+    if (session) {
+      setToken(session.token);
+      setUser(session.user);
+    }
+    setIsInitializing(false);
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -145,134 +162,94 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!email.trim()) return { ok: false, message: "Email is required." };
         if (!password.trim()) return { ok: false, message: "Password is required." };
 
-        const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
+        const result = await authRequest<AuthApiResponse>("/api/auth/login", {
+          method: "POST",
+          body: JSON.stringify({
+            email: email.trim().toLowerCase(),
+            password,
+          }),
         });
 
-        if (error) return { ok: false, message: error.message };
+        if (!result.ok || !result.data) return { ok: false, message: result.message || "Sign in failed." };
+
+        const nextUser = mapOrganizationToUser(result.data.organization, "admin");
+        const session: StoredSession = {
+          token: result.data.token,
+          user: nextUser,
+        };
+
+        setToken(result.data.token);
+        setUser(nextUser);
+        saveStoredSession(session);
+
         return { ok: true };
       },
       signup: async ({ email, password, role, name, organizationName, phone }) => {
         if (!email.trim()) return { ok: false, message: "Email is required." };
         if (!password.trim()) return { ok: false, message: "Password is required." };
-        const normalizedEmail = email.trim().toLowerCase();
 
-        if (role === "admin" && import.meta.env.VITE_ANONYMOUS_ADMINS === 'false') {
-          return { ok: false, message: "Anonymous admin creation is blocked by the server configuration." };
-        }
-
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: normalizedEmail,
-          password,
-          options: {
-            data: {
-              role,
-              full_name: name?.trim() || "",
-              organization_name: organizationName?.trim() || "InnovByte Organization",
-              phone: phone?.trim() || "",
-            },
-          },
+        const organization = organizationName?.trim() || name?.trim() || DEFAULT_ORG_NAME;
+        const result = await authRequest<AuthApiResponse>("/api/auth/register", {
+          method: "POST",
+          body: JSON.stringify({
+            email: email.trim().toLowerCase(),
+            name: organization,
+            password,
+          }),
         });
 
-        if (signUpError) return { ok: false, message: signUpError.message };
+        if (!result.ok || !result.data) return { ok: false, message: result.message || "Sign up failed." };
 
-        if (!signUpData.session) {
-          return {
-            ok: true,
-            message: "Account created. If email confirmation is enabled, verify your inbox before signing in.",
-          };
-        }
+        const nextUser = mapOrganizationToUser(result.data.organization, normalizeRole(role), phone?.trim() || "");
+        const session: StoredSession = {
+          token: result.data.token,
+          user: nextUser,
+        };
+
+        setToken(result.data.token);
+        setUser(nextUser);
+        saveStoredSession(session);
 
         return { ok: true };
       },
       updateProfile: async ({ name, email, organizationName, phone }) => {
         if (!user) return { ok: false, message: "No active user session." };
 
-        const normalizedEmail = email.trim().toLowerCase();
-        const normalizedName = name.trim();
-        const normalizedOrganizationName = organizationName.trim();
-        const normalizedPhone = phone.trim();
+        const updatedUser: SessionUser = {
+          ...user,
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          organizationName: organizationName.trim(),
+          phone: phone.trim(),
+        };
 
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .update({
-            email: normalizedEmail,
-            full_name: normalizedName,
-            organization_name: normalizedOrganizationName,
-            phone: normalizedPhone,
-          })
-          .eq("id", user.id);
-
-        if (profileError) return { ok: false, message: profileError.message };
-
-        const { error: metadataError } = await supabase.auth.updateUser({
-          data: {
-            full_name: normalizedName,
-            organization_name: normalizedOrganizationName,
-            phone: normalizedPhone,
-            role: user.role,
-          },
-        });
-
-        if (metadataError) return { ok: false, message: metadataError.message };
-
-        if (normalizedEmail !== user.email) {
-          const { error: emailError } = await supabase.auth.updateUser({ email: normalizedEmail });
-          if (emailError) {
-            return {
-              ok: false,
-              message: `Profile saved but auth email update failed: ${emailError.message}`,
-            };
-          }
-        }
-
-        setUser((prev) =>
-          prev
-            ? {
-                ...prev,
-                name: normalizedName,
-                email: normalizedEmail,
-                organizationName: normalizedOrganizationName,
-                phone: normalizedPhone,
-              }
-            : prev,
-        );
+        setUser(updatedUser);
+        if (token) saveStoredSession({ token, user: updatedUser });
 
         return { ok: true };
       },
       updatePassword: async ({ newPassword }) => {
         if (!newPassword.trim()) return { ok: false, message: "New password is required." };
-
-        const { error } = await supabase.auth.updateUser({ password: newPassword });
-        if (error) return { ok: false, message: error.message };
-        return { ok: true };
+        return { ok: false, message: "Password update endpoint is not available yet in backend auth API." };
       },
       deleteOwnAccount: async () => {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const userSession = sessionData.session?.user;
-        if (!userSession) return { ok: false, message: "No active session." };
-
-        const { error } = await supabase.rpc("delete_account", {
-          p_target_user_id: userSession.id,
-        });
-
-        if (error) {
-          return { ok: false, message: error.message };
-        }
-
-        await supabase.auth.signOut();
-        setUser(null);
-        return { ok: true };
+        return { ok: false, message: "Account deletion endpoint is not available yet in backend auth API." };
       },
       logout: async () => {
-        const { error } = await supabase.auth.signOut();
-        if (error) return { ok: false, message: error.message };
+        if (token) {
+          await authRequest("/api/auth/logout", {
+            method: "POST",
+            headers: withAuthHeaders(token),
+          });
+        }
+
+        setToken(null);
         setUser(null);
+        saveStoredSession(null);
         return { ok: true };
       },
     }),
-    [isInitializing, user],
+    [isInitializing, token, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -285,3 +262,4 @@ export function useAuth() {
   }
   return context;
 }
+

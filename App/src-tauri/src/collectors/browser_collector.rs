@@ -93,3 +93,16 @@ fn detect_browsers() -> Vec<InstalledBrowser> {
 
     browsers
 }
+
+#[cfg(test)]
+mod tests {
+    use super::collect_browser_metadata;
+
+    #[test]
+    fn respects_disabled_browser_collection() {
+        let report = collect_browser_metadata(false).expect("browser report should collect");
+        assert!(!report.enabled);
+        assert!(report.browsers.is_empty());
+        assert!(report.recent_downloads.is_empty());
+    }
+}

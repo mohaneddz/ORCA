@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from "react";
+﻿import { type FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader, StatGrid, DataTable } from "@/components/cards/BaseCards";
 import { ROUTES } from "@/config/routes";
@@ -182,7 +182,7 @@ export default function AccountPage() {
 
       <section className="card p-4">
         <p className="m-0 text-sm font-semibold text-white">Danger Zone</p>
-        <p className="m-0 mt-2 text-sm text-[var(--color-dim)]">
+        <p className="m-0 mt-2 text-sm text-[var(--color-neutral-500)]">
           Delete this account permanently and sign out immediately.
         </p>
         <button
@@ -207,3 +207,5 @@ export default function AccountPage() {
     </div>
   );
 }
+
+

@@ -39,5 +39,7 @@ mod tests {
         let info = collect_device_info().expect("device collection should succeed");
         assert!(!info.architecture.is_empty());
         assert!(info.hardware.cpu_cores > 0);
+        assert_eq!(info.architecture, info.hardware.architecture);
+        assert!(info.uptime_seconds.unwrap_or(0) > 0);
     }
 }
