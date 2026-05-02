@@ -6,12 +6,16 @@ import path from "node:path";
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 const backendTarget = (process.env.VITE_BACKEND_URL || process.env.BACKEND_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
+const dummyData = process.env.DUMMY_DATA ?? process.env.VITE_DUMMY_DATA ?? "true";
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
   root: path.resolve(__dirname),
   envDir: path.resolve(__dirname),
   plugins: [tailwindcss(), react()],
+  define: {
+    __DUMMY_DATA__: JSON.stringify(dummyData),
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
