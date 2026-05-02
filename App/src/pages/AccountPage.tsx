@@ -3,9 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { PageHeader, StatGrid, DataTable } from "@/components/cards/BaseCards";
 import { ROUTES } from "@/config/routes";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
-
-const AVATARS_BUCKET = import.meta.env.VITE_SUPABASE_AVATARS_BUCKET || "staff-pfps";
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const AUTH_STORAGE_KEY = "orca.auth.session";
 
@@ -158,16 +155,11 @@ export default function AccountPage() {
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-
-      if (error) {
-        setStatus(error.message);
+      const result = await updatePassword({ newPassword });
+      if (!result.ok) {
+        setStatus(result.message || "Failed to update password.");
         return;
       }
-
-      await updatePassword({ newPassword });
       setStatus("Password updated.");
       setNewPassword("");
       setConfirmPassword("");
@@ -219,7 +211,6 @@ export default function AccountPage() {
             )}
             <div className="min-w-0">
               <p className="m-0 text-sm font-medium text-white">Profile picture</p>
-              <p className="m-0 mt-0.5 text-xs text-slate-400">Stored in Supabase bucket: {AVATARS_BUCKET}</p>
               <label className="mt-2 inline-flex cursor-pointer items-center rounded-md border border-[var(--color-border-glow)] bg-[var(--color-surface-hover)] px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-primary-strong)] hover:opacity-80 transition-opacity">
                 {isUploadingAvatar ? "Uploading..." : "Upload New Picture"}
                 <input

@@ -90,6 +90,32 @@ class LoginView(View):
 
 
 @method_decorator(csrf_exempt, name="dispatch")
+class ChangePasswordView(View):
+    """POST /api/auth/change-password — update the organisation account password."""
+
+    def post(self, request):
+        org, err = get_org_from_request(request)
+        if err:
+            return err
+
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON."}, status=400)
+
+        new_password = body.get("new_password", "")
+        if not new_password:
+            return JsonResponse({"error": "new_password is required."}, status=400)
+
+        if len(new_password) < 8:
+            return JsonResponse({"error": "Password must be at least 8 characters."}, status=400)
+
+        org.set_password(new_password)
+        org.save()
+        return JsonResponse({}, status=200)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
 class LogoutView(View):
     def post(self, request):
         auth_header = request.headers.get("Authorization", "")
