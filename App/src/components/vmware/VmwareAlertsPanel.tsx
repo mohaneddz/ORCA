@@ -47,7 +47,7 @@ export function VmwareAlertsPanel({ alerts }: VmwareAlertsPanelProps) {
         style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
       >
         <div>
-          <p className="m-0 text-sm font-semibold text-white">Infrastructure Alerts</p>
+          <p className="m-0 text-sm font-semibold" style={{ color: "var(--color-neutral-100)" }}>Infrastructure Alerts</p>
           <p className="m-0 text-xs mt-0.5" style={{ color: "var(--color-neutral-500)" }}>
             {alerts.length} total · {critical} critical · {warning} warning
           </p>

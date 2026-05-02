@@ -4,3 +4,4 @@
 **/__pycache__/
 **/*.pyc
 /Extension/node_modules
+App/lightmode_issues_full.txt

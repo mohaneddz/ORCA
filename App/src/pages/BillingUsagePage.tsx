@@ -66,7 +66,7 @@ export default function BillingUsagePage() {
       <section className="card p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="m-0 text-sm font-semibold text-white">Limits</p>
+            <p className="m-0 text-sm font-semibold text-black dark:text-white">Limits</p>
             <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">
               Limits are not configured yet. Placeholder values are shown as percentages only.
             </p>

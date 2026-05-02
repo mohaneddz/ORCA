@@ -1,7 +1,7 @@
 import { DataTable, PageHeader } from "@/components/cards/BaseCards";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-const AXIS_STYLE = { fill: "#64748b", fontSize: 11 };
+const AXIS_STYLE = { fill: "var(--color-neutral-500)", fontSize: 11 };
 const CHART_PRIMARY = "#1d4ed8";
 const CHART_SECONDARY = "#38bdf8";
 
@@ -51,7 +51,7 @@ export default function NetworkPage() {
 
       <section className="grid gap-3 xl:grid-cols-3">
         <section className="card p-5 min-h-[280px]">
-          <p className="m-0 text-sm font-semibold text-white">Core Segment Risk</p>
+          <p className="m-0 text-sm font-semibold text-black dark:text-white">Core Segment Risk</p>
           <p className="m-0 mt-2 text-sm text-slate-400">Score 58/100</p>
           <div className="mt-3 h-[170px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -62,12 +62,12 @@ export default function NetworkPage() {
                     <stop offset="100%" stopColor={CHART_PRIMARY} stopOpacity={0.03} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <CartesianGrid stroke="var(--color-border-subtle)" vertical={false} />
                 <XAxis dataKey="name" tick={AXIS_STYLE} tickLine={false} axisLine={false} />
                 <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={34} />
                 <Tooltip
-                  contentStyle={{ background: "rgba(10, 25, 49, 0.76)", border: "1px solid rgba(29,78,216,0.45)", borderRadius: 10, color: "#e2e8f0", backdropFilter: "blur(10px)" }}
-                  labelStyle={{ color: "#64748b" }}
+                  contentStyle={{ background: "color-mix(in srgb, var(--color-surface-1) 78%, transparent)", border: "1px solid var(--color-border-subtle)", borderRadius: 10, color: "var(--color-neutral-200)", backdropFilter: "blur(10px)" }}
+                  labelStyle={{ color: "var(--color-neutral-500)" }}
                 />
                 <Area type="monotone" dataKey="value" name="Risk score" stroke={CHART_PRIMARY} strokeWidth={2.5} fill="url(#riskGradient)" dot={false} />
               </AreaChart>
@@ -76,17 +76,17 @@ export default function NetworkPage() {
         </section>
 
         <section className="card p-5 min-h-[280px]">
-          <p className="m-0 text-sm font-semibold text-white">External Exposure</p>
+          <p className="m-0 text-sm font-semibold text-black dark:text-white">External Exposure</p>
           <p className="m-0 mt-2 text-sm text-slate-400">7 critical open ports</p>
           <div className="mt-3 h-[170px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={exposureByZone} barCategoryGap="26%" margin={{ top: 4, right: 6, left: -20, bottom: 0 }}>
-                <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <CartesianGrid stroke="var(--color-border-subtle)" vertical={false} />
                 <XAxis dataKey="name" tick={AXIS_STYLE} tickLine={false} axisLine={false} />
                 <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={34} />
                 <Tooltip
-                  contentStyle={{ background: "rgba(10, 25, 49, 0.76)", border: "1px solid rgba(56,189,248,0.4)", borderRadius: 10, color: "#e2e8f0", backdropFilter: "blur(10px)" }}
-                  labelStyle={{ color: "#64748b" }}
+                  contentStyle={{ background: "color-mix(in srgb, var(--color-surface-1) 78%, transparent)", border: "1px solid var(--color-border-subtle)", borderRadius: 10, color: "var(--color-neutral-200)", backdropFilter: "blur(10px)" }}
+                  labelStyle={{ color: "var(--color-neutral-500)" }}
                 />
                 <Bar dataKey="value" name="Open ports" fill={CHART_SECONDARY} radius={[5, 5, 0, 0]} maxBarSize={26} />
               </BarChart>
@@ -95,7 +95,7 @@ export default function NetworkPage() {
         </section>
 
         <section className="card p-5 min-h-[280px]">
-          <p className="m-0 text-sm font-semibold text-white">NAC Compliance</p>
+          <p className="m-0 text-sm font-semibold text-black dark:text-white">NAC Compliance</p>
           <p className="m-0 mt-2 text-sm text-slate-400">91% compliant endpoints</p>
           <div className="mt-3 h-[170px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -106,14 +106,14 @@ export default function NetworkPage() {
                     <stop offset="100%" stopColor={CHART_SECONDARY} stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <CartesianGrid stroke="var(--color-border-subtle)" vertical={false} />
                 <XAxis dataKey="name" tick={AXIS_STYLE} tickLine={false} axisLine={false} />
                 <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={34} domain={[80, 100]} />
                 <Tooltip
-                  contentStyle={{ background: "rgba(10, 25, 49, 0.76)", border: "1px solid rgba(56,189,248,0.4)", borderRadius: 10, color: "#e2e8f0", backdropFilter: "blur(10px)" }}
-                  labelStyle={{ color: "#64748b" }}
+                  contentStyle={{ background: "color-mix(in srgb, var(--color-surface-1) 78%, transparent)", border: "1px solid var(--color-border-subtle)", borderRadius: 10, color: "var(--color-neutral-200)", backdropFilter: "blur(10px)" }}
+                  labelStyle={{ color: "var(--color-neutral-500)" }}
                 />
-                <Area type="monotone" dataKey="target" name="Target" stroke="#64748b" strokeWidth={1.8} fillOpacity={0} dot={false} />
+                <Area type="monotone" dataKey="target" name="Target" stroke="var(--color-neutral-500)" strokeWidth={1.8} fillOpacity={0} dot={false} />
                 <Area type="monotone" dataKey="compliant" name="Compliant %" stroke={CHART_SECONDARY} strokeWidth={2.5} fill="url(#nacGradient)" dot={false} />
               </AreaChart>
             </ResponsiveContainer>

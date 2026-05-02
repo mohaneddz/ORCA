@@ -25,7 +25,7 @@ export function PageHeader({
           </span>
         )}
         <h1 className="m-0 text-2xl font-bold tracking-tight text-[var(--color-neutral-100)]">{title}</h1>
-        <p className="m-0 mt-1.5 max-w-[78ch] text-sm" style={{ color: "var(--color-neutral-500)" }}>
+        <p className="m-0 mt-1.5 max-w-[78ch] text-sm text-[var(--color-neutral-400)]">
           {description}
         </p>
       </div>
@@ -66,8 +66,7 @@ export function StatGrid({ stats }: { stats: StatItem[] }) {
           >
             <div className="flex items-start justify-between mb-3">
               <p
-                className="m-0 text-[11px] font-semibold uppercase tracking-[0.08em]"
-                style={{ color: "var(--color-neutral-500)" }}
+                className="m-0 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-neutral-400)]"
               >
                 {stat.label}
               </p>
@@ -99,7 +98,7 @@ export function StatGrid({ stats }: { stats: StatItem[] }) {
             </p>
 
             {stat.helper && (
-              <p className="m-0 mt-1.5 text-xs" style={{ color: "var(--color-neutral-500)" }}>
+              <p className="m-0 mt-1.5 text-xs text-[var(--color-neutral-400)]">
                 {stat.helper}
               </p>
             )}
@@ -115,9 +114,9 @@ export function BulletActions({ title, items }: { title: string; items: string[]
   return (
     <section className="card p-5">
       <p className="m-0 mb-3 text-sm font-semibold text-[var(--color-neutral-100)]">{title}</p>
-      <ul className="m-0 space-y-2.5 pl-5 text-sm" style={{ color: "var(--color-neutral-500)" }}>
+      <ul className="m-0 space-y-2.5 pl-5 text-sm text-[var(--color-neutral-400)]">
         {items.map((item) => (
-          <li key={item} className="leading-relaxed" style={{ color: "var(--color-neutral-400)" }}>
+          <li key={item} className="leading-relaxed text-[var(--color-neutral-300)]">
             {item}
           </li>
         ))}
@@ -287,7 +286,7 @@ export function DataTable({
             ))}
             {displayRows.length === 0 && (
               <tr>
-                <td colSpan={columns.length} style={{ color: "var(--color-neutral-400)", textAlign: "center" }}>
+                <td colSpan={columns.length} className="text-center text-[var(--color-neutral-400)]">
                   No matching records.
                 </td>
               </tr>

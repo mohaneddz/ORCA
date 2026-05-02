@@ -189,7 +189,7 @@ export default function AccountPage() {
 
       <section className="grid gap-3 xl:grid-cols-2">
         <form className="card p-4" onSubmit={onSaveProfile}>
-          <p className="m-0 text-sm font-semibold text-white">Profile Information</p>
+          <p className="m-0 text-sm font-semibold text-black dark:text-white">Profile Information</p>
           <div className="mt-3 flex items-center gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3">
             {avatarUrl && !avatarLoadFailed ? (
               <img
@@ -268,7 +268,7 @@ export default function AccountPage() {
         </form>
 
         <form className="card p-4" onSubmit={onSavePassword}>
-          <p className="m-0 text-sm font-semibold text-white">Password Update</p>
+          <p className="m-0 text-sm font-semibold text-black dark:text-white">Password Update</p>
           <div className="mt-3 grid gap-3">
             <label className="grid gap-1 text-sm text-slate-200">
               New password
@@ -305,7 +305,7 @@ export default function AccountPage() {
       )}
 
       <section className="card p-4">
-        <p className="m-0 text-sm font-semibold text-white">Danger Zone</p>
+        <p className="m-0 text-sm font-semibold text-black dark:text-white">Danger Zone</p>
         <p className="m-0 mt-2 text-sm text-[var(--color-neutral-500)]">
           Delete this account permanently and sign out immediately.
         </p>

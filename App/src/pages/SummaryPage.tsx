@@ -227,7 +227,7 @@ export default function SummaryPage() {
         }
       />
 
-      <p className="m-0 text-xs" style={{ color: "#64748b" }}>
+      <p className="m-0 text-xs" style={{ color: "var(--color-neutral-500)" }}>
         {generatedLabel}
       </p>
 
@@ -237,8 +237,8 @@ export default function SummaryPage() {
             <p className="m-0 text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--color-primary-soft)" }}>
               What Is Happening
             </p>
-            <p className="m-0 mt-2 text-base font-semibold text-white">{data.interpretation.headline}</p>
-            <p className="m-0 mt-2 text-sm leading-relaxed" style={{ color: "#94a3b8" }}>
+            <p className="m-0 mt-2 text-base font-semibold text-[var(--color-neutral-100)]">{data.interpretation.headline}</p>
+            <p className="m-0 mt-2 text-sm leading-relaxed" style={{ color: "var(--color-neutral-400)" }}>
               This page turns technical signals into everyday language so non-technical teams can quickly understand the situation.
             </p>
           </section>
@@ -261,8 +261,8 @@ export default function SummaryPage() {
               secondaryLabel="Fixed Issues"
             />
             <section className="card p-5">
-              <p className="m-0 text-sm font-semibold text-white">Quick Explanation</p>
-              <ul className="m-0 mt-3 space-y-2 pl-5 text-sm" style={{ color: "#94a3b8" }}>
+              <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">Quick Explanation</p>
+              <ul className="m-0 mt-3 space-y-2 pl-5 text-sm" style={{ color: "var(--color-neutral-400)" }}>
                 {data.interpretation.highlights.map((point) => (
                   <li key={point}>{point}</li>
                 ))}
@@ -287,15 +287,15 @@ export default function SummaryPage() {
               }}
             />
             <section className="card p-5">
-              <p className="m-0 text-sm font-semibold text-white">Simple Guidance</p>
+              <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">Simple Guidance</p>
               <div className="mt-3 space-y-3 text-sm">
-                <p className="m-0 leading-relaxed" style={{ color: "#94a3b8" }}>
+                <p className="m-0 leading-relaxed" style={{ color: "var(--color-neutral-400)" }}>
                   First finish urgent items, then handle medium items, then send a short update.
                 </p>
-                <p className="m-0 leading-relaxed" style={{ color: "#94a3b8" }}>
+                <p className="m-0 leading-relaxed" style={{ color: "var(--color-neutral-400)" }}>
                   If the numbers get worse after two refreshes in a row, ask for extra help from leadership.
                 </p>
-                <p className="m-0 leading-relaxed" style={{ color: "#94a3b8" }}>
+                <p className="m-0 leading-relaxed" style={{ color: "var(--color-neutral-400)" }}>
                   After important fixes, press Refresh to get a new explanation and see if things improved.
                 </p>
               </div>

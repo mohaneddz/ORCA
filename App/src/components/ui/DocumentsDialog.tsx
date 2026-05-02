@@ -87,15 +87,16 @@ export default function DocumentsDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-xl border border-white/10 bg-[#071225] shadow-2xl flex flex-col max-h-[80vh]">
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
+      <div className="w-full max-w-md rounded-xl border shadow-2xl flex flex-col max-h-[80vh]" style={{ background: "var(--color-surface-1)", borderColor: "var(--color-border-subtle)" }}>
+        <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: "var(--color-border-subtle)" }}>
           <div className="flex items-center gap-2">
-            <Folder size={18} className="text-[#00c6c1]" />
-            <h2 className="text-lg font-semibold text-white">Documents</h2>
+            <Folder size={18} style={{ color: "var(--color-primary)" }} />
+            <h2 className="text-lg font-semibold text-[var(--color-neutral-100)]">Documents</h2>
           </div>
-          <button 
+          <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white hover:bg-white/5 rounded-md transition-colors"
+            className="p-1.5 rounded-md transition-colors hover:opacity-80"
+            style={{ color: "var(--color-neutral-400)" }}
           >
             <X size={18} />
           </button>
@@ -107,27 +108,29 @@ export default function DocumentsDialog({ onClose }: { onClose: () => void }) {
               <Loader2 className="animate-spin text-[#00c6c1]" size={24} />
             </div>
           ) : documents.length === 0 ? (
-            <div className="text-center py-8 text-slate-500 text-sm">
+            <div className="text-center py-8 text-sm" style={{ color: "var(--color-neutral-500)" }}>
               No documents found.
             </div>
           ) : (
             <div className="space-y-2">
               {documents.map((doc) => (
-                <div 
-                  key={doc.name} 
-                  className="flex items-center justify-between p-3 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
+                <div
+                  key={doc.name}
+                  className="flex items-center justify-between p-3 rounded-lg border transition-colors"
+                  style={{ background: "var(--color-surface-muted)", borderColor: "var(--color-border-subtle)" }}
                 >
                   <div className="flex items-center gap-3 overflow-hidden">
-                    <FileText size={16} className="text-slate-400 shrink-0" />
-                    <div className="truncate text-sm font-medium text-slate-200" title={doc.name}>
+                    <FileText size={16} className="shrink-0" style={{ color: "var(--color-neutral-400)" }} />
+                    <div className="truncate text-sm font-medium" style={{ color: "var(--color-neutral-200)" }} title={doc.name}>
                       {doc.name}
-                      <span className="ml-2 text-xs text-slate-500">({doc.chunks} chunks)</span>
+                      <span className="ml-2 text-xs" style={{ color: "var(--color-neutral-500)" }}>({doc.chunks} chunks)</span>
                     </div>
                   </div>
                   <button
                     onClick={() => handleDelete(doc.name)}
                     disabled={deletingDoc === doc.name}
-                    className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-400/10 rounded-md transition-colors shrink-0 disabled:opacity-50"
+                    className="p-1.5 rounded-md transition-colors shrink-0 disabled:opacity-50"
+                    style={{ color: "var(--color-neutral-500)" }}
                   >
                     {deletingDoc === doc.name ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                   </button>
@@ -137,7 +140,7 @@ export default function DocumentsDialog({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        <div className="p-4 border-t border-white/10">
+        <div className="p-4 border-t" style={{ borderColor: "var(--color-border-subtle)" }}>
           <input 
             type="file" 
             ref={fileInputRef} 

@@ -17,7 +17,7 @@ const campaignBreakdown = [
   { group: "Marketing", completed: 79 },
 ];
 
-const AXIS_STYLE = { fill: "#64748b", fontSize: 11 };
+const AXIS_STYLE = { fill: "var(--color-neutral-500)", fontSize: 11 };
 const CHART_PRIMARY = "#1d4ed8";
 const CHART_SECONDARY = "#38bdf8";
 
@@ -32,13 +32,13 @@ export default function TrainingPage() {
 
       <section className="grid gap-3 xl:grid-cols-3">
         <section className="card p-5 xl:col-span-2 min-h-[420px]">
-          <p className="m-0 text-sm font-semibold text-white">Training Performance Board</p>
-          <p className="m-0 mt-2 text-sm text-slate-400">Resilience curve, suspicious-report growth, and click-risk decline across active simulations.</p>
+          <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">Training Performance Board</p>
+          <p className="m-0 mt-2 text-sm text-[var(--color-neutral-400)]">Resilience curve, suspicious-report growth, and click-risk decline across active simulations.</p>
           <div className="mt-4 grid gap-3 md:grid-cols-[1.65fr_1fr]">
-            <section className="rounded-xl border border-white/8 bg-slate-900/30 p-3">
-              <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
+            <section className="rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-2)] p-3">
+              <div className="mb-2 flex items-center justify-between text-xs text-[var(--color-neutral-400)]">
                 <span>6-Week Behavior Trend</span>
-                <span className="text-cyan-300">Click risk: -50%</span>
+                <span className="text-[var(--color-primary)]">Click risk: -50%</span>
               </div>
               <div className="h-[230px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -53,12 +53,12 @@ export default function TrainingPage() {
                         <stop offset="100%" stopColor={CHART_SECONDARY} stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <CartesianGrid stroke="var(--color-border-subtle)" vertical={false} />
                     <XAxis dataKey="week" tick={AXIS_STYLE} tickLine={false} axisLine={false} />
                     <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={32} domain={[0, 100]} />
                     <Tooltip
-                      contentStyle={{ background: "rgba(10, 25, 49, 0.76)", border: "1px solid rgba(29,78,216,0.45)", borderRadius: 10, color: "#e2e8f0", backdropFilter: "blur(10px)" }}
-                      labelStyle={{ color: "#64748b" }}
+                      contentStyle={{ background: "color-mix(in srgb, var(--color-surface-1) 78%, transparent)", border: "1px solid var(--color-border-subtle)", borderRadius: 10, color: "var(--color-neutral-200)", backdropFilter: "blur(10px)" }}
+                      labelStyle={{ color: "var(--color-neutral-500)" }}
                     />
                     <Area type="monotone" dataKey="passRate" name="Pass rate %" stroke={CHART_PRIMARY} strokeWidth={2.4} fill="url(#passRateGradient)" dot={false} />
                     <Area type="monotone" dataKey="reportRate" name="Report rate %" stroke={CHART_SECONDARY} strokeWidth={2.4} fill="url(#reportRateGradient)" dot={false} />
@@ -66,17 +66,17 @@ export default function TrainingPage() {
                 </ResponsiveContainer>
               </div>
             </section>
-            <section className="rounded-xl border border-white/8 bg-slate-900/30 p-3">
-              <p className="m-0 text-xs text-slate-400">Completion by Department</p>
+            <section className="rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-2)] p-3">
+              <p className="m-0 text-xs text-[var(--color-neutral-400)]">Completion by Department</p>
               <div className="mt-2 h-[230px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={campaignBreakdown} margin={{ top: 4, right: 6, left: -20, bottom: 0 }} barCategoryGap="28%">
-                    <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <CartesianGrid stroke="var(--color-border-subtle)" vertical={false} />
                     <XAxis dataKey="group" tick={AXIS_STYLE} tickLine={false} axisLine={false} />
                     <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={32} domain={[0, 100]} />
                     <Tooltip
-                      contentStyle={{ background: "rgba(10, 25, 49, 0.76)", border: "1px solid rgba(56,189,248,0.4)", borderRadius: 10, color: "#e2e8f0", backdropFilter: "blur(10px)" }}
-                      labelStyle={{ color: "#64748b" }}
+                      contentStyle={{ background: "color-mix(in srgb, var(--color-surface-1) 78%, transparent)", border: "1px solid var(--color-border-subtle)", borderRadius: 10, color: "var(--color-neutral-200)", backdropFilter: "blur(10px)" }}
+                      labelStyle={{ color: "var(--color-neutral-500)" }}
                     />
                     <Bar dataKey="completed" name="Completed %" fill={CHART_SECONDARY} radius={[5, 5, 0, 0]} maxBarSize={24} />
                   </BarChart>
@@ -85,16 +85,16 @@ export default function TrainingPage() {
             </section>
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-            <div className="rounded-lg border border-blue-700/35 bg-blue-900/20 px-3 py-2 text-slate-300 backdrop-blur-sm">Avg Pass Rate <span className="ml-1 font-semibold text-white">74%</span></div>
-            <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-slate-300">Avg Report Rate <span className="ml-1 font-semibold text-white">59%</span></div>
-            <div className="rounded-lg border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-slate-300">Avg Click Rate <span className="ml-1 font-semibold text-white">20%</span></div>
+            <div className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-2)] px-3 py-2 text-[var(--color-neutral-300)] backdrop-blur-sm">Avg Pass Rate <span className="ml-1 font-semibold text-[var(--color-neutral-100)]">74%</span></div>
+            <div className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-2)] px-3 py-2 text-[var(--color-neutral-300)]">Avg Report Rate <span className="ml-1 font-semibold text-[var(--color-neutral-100)]">59%</span></div>
+            <div className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-2)] px-3 py-2 text-[var(--color-neutral-300)]">Avg Click Rate <span className="ml-1 font-semibold text-[var(--color-neutral-100)]">20%</span></div>
           </div>
         </section>
         <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-1">
           {["Active Campaigns", "Failure Rate", "Report Rate", "Auto-Enrolled"].map((title, idx) => (
             <section key={title} className="card p-5 min-h-[96px]">
-              <p className="m-0 text-xs uppercase tracking-[0.08em] text-slate-400">{title}</p>
-              <p className="m-0 mt-2 text-xl font-bold text-white">{["9", "14%", "73%", "22"][idx]}</p>
+              <p className="m-0 text-xs uppercase tracking-[0.08em] text-[var(--color-neutral-400)]">{title}</p>
+              <p className="m-0 mt-2 text-xl font-bold text-[var(--color-neutral-100)]">{["9", "14%", "73%", "22"][idx]}</p>
             </section>
           ))}
         </div>
@@ -114,8 +114,8 @@ export default function TrainingPage() {
           />
         </div>
         <section className="card p-5">
-          <p className="m-0 text-sm font-semibold text-white">Assisting Tools</p>
-          <ul className="m-0 mt-3 space-y-2 pl-5 text-sm text-slate-400">
+          <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">Assisting Tools</p>
+          <ul className="m-0 mt-3 space-y-2 pl-5 text-sm text-[var(--color-neutral-400)]">
             <li>Template generator</li>
             <li>Adaptive difficulty</li>
             <li>Auto-remediation links</li>
