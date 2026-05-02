@@ -1,3 +1,4 @@
+import secrets
 import uuid
 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
@@ -13,14 +14,28 @@ class OrganizationManager(BaseUserManager):
         org.save(using=self._db)
         return org
 
+    def create_superuser(self, email, name, password=None):
+        org = self.create_user(email=email, name=name, password=password)
+        org.is_staff = True
+        org.is_superuser = True
+        org.save(using=self._db)
+        return org
+
 
 class Organization(AbstractBaseUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    supabase_uid = models.UUIDField(unique=True, null=True, blank=True, help_text="Supabase Auth user ID (sub claim in JWT)")
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    is_superuser = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def has_perm(self, perm, obj=None):
+        return self.is_superuser
+
+    def has_module_perms(self, app_label):
+        return self.is_superuser
 
     objects = OrganizationManager()
 
@@ -31,16 +46,40 @@ class Organization(AbstractBaseUser):
         return self.name
 
 
-class Device(models.Model):
+class Employee(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(
-        Organization, on_delete=models.CASCADE, related_name="devices"
+        Organization, on_delete=models.CASCADE, related_name="employees"
     )
-    employee_name = models.CharField(max_length=255)
-    employee_email = models.EmailField()
-    device_identifier = models.CharField(max_length=255, unique=True)
+    email = models.EmailField(unique=True)
+    password = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
     registered_at = models.DateTimeField(auto_now_add=True)
 
+    def set_password(self, raw_password):
+        from django.contrib.auth.hashers import make_password
+        self.password = make_password(raw_password)
+
+    def check_password(self, raw_password):
+        from django.contrib.auth.hashers import check_password as django_check_password
+        return django_check_password(raw_password, self.password)
+
     def __str__(self):
-        return f"{self.device_identifier} ({self.employee_name})"
+        return self.email
+
+
+class AuthToken(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="tokens"
+    )
+    key = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.key:
+            self.key = secrets.token_hex(32)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Token for {self.organization}"
