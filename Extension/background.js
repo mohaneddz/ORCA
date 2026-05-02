@@ -1,15 +1,15 @@
-// ─── Configuration ────────────────────────────────────────────────────────────
-
 const BACKEND_URL = "http://127.0.0.1:8000";
 const DEBUG_MODE = true;
-const POLL_INTERVAL_MINUTES = 0.2; // 12 seconds — adjust as needed
+const POLL_INTERVAL_MINUTES = 0.2; // 12 seconds
 const OFFLINE_QUEUE_MAX = 20;
+const BLACKLIST_CACHE_TTL_MS = 5 * 60 * 1000;
 
-const BLACKLIST = [
+const DEFAULT_BLACKLIST = [
   "malware-test.local",
-  "phishing-test.local",
+  "credential-harvest-test.local",
   "eicar.org",
 ];
+const SENSITIVE_TOPICS_URL = chrome.runtime.getURL("config/sensitive-topics.json");
 
 const SEMANTIC_DLP_CONFIG = {
   modelId: "Xenova/all-MiniLM-L6-v2",
@@ -17,19 +17,9 @@ const SEMANTIC_DLP_CONFIG = {
   maxInputChars: 12000,
 };
 
-const SENSITIVE_TOPICS = [
-  { id: "credentials", text: "passwords api keys private keys secrets authentication tokens login credentials" },
-  { id: "employee_data", text: "employee records personal identifiers social security passport date of birth hr files" },
-  { id: "finance", text: "bank account iban swift payroll salary invoices financial statements revenue forecast" },
-  { id: "legal", text: "nda contracts acquisition merger legal terms confidential agreement compliance investigation" },
-  { id: "customer_data", text: "customer database pii phone email address support tickets private client information" },
-  { id: "ip_strategy", text: "source code architecture roadmap unreleased product strategy internal planning proprietary design" },
-];
-
 let semanticExtractorPromise = null;
 let sensitiveTopicEmbeddingsPromise = null;
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+let sensitiveTopicsPromise = null;
 
 function log(...args) {
   if (DEBUG_MODE) console.log("[CyberBase BG]", ...args);
@@ -39,6 +29,7 @@ function ensureTransformersRuntime() {
   if (!globalThis.transformers) {
     importScripts(chrome.runtime.getURL("lib/transformers.min.js"));
   }
+
   if (!globalThis.transformers) {
     throw new Error("Transformers.js runtime failed to load");
   }
@@ -102,6 +93,7 @@ function cosineSimilarity(vecA, vecB) {
     magA += a * a;
     magB += b * b;
   }
+
   if (magA === 0 || magB === 0) return 0;
   return dot / (Math.sqrt(magA) * Math.sqrt(magB));
 }
@@ -109,8 +101,9 @@ function cosineSimilarity(vecA, vecB) {
 async function getSensitiveTopicEmbeddings() {
   if (!sensitiveTopicEmbeddingsPromise) {
     sensitiveTopicEmbeddingsPromise = (async () => {
+      const sensitiveTopics = await getSensitiveTopics();
       const embeddings = [];
-      for (const topic of SENSITIVE_TOPICS) {
+      for (const topic of sensitiveTopics) {
         const vector = await getEmbeddingVector(topic.text);
         embeddings.push({ ...topic, vector });
       }
@@ -121,6 +114,68 @@ async function getSensitiveTopicEmbeddings() {
     });
   }
   return sensitiveTopicEmbeddingsPromise;
+}
+
+async function getSensitiveTopics() {
+  if (!sensitiveTopicsPromise) {
+    sensitiveTopicsPromise = (async () => {
+      const response = await fetch(SENSITIVE_TOPICS_URL);
+      if (!response.ok) throw new Error("Could not load sensitive topics config.");
+      const payload = await response.json();
+      const topics = Array.isArray(payload?.topics) ? payload.topics : [];
+      if (!topics.length) throw new Error("Sensitive topics config is empty.");
+
+      return topics
+        .map((topic) => ({
+          id: String(topic.id || "topic"),
+          text: String(topic.text || "").trim(),
+        }))
+        .filter((topic) => topic.text.length > 0);
+    })().catch((error) => {
+      sensitiveTopicsPromise = null;
+      throw error;
+    });
+  }
+
+  return sensitiveTopicsPromise;
+}
+
+async function getBlacklistDomains(forceRefresh = false) {
+  const now = Date.now();
+  const cached = await chrome.storage.local.get(["blacklistDomains", "blacklistFetchedAt"]);
+  const cachedDomains = Array.isArray(cached.blacklistDomains) ? cached.blacklistDomains : [];
+  const fetchedAt = Number(cached.blacklistFetchedAt || 0);
+
+  const cacheValid = !forceRefresh && cachedDomains.length > 0 && now - fetchedAt < BLACKLIST_CACHE_TTL_MS;
+  if (cacheValid) return cachedDomains;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/extension/blacklist/`, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error(`Blacklist endpoint returned ${res.status}`);
+
+    const data = await res.json();
+    const domains = Array.isArray(data?.domains)
+      ? data.domains.map((d) => String(d || "").toLowerCase().trim()).filter(Boolean)
+      : [];
+
+    if (domains.length) {
+      await chrome.storage.local.set({ blacklistDomains: domains, blacklistFetchedAt: now });
+      return domains;
+    }
+  } catch (error) {
+    clearTimeout(timeout);
+    log("Blacklist fetch failed:", error.message || error);
+  }
+
+  return cachedDomains.length ? cachedDomains : DEFAULT_BLACKLIST;
+}
+
+function isHostnameBlacklisted(hostname, domains) {
+  const host = String(hostname || "").toLowerCase().trim();
+  return domains.some((entry) => host === entry || host.endsWith("." + entry));
 }
 
 async function runSemanticDlp(text) {
@@ -170,18 +225,16 @@ async function runSemanticDlp(text) {
 async function warmSemanticModel() {
   try {
     await getSensitiveTopicEmbeddings();
-    log("Semantic DLP model and topic vectors are warmed.");
+    log("Semantic model warm-up complete.");
   } catch (error) {
-    log("Semantic warm-up failed:", error.message || error);
+    log("Semantic model warm-up failed:", error.message || error);
   }
 }
-
-// ─── Alarm bootstrap ─────────────────────────────────────────────────────────
 
 chrome.alarms.get("poll", (alarm) => {
   if (!alarm) {
     chrome.alarms.create("poll", { periodInMinutes: POLL_INTERVAL_MINUTES });
-    log("Alarme créée.");
+    log("Polling alarm created.");
   }
 });
 
@@ -192,14 +245,16 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.runtime.onStartup.addListener(() => {
   chrome.alarms.create("poll", { periodInMinutes: POLL_INTERVAL_MINUTES });
+  warmSemanticModel();
 });
-
-// ─── Polling ─────────────────────────────────────────────────────────────────
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== "poll") return;
   const { emp_id } = await chrome.storage.local.get("emp_id");
-  if (!emp_id) { log("emp_id absent, sondage ignoré."); return; }
+  if (!emp_id) {
+    log("emp_id missing, skipping poll.");
+    return;
+  }
   await drainOfflineQueue(emp_id);
   await pollAdminTriggers(emp_id);
 });
@@ -207,6 +262,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 async function pollAdminTriggers(emp_id) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
+
   try {
     const res = await fetch(
       `${BACKEND_URL}/api/extension/poll/?emp_id=${encodeURIComponent(emp_id)}`,
@@ -215,51 +271,62 @@ async function pollAdminTriggers(emp_id) {
     clearTimeout(timeout);
     const data = await res.json();
     await chrome.storage.local.set({ lastPollTime: Date.now() });
-    log("Sondage:", data);
+    log("Poll response:", data);
+
     if (!data.hasEvent) return;
+    if (!data.eventPayload || data.eventPayload.type !== "QUIZ") return;
+
     const { lastEventId } = await chrome.storage.local.get("lastEventId");
     if (data.eventPayload.event_id === lastEventId) return;
+
     await chrome.storage.local.set({ lastEventId: data.eventPayload.event_id });
     const delivered = await sendToAnyTab({ type: "ADMIN_TRIGGER", payload: data.eventPayload });
-    if (!delivered) log("Événement non distribué — aucun onglet injectable.");
+    if (!delivered) log("Could not deliver quiz event to any injectable tab.");
   } catch (e) {
     clearTimeout(timeout);
-    log("Échec du sondage:", e.message);
+    log("Polling failed:", e.message);
   }
 }
 
-// ─── Tab messaging ───────────────────────────────────────────────────────────
-
 function isInjectable(url) {
   if (!url) return false;
-  return !url.startsWith("chrome://") &&
+  return (
+    !url.startsWith("chrome://") &&
     !url.startsWith("chrome-extension://") &&
     !url.startsWith("about:") &&
-    !url.startsWith("edge://");
+    !url.startsWith("edge://")
+  );
 }
 
 async function sendToAnyTab(message) {
   const activeTabs = await chrome.tabs.query({ active: true, currentWindow: true });
   for (const tab of activeTabs) {
     if (isInjectable(tab.url)) {
-      try { await chrome.tabs.sendMessage(tab.id, message); return true; } catch (_) {}
+      try {
+        await chrome.tabs.sendMessage(tab.id, message);
+        return true;
+      } catch (_) {}
     }
   }
+
   const allTabs = await chrome.tabs.query({});
   for (const tab of allTabs) {
     if (isInjectable(tab.url)) {
-      try { await chrome.tabs.sendMessage(tab.id, message); return true; } catch (_) {}
+      try {
+        await chrome.tabs.sendMessage(tab.id, message);
+        return true;
+      } catch (_) {}
     }
   }
+
   return false;
 }
-
-// ─── Offline queue ───────────────────────────────────────────────────────────
 
 async function drainOfflineQueue(emp_id) {
   const { offlineQueue = [] } = await chrome.storage.local.get("offlineQueue");
   if (!offlineQueue.length) return;
-  log(`Vidage de ${offlineQueue.length} log(s) en attente.`);
+
+  log(`Draining ${offlineQueue.length} queued log(s).`);
   const remaining = [];
   for (const item of offlineQueue) {
     const ok = await postLog(item.url, { ...item.body, employee_id: emp_id });
@@ -289,18 +356,18 @@ async function postLog(url, body) {
     return res.ok;
   } catch (e) {
     clearTimeout(timeout);
-    log("Échec POST:", url, e.message);
+    log("POST failed:", url, e.message);
     return false;
   }
 }
 
-// ─── Message handler ─────────────────────────────────────────────────────────
-
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  handleMessage(message, sender).then(sendResponse).catch((e) => {
-    log("Erreur gestionnaire:", e.message);
-    sendResponse({ ok: false });
-  });
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  handleMessage(message)
+    .then(sendResponse)
+    .catch((e) => {
+      log("Message handler error:", e.message);
+      sendResponse({ ok: false });
+    });
   return true;
 });
 
@@ -310,12 +377,12 @@ async function handleMessage(message) {
 
   switch (message.action) {
     case "CHECK_BLACKLIST": {
-      const blocked = BLACKLIST.some(
-        (e) => message.hostname === e || message.hostname.endsWith("." + e)
-      );
+      const domains = await getBlacklistDomains();
+      const blocked = isHostnameBlacklisted(message.hostname, domains);
       if (blocked) {
         const ok = await postLog("/api/logs/blacklist/", {
-          employee_id: eid, attempted_url: message.attempted_url,
+          employee_id: eid,
+          attempted_url: message.attempted_url,
         });
         if (!ok) await queueLog("/api/logs/blacklist/", { attempted_url: message.attempted_url });
       }
@@ -328,8 +395,8 @@ async function handleMessage(message) {
       } catch (error) {
         log("Semantic DLP failed:", error.message || error);
         return {
-          blocked: false,
-          top_score: 0,
+          blocked: true,
+          top_score: 1,
           top_topic: "semantic_error",
           threshold: SEMANTIC_DLP_CONFIG.threshold,
         };
@@ -354,26 +421,17 @@ async function handleMessage(message) {
     }
 
     case "SUBMIT_QUIZ": {
-      const ok = await postLog("/api/gamification/submit-quiz/", {
-        employee_id: eid, quiz_id: message.quiz_id, answer_selected: message.answer,
-      });
-      if (!ok) await queueLog("/api/gamification/submit-quiz/", {
-        quiz_id: message.quiz_id, answer_selected: message.answer,
-      });
-      return { ok: true };
-    }
-
-    case "PHISHING_RESULT": {
-      const ok = await postLog("/api/logs/phishing/", {
-        employee_id: eid, clicked: message.clicked, website: message.website,
-      });
-      if (!ok) await queueLog("/api/logs/phishing/", {
-        clicked: message.clicked, website: message.website,
-      });
+      const payload = {
+        employee_id: eid,
+        quiz_id: message.quiz_id,
+        answer_selected: message.answer,
+      };
+      const ok = await postLog("/api/gamification/submit-quiz/", payload);
+      if (!ok) await queueLog("/api/gamification/submit-quiz/", payload);
       return { ok: true };
     }
 
     default:
-      return { ok: false, error: "Action inconnue" };
+      return { ok: false, error: "Unknown action" };
   }
 }

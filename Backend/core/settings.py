@@ -134,3 +134,9 @@ AUTH_USER_MODEL = "organizations.Organization"
 # Supabase
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+
+EXTENSION_BLACKLIST_DOMAINS = [
+    "malware-test.local",
+    "credential-harvest-test.local",
+    "eicar.org",
+]

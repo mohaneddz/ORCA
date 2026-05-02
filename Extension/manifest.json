@@ -26,6 +26,8 @@
       "resources": [
         "lib/pdf.worker.min.js",
         "lib/transformers.min.js",
+        "config/regex-patterns.json",
+        "config/sensitive-topics.json",
         "lib/ort-wasm.wasm",
         "lib/ort-wasm-threaded.wasm",
         "lib/ort-wasm-simd.wasm",
