@@ -1,0 +1,157 @@
+import django.db.models.deletion
+import uuid
+from django.conf import settings
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    initial = True
+
+    dependencies = [
+        ("organizations", "0009_employee_delete_device"),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name="PhishingTemplate",
+            fields=[
+                ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ("attack_type", models.CharField(
+                    choices=[
+                        ("IT_RESET", "IT Password Reset"),
+                        ("INVOICE", "Fake Invoice Approval"),
+                        ("DELIVERY", "Package Delivery Notification"),
+                        ("HR_UPDATE", "HR Policy Update"),
+                    ],
+                    max_length=20,
+                )),
+                ("language", models.CharField(
+                    choices=[
+                        ("EN", "English"),
+                        ("FR", "French"),
+                        ("AR_MSA", "Arabic (MSA)"),
+                        ("AR_DARIJA", "Arabic (Darija)"),
+                    ],
+                    default="EN",
+                    max_length=10,
+                )),
+                ("difficulty", models.IntegerField(
+                    choices=[
+                        (1, "Easy \u2013 obvious signals (poor grammar, suspicious link)"),
+                        (2, "Medium \u2013 plausible but detectable"),
+                        (3, "Hard \u2013 spear-phishing, realistic domain spoofing"),
+                    ],
+                    default=1,
+                )),
+                ("subject", models.CharField(max_length=512)),
+                ("body", models.TextField()),
+                ("sender_name", models.CharField(max_length=255)),
+                ("sender_domain", models.CharField(max_length=255)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+            ],
+            options={"ordering": ["attack_type", "difficulty"]},
+        ),
+        migrations.CreateModel(
+            name="PhishingCampaign",
+            fields=[
+                ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ("name", models.CharField(max_length=255)),
+                ("status", models.CharField(
+                    choices=[("DRAFT", "Draft"), ("ACTIVE", "Active"), ("COMPLETED", "Completed")],
+                    default="DRAFT",
+                    max_length=12,
+                )),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("launched_at", models.DateTimeField(blank=True, null=True)),
+                ("completed_at", models.DateTimeField(blank=True, null=True)),
+                ("organization", models.ForeignKey(
+                    on_delete=django.db.models.deletion.CASCADE,
+                    related_name="phishing_campaigns",
+                    to=settings.AUTH_USER_MODEL,
+                )),
+                ("template", models.ForeignKey(
+                    on_delete=django.db.models.deletion.PROTECT,
+                    related_name="campaigns",
+                    to="phishing.phishingtemplate",
+                )),
+            ],
+            options={"ordering": ["-created_at"]},
+        ),
+        migrations.CreateModel(
+            name="PhishingSimulationTarget",
+            fields=[
+                ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ("tracking_token", models.UUIDField(default=uuid.uuid4, editable=False, unique=True)),
+                ("sent_at", models.DateTimeField(blank=True, null=True)),
+                ("clicked_at", models.DateTimeField(blank=True, null=True)),
+                ("campaign", models.ForeignKey(
+                    on_delete=django.db.models.deletion.CASCADE,
+                    related_name="targets",
+                    to="phishing.phishingcampaign",
+                )),
+                ("employee", models.ForeignKey(
+                    on_delete=django.db.models.deletion.CASCADE,
+                    related_name="simulation_targets",
+                    to="organizations.employee",
+                )),
+            ],
+            options={"unique_together": {("campaign", "employee")}},
+        ),
+        migrations.CreateModel(
+            name="TrainingModule",
+            fields=[
+                ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ("attack_type", models.CharField(
+                    choices=[
+                        ("IT_RESET", "IT Password Reset"),
+                        ("INVOICE", "Fake Invoice Approval"),
+                        ("DELIVERY", "Package Delivery Notification"),
+                        ("HR_UPDATE", "HR Policy Update"),
+                    ],
+                    max_length=20,
+                )),
+                ("language", models.CharField(
+                    choices=[
+                        ("EN", "English"),
+                        ("FR", "French"),
+                        ("AR_MSA", "Arabic (MSA)"),
+                        ("AR_DARIJA", "Arabic (Darija)"),
+                    ],
+                    default="EN",
+                    max_length=10,
+                )),
+                ("title", models.CharField(max_length=255)),
+                ("content", models.TextField()),
+                ("duration_minutes", models.PositiveSmallIntegerField(default=5)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+            ],
+            options={"unique_together": {("attack_type", "language")}},
+        ),
+        migrations.CreateModel(
+            name="TrainingEnrollment",
+            fields=[
+                ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ("enrolled_at", models.DateTimeField(auto_now_add=True)),
+                ("completed_at", models.DateTimeField(blank=True, null=True)),
+                ("employee", models.ForeignKey(
+                    on_delete=django.db.models.deletion.CASCADE,
+                    related_name="training_enrollments",
+                    to="organizations.employee",
+                )),
+                ("module", models.ForeignKey(
+                    on_delete=django.db.models.deletion.CASCADE,
+                    related_name="enrollments",
+                    to="phishing.trainingmodule",
+                )),
+                ("simulation_target", models.ForeignKey(
+                    blank=True,
+                    null=True,
+                    on_delete=django.db.models.deletion.SET_NULL,
+                    related_name="training_enrollments",
+                    to="phishing.phishingsimulationtarget",
+                )),
+            ],
+            options={"unique_together": {("employee", "module")}},
+        ),
+    ]
