@@ -87,36 +87,43 @@ function showBlockedPage(attemptedUrl) {
 // ─── Avertissement upload universel ──────────────────────────────────────────
 
 let dlpActive = false;
-let classifierPromise = null;
+const replayBypassInputs = new WeakSet();
 
-const DLP_CONFIG = {
-  warningThreshold: 0.62,
-  sampleChars: 4000,
-  maxReadBytes: 120000,
-  modelId: "Xenova/distilbert-base-uncased-finetuned-sst-2-english",
+const DLP_PIPELINE_CONFIG = {
+  maxExtractChars: 12000,
+  maxPdfPages: 8,
 };
 
-const FILE_TEXT_TYPES = [
-  "text/plain",
-  "text/csv",
-  "application/json",
-  "application/xml",
-  "text/xml",
-  "text/markdown",
-  "application/javascript",
-  "text/javascript",
-];
-
-const SENSITIVE_HINTS = [
-  /confidential/i, /internal use only/i, /salary/i, /payroll/i, /customer list/i, /nda/i,
-  /trade secret/i, /credential/i, /password/i, /token/i, /iban/i, /swift/i, /invoice/i,
-  /contract/i, /roadmap/i, /proprietary/i, /financial report/i, /employee id/i,
-  /social security/i, /passport/i, /tax/i, /project x/i,
+const TIER1_RESTRICTED_PATTERNS = [
+  {
+    id: "credentials",
+    label: "credentials or secrets",
+    regex: /\b(password|passwd|api[_\s-]?key|secret[_\s-]?key|private[_\s-]?key|access[_\s-]?token|refresh[_\s-]?token|bearer)\b/i,
+  },
+  {
+    id: "personal_id",
+    label: "personal identifiers",
+    regex: /\b(ssn|social security|passport|national id|employee id|dob|date of birth)\b/i,
+  },
+  {
+    id: "banking",
+    label: "banking information",
+    regex: /\b(iban|swift|routing number|bank account|credit card|card number)\b/i,
+  },
+  {
+    id: "confidentiality_marker",
+    label: "confidentiality markers",
+    regex: /\b(confidential|internal use only|do not share|restricted|private and confidential)\b/i,
+  },
+  {
+    id: "legal_finance",
+    label: "legal or finance sensitive content",
+    regex: /\b(nda|contract|payroll|salary|financial report|acquisition|merger)\b/i,
+  },
 ];
 
 function attachDlpListeners() {
   document.addEventListener("change", handleFileChange, true);
-  document.addEventListener("drop", handleFileDrop, true);
 }
 
 async function handleFileChange(event) {
@@ -124,187 +131,195 @@ async function handleFileChange(event) {
   if (!input || input.type !== "file") return;
   if (!input.files || input.files.length === 0) return;
   if (dlpActive) return;
+  if (replayBypassInputs.has(input)) {
+    replayBypassInputs.delete(input);
+    return;
+  }
+
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  event.stopPropagation();
 
   const file = input.files[0];
-  const analysis = await analyzeUploadRisk(file);
+  dlpActive = true;
+  try {
+    const analysis = await runUploadPipeline(file);
+    if (!analysis.shouldBlock) {
+      await sendDlpDecisionLog("allow", file.name, analysis);
+      replayBypassInputs.add(input);
+      input.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+      return;
+    }
 
-  if (!analysis.shouldWarn) {
-    await sendDlpDecisionLog("allow", file.name, analysis);
-    return;
+    const userAction = await showDlpWarningModal(file.name, analysis);
+    const actionTaken = userAction === "cancel" ? "cancel" : "force";
+    await sendDlpDecisionLog(actionTaken, file.name, analysis);
+
+    if (actionTaken === "cancel") {
+      input.value = "";
+      return;
+    }
+
+    replayBypassInputs.add(input);
+    input.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+  } catch (error) {
+    log("DLP pipeline error:", error.message || error);
+    input.value = "";
+    await sendDlpDecisionLog("cancel", file.name, {
+      topic: "Extraction pipeline failure",
+      similarity: 1,
+      tier: "pipeline_error",
+      reason: error.message || String(error),
+      matchedPattern: null,
+    });
+  } finally {
+    dlpActive = false;
   }
-
-  event.preventDefault();
-  event.stopPropagation();
-
-  triggerUploadWarning({
-    filename: file.name,
-    analysis,
-    originalInput: input,
-    onProceed: () => {
-      dlpActive = true;
-      input.dispatchEvent(new Event("change", { bubbles: true }));
-      dlpActive = false;
-    },
-  });
 }
 
-async function handleFileDrop(event) {
-  const files = event.dataTransfer && event.dataTransfer.files;
-  if (!files || files.length === 0) return;
-  if (dlpActive) return;
+async function runUploadPipeline(file) {
+  const extractedText = await extractTextFromFile(file);
+  const topic = summarizeDocument(extractedText, file.name);
 
-  const file = files[0];
-  const analysis = await analyzeUploadRisk(file);
-
-  if (!analysis.shouldWarn) {
-    await sendDlpDecisionLog("allow", file.name, analysis);
-    return;
-  }
-
-  event.preventDefault();
-  event.stopPropagation();
-
-  triggerUploadWarning({
-    filename: file.name,
-    analysis,
-    originalInput: null,
-    onProceed: null,
-  });
-}
-
-async function analyzeUploadRisk(file) {
-  const text = await extractTextSample(file);
-  const topic = summarizeDocument(text, file.name);
-
-  if (!text) {
-    const nameRisk = scoreFromFilename(file.name);
+  const tier1 = runTier1Regex(extractedText, file.name);
+  if (tier1.hit) {
     return {
-      shouldWarn: nameRisk >= DLP_CONFIG.warningThreshold,
-      riskScore: nameRisk,
+      shouldBlock: true,
       topic,
-      reason: "filename_fallback",
+      tier: "tier1_regex",
+      similarity: 1,
+      reason: "Tier 1 regex hit: " + tier1.label,
+      matchedPattern: tier1.id,
     };
   }
 
-  let modelRisk = null;
-  try {
-    const classifier = await loadLocalClassifier();
-    if (classifier) {
-      const result = await classifier(text, { topk: 1 });
-      const top = Array.isArray(result) ? result[0] : result;
-      if (top && typeof top.score === "number") modelRisk = top.score;
-    }
-  } catch (error) {
-    log("Local transformer unavailable, using heuristic fallback:", error.message || error);
+  if (!extractedText) {
+    return {
+      shouldBlock: false,
+      topic,
+      tier: "no_text",
+      similarity: 0,
+      reason: "No extractable text",
+      matchedPattern: null,
+    };
   }
 
-  const heuristicRisk = scoreFromText(text, file.name);
-  const riskScore = modelRisk == null
-    ? heuristicRisk
-    : Math.max(heuristicRisk, normalizeClassifierScore(modelRisk));
+  const semanticResponse = await chrome.runtime.sendMessage({
+    action: "DLP_SEMANTIC_CHECK",
+    text: extractedText,
+  });
 
+  const similarity = typeof semanticResponse?.top_score === "number" ? semanticResponse.top_score : 0;
+  const blocked = Boolean(semanticResponse?.blocked);
   return {
-    shouldWarn: riskScore >= DLP_CONFIG.warningThreshold,
-    riskScore,
+    shouldBlock: blocked,
     topic,
-    reason: modelRisk == null ? "heuristic" : "model_plus_heuristic",
+    tier: "tier2_semantic",
+    similarity,
+    reason: semanticResponse?.top_topic || "semantic check",
+    matchedPattern: null,
   };
 }
 
-function normalizeClassifierScore(rawScore) {
-  if (typeof rawScore !== "number") return 0;
-  if (rawScore < 0) return 0;
-  if (rawScore > 1) return 1;
-  return rawScore;
-}
-
-async function loadLocalClassifier() {
-  if (!classifierPromise) {
-    classifierPromise = (async () => {
-      const transformersUrl = chrome.runtime.getURL("lib/transformers.min.js");
-      const { pipeline, env } = await import(transformersUrl);
-      env.allowLocalModels = false;
-      env.useBrowserCache = true;
-      return pipeline("text-classification", DLP_CONFIG.modelId);
-    })().catch((error) => {
-      classifierPromise = null;
-      throw error;
-    });
+function runTier1Regex(text, filename) {
+  const source = (filename || "") + "\n" + (text || "");
+  for (const pattern of TIER1_RESTRICTED_PATTERNS) {
+    if (pattern.regex.test(source)) {
+      return { hit: true, id: pattern.id, label: pattern.label };
+    }
   }
-  return classifierPromise;
+  return { hit: false, id: null, label: "" };
 }
 
-async function extractTextSample(file) {
+async function extractTextFromFile(file) {
   if (!file) return "";
+  const name = (file.name || "").toLowerCase();
 
-  const lowerName = (file.name || "").toLowerCase();
-  const isTextLike =
-    FILE_TEXT_TYPES.includes(file.type) ||
-    lowerName.endsWith(".txt") || lowerName.endsWith(".csv") || lowerName.endsWith(".md") ||
-    lowerName.endsWith(".json") || lowerName.endsWith(".xml") || lowerName.endsWith(".log");
-
-  if (!isTextLike) return "";
-
-  const blob = file.slice(0, DLP_CONFIG.maxReadBytes);
-  const text = await blob.text();
-  return text.slice(0, DLP_CONFIG.sampleChars);
-}
-
-function scoreFromText(text, filename) {
-  const lowered = (text || "").toLowerCase();
-  let hits = 0;
-  for (const re of SENSITIVE_HINTS) {
-    if (re.test(lowered)) hits += 1;
+  if (isStructuredText(file, name)) {
+    const raw = await file.slice(0, DLP_PIPELINE_CONFIG.maxExtractChars * 3).text();
+    return normalizeExtractedText(raw);
   }
-  const extra = scoreFromFilename(filename);
-  return Math.min(1, hits * 0.12 + extra * 0.45);
+
+  if (name.endsWith(".pdf")) {
+    return extractPdfText(file);
+  }
+
+  if (name.endsWith(".docx")) {
+    return extractDocxText(file);
+  }
+
+  return "";
 }
 
-function scoreFromFilename(filename) {
-  const n = (filename || "").toLowerCase();
-  const sensitiveNameHints = [
-    "confidential", "private", "internal", "salary", "payroll", "invoice",
-    "contract", "employee", "customers", "roadmap", "finance", "secret",
-  ];
-  const matches = sensitiveNameHints.filter((k) => n.includes(k)).length;
-  return Math.min(1, matches * 0.24);
+function isStructuredText(file, lowerName) {
+  const type = (file.type || "").toLowerCase();
+  return (
+    type.startsWith("text/") ||
+    lowerName.endsWith(".txt") ||
+    lowerName.endsWith(".csv") ||
+    lowerName.endsWith(".json") ||
+    lowerName.endsWith(".xml")
+  );
+}
+
+async function extractPdfText(file) {
+  if (!window.pdfjsLib) return "";
+  const workerUrl = chrome.runtime.getURL("lib/pdf.worker.min.js");
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+
+  const bytes = await file.arrayBuffer();
+  const pdf = await window.pdfjsLib.getDocument({ data: bytes }).promise;
+
+  const pages = Math.min(pdf.numPages, DLP_PIPELINE_CONFIG.maxPdfPages);
+  const chunks = [];
+  for (let i = 1; i <= pages; i += 1) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const pageText = content.items
+      .map((item) => (item && typeof item.str === "string" ? item.str : ""))
+      .join(" ");
+    chunks.push(pageText);
+    if (chunks.join(" ").length >= DLP_PIPELINE_CONFIG.maxExtractChars) break;
+  }
+
+  return normalizeExtractedText(chunks.join(" "));
+}
+
+async function extractDocxText(file) {
+  if (!window.mammoth) return "";
+  const arrayBuffer = await file.arrayBuffer();
+  const result = await window.mammoth.extractRawText({ arrayBuffer });
+  return normalizeExtractedText(result?.value || "");
+}
+
+function normalizeExtractedText(text) {
+  return (text || "").replace(/\s+/g, " ").trim().slice(0, DLP_PIPELINE_CONFIG.maxExtractChars);
 }
 
 function summarizeDocument(text, filename) {
-  const base = (text || "").replace(/s+/g, " ").trim();
-  if (!base) return "File: " + sanitize(filename, 80);
-  return sanitize(base.slice(0, 180), 180);
+  if (!text) return "File: " + sanitize(filename, 80);
+  return sanitize(text.slice(0, 220), 220);
 }
 
-async function sendDlpDecisionLog(action_taken, filename, analysis) {
-  chrome.runtime.sendMessage({
-    action: "DLP_LOG",
-    filename,
-    website: window.location.hostname,
-    action_taken,
-    document_topic: analysis.topic,
-    risk_score: Number((analysis.riskScore || 0).toFixed(3)),
-    detection_reason: analysis.reason,
-  });
-}
+async function showDlpWarningModal(filename, analysis) {
+  const tierLabel = analysis.tier === "tier1_regex" ? "Tier 1 / Regex" : "Tier 2 / Semantic";
+  const similarityPct = Math.round((analysis.similarity || 0) * 100);
 
-function triggerUploadWarning({ filename, analysis, originalInput, onProceed }) {
-  dlpActive = true;
-  const scorePct = Math.round((analysis.riskScore || 0) * 100);
-
-  Swal.fire({
+  const result = await Swal.fire({
     html:
       '<div class="cb-dlp-modal">' +
       '<div class="cb-dlp-header">' +
         '<span class="cb-dlp-icon">&#9888;</span>' +
-        '<span class="cb-dlp-title">Upload Risk Detected</span>' +
-        '<span class="cb-dlp-badge">CyberBase AI</span>' +
+        '<span class="cb-dlp-title">Sensitive Upload Detected</span>' +
+        '<span class="cb-dlp-badge">CyberBase</span>' +
       "</div>" +
       '<div class="cb-dlp-body-wrap">' +
         '<p class="cb-dlp-body">Selected file:</p>' +
         '<div class="cb-dlp-filename">' + sanitize(filename, 80) + "</div>" +
-        '<p class="cb-dlp-question">This document appears company-related (' + scorePct + '% risk). Upload to external site only if you are sure.</p>' +
-        '<p class="cb-dlp-question">Document summary: ' + sanitize(analysis.topic, 180) + "</p>" +
+        '<p class="cb-dlp-question"><strong>Detection:</strong> ' + sanitize(tierLabel, 80) + "</p>" +
+        '<p class="cb-dlp-question"><strong>Signal:</strong> ' + sanitize(analysis.reason || "sensitive content", 180) + "</p>" +
+        '<p class="cb-dlp-question"><strong>Semantic score:</strong> ' + similarityPct + "%</p>" +
+        '<p class="cb-dlp-question">This file may contain private company information and should not be shared externally.</p>' +
       "</div>" +
       "</div>",
     showCancelButton: true,
@@ -315,24 +330,22 @@ function triggerUploadWarning({ filename, analysis, originalInput, onProceed }) 
     allowOutsideClick: false,
     showClass: { popup: "cb-swal-enter" },
     customClass: { container: "cb-swal-container", popup: "cb-swal-popup" },
-  }).then((result) => {
-    dlpActive = false;
-    const action_taken = result.isConfirmed ? "cancel" : "force";
-    chrome.runtime.sendMessage({
-      action: "DLP_LOG",
-      filename,
-      website: window.location.hostname,
-      action_taken,
-      document_topic: analysis.topic,
-      risk_score: Number((analysis.riskScore || 0).toFixed(3)),
-      detection_reason: analysis.reason,
-    });
+  });
 
-    if (result.isConfirmed) {
-      if (originalInput) originalInput.value = "";
-    } else if (onProceed) {
-      onProceed();
-    }
+  return result.isConfirmed ? "cancel" : "force";
+}
+
+async function sendDlpDecisionLog(actionTaken, filename, analysis) {
+  chrome.runtime.sendMessage({
+    action: "DLP_LOG",
+    filename,
+    website: window.location.hostname,
+    action_taken: actionTaken,
+    document_topic: analysis.topic,
+    semantic_score: Number((analysis.similarity || 0).toFixed(4)),
+    detection_tier: analysis.tier,
+    detection_reason: analysis.reason,
+    matched_pattern: analysis.matchedPattern,
   });
 }
 

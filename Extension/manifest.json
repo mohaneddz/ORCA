@@ -11,9 +11,27 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["lib/sweetalert2.all.min.js", "content.js"],
+      "js": [
+        "lib/sweetalert2.all.min.js",
+        "lib/pdf.min.js",
+        "lib/mammoth.browser.min.js",
+        "content.js"
+      ],
       "css": ["custom.css"],
       "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "lib/pdf.worker.min.js",
+        "lib/transformers.min.js",
+        "lib/ort-wasm.wasm",
+        "lib/ort-wasm-threaded.wasm",
+        "lib/ort-wasm-simd.wasm",
+        "lib/ort-wasm-simd-threaded.wasm"
+      ],
+      "matches": ["<all_urls>"]
     }
   ],
   "action": {

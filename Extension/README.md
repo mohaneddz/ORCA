@@ -1,15 +1,14 @@
-# CyberBase Web Guard — Chrome Extension
+# CyberBase Web Guard - Chrome Extension
 
-Manifest V3 Chrome extension for CyberBase (Module C). Enforces navigation security, DLP on file uploads, and delivers real-time admin quizzes and fake phishing simulations to employees.
+Manifest V3 Chrome extension for CyberBase (Module C). It enforces navigation security, DLP on file uploads, and delivers real-time admin quizzes and fake phishing simulations.
 
 ---
 
 ## Install (Development)
 
-1. Place `sweetalert2.all.min.js` (v11.x) in `Extension/lib/`. Download from: https://github.com/sweetalert2/sweetalert2/releases
-2. Open Chrome → `chrome://extensions` → Enable **Developer mode**
-3. Click **Load unpacked** → select the `Extension/` folder
-4. Click the CyberBase icon in the toolbar → enter your `emp_id` → Save
+1. Open Chrome -> `chrome://extensions` -> Enable **Developer mode**
+2. Click **Load unpacked** -> select the `Extension/` folder
+3. Click the CyberBase icon in the toolbar -> enter your `emp_id` -> Save
 
 ---
 
@@ -23,7 +22,16 @@ Manifest V3 Chrome extension for CyberBase (Module C). Enforces navigation secur
 
 ---
 
-## Backend Route Contract (V1)
+## DLP Pipeline (Multi-tier)
+
+1. **Interceptor (content script):** captures file uploads and extracts text from `.txt`, `.csv`, `.json`, `.xml`, `.pdf` (pdf.js), and `.docx` (mammoth.js).
+2. **Tier 1 (Fast Fail):** regex scan for restricted markers.
+3. **Tier 2 (Semantic):** if Tier 1 passes, `background.js` runs Transformers.js embeddings (`Xenova/all-MiniLM-L6-v2`) and cosine similarity against restricted topic vectors.
+4. **Decision:** if similarity `>= 0.85`, show warning and let user `cancel` or `force`.
+
+---
+
+## Backend Route Contract (V2)
 
 All routes are on the backend server. The extension assumes these exist and does not implement them.
 
@@ -35,8 +43,10 @@ All routes are on the backend server. The extension assumes these exist and does
   "website": "string",
   "action_taken": "allow | cancel | force",
   "document_topic": "string",
-  "risk_score": 0.0,
-  "detection_reason": "filename_fallback | heuristic | model_plus_heuristic"
+  "semantic_score": 0.0,
+  "detection_tier": "tier1_regex | tier2_semantic | no_text | pipeline_error",
+  "detection_reason": "string",
+  "matched_pattern": "string | null"
 }
 ```
 Response: `200 OK`
@@ -50,7 +60,7 @@ Response: `200 OK`
 ### `GET /api/extension/poll?emp_id=XYZ`
 ```json
 { "hasEvent": false }
-{ "hasEvent": true, "eventPayload": { "event_id": "string", "type": "QUIZ | FAKE_PHISHING", ... } }
+{ "hasEvent": true, "eventPayload": { "event_id": "string", "type": "QUIZ | FAKE_PHISHING", "...": "..." } }
 ```
 Backend marks event as delivered after first fetch (no duplicate delivery).
 
@@ -65,14 +75,6 @@ Response: `200 OK`
 ## Employee ID Strategy (V1)
 
 `emp_id` is a plain alphanumeric string configured manually via the extension popup. It is stored in `chrome.storage.local` (scoped to the browser profile). No OAuth or SSO for V1.
-
----
-
-## SweetAlert2
-
-- **Version:** 11.x (pin to exact version used)
-- **Bundle:** `lib/sweetalert2.all.min.js` — must be local, no CDN
-- **Source:** https://github.com/sweetalert2/sweetalert2/releases
 
 ---
 
