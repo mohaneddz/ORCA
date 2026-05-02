@@ -4,7 +4,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 
-from organizations.models import Employee
+from organizations.auth import get_employee_from_request
 
 from .models import AdminEvent, BlacklistLog, DLPLog
 
@@ -28,17 +28,20 @@ def _to_int(value):
 @method_decorator(csrf_exempt, name="dispatch")
 class DLPLogView(View):
     def post(self, request):
+        employee, err = get_employee_from_request(request)
+        if err:
+            return err
+
         try:
             body = json.loads(request.body)
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON."}, status=400)
 
-        employee_id = body.get("employee_id")
         filename = body.get("filename")
         website = body.get("website")
         action_taken = body.get("action_taken")
 
-        if not all([employee_id, filename, website, action_taken]):
+        if not all([filename, website, action_taken]):
             return JsonResponse({"error": "Missing required fields."}, status=400)
 
         if action_taken not in ("allow", "cancel", "force"):
@@ -46,17 +49,12 @@ class DLPLogView(View):
                 {"error": "action_taken must be allow, cancel, or force."}, status=400
             )
 
-        try:
-            device = Employee.objects.get(id=employee_id)
-        except (Employee.DoesNotExist, Exception):
-            return JsonResponse({"error": "Employee not found."}, status=404)
-
         event_channel = body.get("event_channel") or "file_upload"
         if event_channel not in ("file_upload", "ai_prompt"):
             event_channel = "file_upload"
 
         DLPLog.objects.create(
-            employee=device,
+            employee=employee,
             filename=filename,
             website=website,
             action_taken=action_taken,
@@ -78,40 +76,32 @@ class DLPLogView(View):
 @method_decorator(csrf_exempt, name="dispatch")
 class BlacklistLogView(View):
     def post(self, request):
+        employee, err = get_employee_from_request(request)
+        if err:
+            return err
+
         try:
             body = json.loads(request.body)
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON."}, status=400)
 
-        employee_id = body.get("employee_id")
         attempted_url = body.get("attempted_url")
 
-        if not all([employee_id, attempted_url]):
+        if not attempted_url:
             return JsonResponse({"error": "Missing required fields."}, status=400)
 
-        try:
-            device = Employee.objects.get(id=employee_id)
-        except (Employee.DoesNotExist, Exception):
-            return JsonResponse({"error": "Employee not found."}, status=404)
-
-        BlacklistLog.objects.create(employee=device, attempted_url=attempted_url)
+        BlacklistLog.objects.create(employee=employee, attempted_url=attempted_url)
         return JsonResponse({}, status=200)
 
 
 class PollView(View):
     def get(self, request):
-        emp_id = request.GET.get("emp_id")
-
-        if not emp_id:
-            return JsonResponse({"error": "emp_id is required."}, status=400)
-
-        try:
-            device = Employee.objects.get(id=emp_id)
-        except (Employee.DoesNotExist, Exception):
-            return JsonResponse({"error": "Employee not found."}, status=404)
+        employee, err = get_employee_from_request(request)
+        if err:
+            return err
 
         event = (
-            AdminEvent.objects.filter(employee=device, is_delivered=False)
+            AdminEvent.objects.filter(employee=employee, is_delivered=False)
             .order_by("created_at")
             .first()
         )
@@ -130,6 +120,10 @@ class PollView(View):
 
 class BlacklistDomainsView(View):
     def get(self, request):
+        _, err = get_employee_from_request(request)
+        if err:
+            return err
+
         domains = getattr(
             settings,
             "EXTENSION_BLACKLIST_DOMAINS",
@@ -141,6 +135,10 @@ class BlacklistDomainsView(View):
 
 class AITargetsView(View):
     def get(self, request):
+        _, err = get_employee_from_request(request)
+        if err:
+            return err
+
         domains = getattr(
             settings,
             "EXTENSION_AI_TARGET_DOMAINS",

@@ -5,7 +5,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
-from organizations.models import Employee
+from organizations.auth import get_employee_from_request
 
 from .models import Quiz, QuizSubmission
 
@@ -49,22 +49,20 @@ class QuizDetailView(View):
 @method_decorator(csrf_exempt, name="dispatch")
 class SubmitQuizView(View):
     def post(self, request):
+        employee, err = get_employee_from_request(request)
+        if err:
+            return err
+
         try:
             body = json.loads(request.body)
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON."}, status=400)
 
-        employee_id = body.get("employee_id")
         quiz_id = body.get("quiz_id")
         answer_selected = body.get("answer_selected")
 
-        if not all([employee_id, quiz_id, answer_selected]):
+        if not all([quiz_id, answer_selected]):
             return JsonResponse({"error": "Missing required fields."}, status=400)
-
-        try:
-            device = Employee.objects.get(id=employee_id)
-        except (Employee.DoesNotExist, Exception):
-            return JsonResponse({"error": "Employee not found."}, status=404)
 
         try:
             quiz = Quiz.objects.get(id=quiz_id)
@@ -74,7 +72,7 @@ class SubmitQuizView(View):
         is_correct = answer_selected == quiz.correct_answer
 
         submission, created = QuizSubmission.objects.get_or_create(
-            employee=device,
+            employee=employee,
             quiz=quiz,
             defaults={"answer_selected": answer_selected, "is_correct": is_correct},
         )

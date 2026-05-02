@@ -6,6 +6,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
+from .auth import get_employee_from_request
 from .models import AuthToken, Employee, EmployeeAuthToken, Organization
 
 
@@ -220,26 +221,6 @@ class EmployeeDetailView(View):
             return err
         emp.delete()
         return JsonResponse({}, status=204)
-
-
-# ---------------------------------------------------------------------------
-# Employee authentication
-# ---------------------------------------------------------------------------
-
-def get_employee_from_request(request):
-    """
-    Resolve the Employee from `Authorization: EmployeeToken <key>`.
-    Returns (employee, None) on success or (None, JsonResponse) on failure.
-    """
-    header = request.headers.get("Authorization", "")
-    if not header.startswith("EmployeeToken "):
-        return None, JsonResponse({"error": "Authorization header missing or malformed."}, status=401)
-    key = header[len("EmployeeToken "):]
-    try:
-        token = EmployeeAuthToken.objects.select_related("employee").get(key=key)
-        return token.employee, None
-    except EmployeeAuthToken.DoesNotExist:
-        return None, JsonResponse({"error": "Invalid token."}, status=401)
 
 
 @method_decorator(csrf_exempt, name="dispatch")

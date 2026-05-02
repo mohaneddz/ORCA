@@ -9,26 +9,70 @@ function sanitize(str, maxLen = 500) {
   return str.replace(/</g, "&lt;").replace(/>/g, "&gt;").slice(0, maxLen);
 }
 
+let protectionEnabled = null;
+let protectionListenersAttached = false;
+let authStateRefreshInFlight = false;
+
 if (!document.body) {
   log("No document.body, skipping content script init.");
 } else {
-  init();
-}
-
-function init() {
-  checkEmpId();
-  showHttpWarning();
-  checkBlacklist();
-  attachDlpListeners();
-  attachAiPromptListeners();
-  listenForAdminTriggers();
-}
-
-// Employee ID banner
-function checkEmpId() {
-  chrome.storage.local.get("emp_id", ({ emp_id }) => {
-    if (!emp_id) injectSetupBanner();
+  init().catch((error) => {
+    log("Init failure:", error?.message || error);
   });
+}
+
+async function init() {
+  showHttpWarning();
+  await refreshProtectionState();
+  watchAuthStorageChanges();
+}
+
+function watchAuthStorageChanges() {
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== "local") return;
+    if (!changes.employeeAuthToken && !changes.employeeProfile) return;
+    refreshProtectionState().catch((error) => {
+      log("Auth refresh after storage change failed:", error?.message || error);
+    });
+  });
+}
+
+async function refreshProtectionState() {
+  if (authStateRefreshInFlight) return;
+  authStateRefreshInFlight = true;
+  try {
+    const state = await safeRuntimeMessage({ action: "AUTH_GET_STATE" }, { isAuthenticated: false });
+    const authenticated = Boolean(state?.isAuthenticated);
+    setProtectionEnabled(authenticated);
+  } finally {
+    authStateRefreshInFlight = false;
+  }
+}
+
+function setProtectionEnabled(enabled) {
+  const nextEnabled = Boolean(enabled);
+  if (protectionEnabled === nextEnabled) return;
+
+  protectionEnabled = nextEnabled;
+  aiMonitorProfilePromise = null;
+
+  if (!protectionEnabled) {
+    injectSetupBanner();
+    return;
+  }
+
+  removeSetupBanner();
+  if (!protectionListenersAttached) {
+    attachDlpListeners();
+    attachAiPromptListeners();
+    listenForAdminTriggers();
+    protectionListenersAttached = true;
+  }
+  checkBlacklist();
+}
+
+function isProtectionEnabled() {
+  return protectionEnabled === true;
 }
 
 function injectSetupBanner() {
@@ -37,10 +81,15 @@ function injectSetupBanner() {
   banner.id = "cb-setup-banner";
   banner.className = "cb-setup-banner";
   banner.innerHTML =
-    "<span>CyberBase: click the extension icon and set your employee ID to activate protection.</span>" +
+    "<span>CyberBase: click the extension icon and sign in to activate protection.</span>" +
     '<button id="cb-setup-dismiss" aria-label="Close">X</button>';
   document.body.prepend(banner);
   document.getElementById("cb-setup-dismiss").addEventListener("click", () => banner.remove());
+}
+
+function removeSetupBanner() {
+  const banner = document.getElementById("cb-setup-banner");
+  if (banner) banner.remove();
 }
 
 // HTTP warning banner
@@ -57,6 +106,7 @@ function showHttpWarning() {
 
 // Blacklist
 function checkBlacklist() {
+  if (!isProtectionEnabled()) return;
   chrome.runtime.sendMessage(
     {
       action: "CHECK_BLACKLIST",
@@ -132,6 +182,7 @@ function attachDlpListeners() {
 }
 
 async function handleFileChange(event) {
+  if (!isProtectionEnabled()) return;
   const input = event.target;
   if (!input || input.type !== "file") return;
   if (!input.files || input.files.length === 0) return;
@@ -340,6 +391,7 @@ function attachAiPromptListeners() {
 }
 
 async function handlePromptSubmit(event) {
+  if (!isProtectionEnabled()) return;
   if (aiPromptGuardActive) return;
   const form = event.target;
   if (!(form instanceof HTMLFormElement)) return;
@@ -350,8 +402,15 @@ async function handlePromptSubmit(event) {
 }
 
 async function handlePromptClick(event) {
+  if (!isProtectionEnabled()) return;
   if (aiPromptGuardActive) return;
-  const clickable = event.target?.closest?.("button, [role='button'], input[type='submit']");
+  const rawTarget = event.target;
+  const targetEl = rawTarget instanceof Element
+    ? rawTarget
+    : (rawTarget && rawTarget.parentElement ? rawTarget.parentElement : null);
+  if (!targetEl) return;
+
+  const clickable = targetEl.closest("button, [role='button'], input[type='submit']");
   if (!clickable) return;
 
   const label = (clickable.textContent || clickable.value || "").toLowerCase();
@@ -366,6 +425,7 @@ async function handlePromptClick(event) {
 }
 
 async function handlePromptKeydown(event) {
+  if (!isProtectionEnabled()) return;
   if (aiPromptGuardActive) return;
   if (event.key !== "Enter" || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return;
 
@@ -375,22 +435,31 @@ async function handlePromptKeydown(event) {
 }
 
 async function processAiPromptEvent(event, promptEl, triggerType) {
+  if (!isProtectionEnabled()) return;
   if (!promptEl || replayBypassPromptElements.has(promptEl)) {
     replayBypassPromptElements.delete(promptEl);
     return;
   }
 
+  if (aiPromptGuardActive) return;
+
   const text = getPromptText(promptEl);
   if (!text || text.length < 20) return;
-
-  const profile = await getAiMonitorProfile();
-  if (!shouldMonitorCurrentPage(profile)) return;
 
   event.preventDefault();
   event.stopPropagation();
   event.stopImmediatePropagation();
 
   aiPromptGuardActive = true;
+
+  const profile = await getAiMonitorProfile();
+  if (!shouldMonitorCurrentPage(profile)) {
+    replayBypassPromptElements.add(promptEl);
+    replayPromptSubmission(promptEl, triggerType);
+    aiPromptGuardActive = false;
+    return;
+  }
+
   showCheckingModal("AI prompt submission");
 
   try {
@@ -829,6 +898,7 @@ async function showDlpWarningModal(filename, analysis) {
 }
 
 async function sendDlpDecisionLog(actionTaken, filename, analysis, context = {}) {
+  if (!isProtectionEnabled()) return;
   const safeScore = Number((analysis.similarity || 0).toFixed(4));
   await safeRuntimeMessage({
     action: "DLP_LOG",
@@ -854,6 +924,7 @@ async function sendDlpDecisionLog(actionTaken, filename, analysis, context = {})
 // Admin quiz trigger
 function listenForAdminTriggers() {
   chrome.runtime.onMessage.addListener((message) => {
+    if (!isProtectionEnabled()) return;
     if (message.type !== "ADMIN_TRIGGER") return;
 
     const payload = message.payload;
@@ -864,6 +935,7 @@ function listenForAdminTriggers() {
 }
 
 function showQuizModal(payload) {
+  if (!isProtectionEnabled()) return;
   const question = sanitize(payload.question || "Security awareness question:");
   const rawOptions = payload.options && typeof payload.options === "object" ? payload.options : {};
   const letters = ["A", "B", "C", "D"];

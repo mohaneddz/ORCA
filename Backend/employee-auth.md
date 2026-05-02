@@ -138,6 +138,21 @@ Authorization: EmployeeToken d4e5f6a7b8c9...
 
 ---
 
+## Extension-protected routes
+
+The following extension-facing routes also require the same employee token header:
+
+- `GET /api/extension/blacklist`
+- `GET /api/extension/ai-targets`
+- `GET /api/extension/poll`
+- `POST /api/logs/dlp`
+- `POST /api/logs/blacklist`
+- `POST /api/gamification/submit-quiz`
+
+For these routes, employee identity is derived from the token. Any `employee_id` field sent by a client is ignored.
+
+---
+
 ## Notes
 
 - Passwords must be **at least 8 characters**.

@@ -8,7 +8,7 @@ Manifest V3 Chrome extension for CyberBase (Module C). It enforces navigation se
 
 1. Open Chrome -> `chrome://extensions` -> Enable **Developer mode**
 2. Click **Load unpacked** -> select the `Extension/` folder
-3. Click the CyberBase icon in the toolbar -> enter your `emp_id` -> Save
+3. Click the CyberBase icon -> enter employee email -> `Next` -> enter password -> `Login`
 
 ---
 
@@ -17,7 +17,7 @@ Manifest V3 Chrome extension for CyberBase (Module C). It enforces navigation se
 | Setting | Where | Notes |
 |---|---|---|
 | `BACKEND_URL` | Top of `background.js` | Change before loading extension |
-| `emp_id` | Extension popup (toolbar icon) | Plain string, set per device |
+| Employee session | Extension popup (toolbar icon) | Stored in `chrome.storage.local` after login |
 | `DEBUG_MODE` | Top of `background.js` | Set `true` to enable verbose logging |
 
 ---
@@ -36,11 +36,15 @@ Manifest V3 Chrome extension for CyberBase (Module C). It enforces navigation se
 ## Backend Route Contract (V2)
 
 All routes are on the backend server.
+All extension routes below require:
+
+```http
+Authorization: EmployeeToken <token>
+```
 
 ### `POST /api/logs/dlp`
 ```json
 {
-  "employee_id": "string",
   "filename": "string",
   "website": "string",
   "action_taken": "allow | cancel | force",
@@ -70,11 +74,11 @@ Response: `200 OK`
 
 ### `POST /api/logs/blacklist`
 ```json
-{ "employee_id": "string", "attempted_url": "string" }
+{ "attempted_url": "string" }
 ```
 Response: `200 OK`
 
-### `GET /api/extension/poll?emp_id=XYZ`
+### `GET /api/extension/poll`
 ```json
 { "hasEvent": false }
 { "hasEvent": true, "eventPayload": { "event_id": "string", "type": "QUIZ", "...": "..." } }
@@ -83,15 +87,21 @@ Backend marks event as delivered after first fetch (no duplicate delivery).
 
 ### `POST /api/gamification/submit-quiz`
 ```json
-{ "employee_id": "string", "quiz_id": "string", "answer_selected": "string" }
+{ "quiz_id": "string", "answer_selected": "string" }
 ```
 Response: `200 OK`
 
 ---
 
-## Employee ID Strategy (V1)
+## Employee Session (V2)
 
-`emp_id` is a plain alphanumeric string configured manually via the extension popup. It is stored in `chrome.storage.local` (scoped to the browser profile). No OAuth or SSO for V1.
+The extension authenticates employees using:
+
+- `POST /api/auth/employee/login`
+- `GET /api/auth/employee/me`
+- `POST /api/auth/employee/logout`
+
+After login, the token is persisted in `chrome.storage.local` and attached to every protected request as `Authorization: EmployeeToken <token>`. If a protected request returns `401`, the extension auto-logs out and returns to locked mode.
 
 ---
 
@@ -101,6 +111,11 @@ Response: `200 OK`
 cd Extension
 node mock-backend.js
 ```
+
+Default mock credentials:
+
+- Email: `employee@acme.test`
+- Password: `secret123`
 
 To trigger a quiz on the employee's screen:
 ```bash
