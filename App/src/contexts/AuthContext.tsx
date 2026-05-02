@@ -159,23 +159,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!email.trim()) return { ok: false, message: "Email is required." };
         if (!password.trim()) return { ok: false, message: "Password is required." };
 
-        const createResponse = await fetch(`${backendBaseUrl}/accounts/create`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: email.trim(),
-            password,
-            role,
-            fullName: name?.trim() || "",
-            organizationName: organizationName?.trim() || "",
-            phone: phone?.trim() || "",
-          }),
+        if (role === "admin" && import.meta.env.VITE_ANONYMOUS_ADMINS === 'false') {
+          return { ok: false, message: "Anonymous admin creation is blocked by the server configuration." };
+        }
+
+        const { error: createError } = await supabase.rpc("create_account", {
+          p_email: email.trim(),
+          p_password: password,
+          p_role: role,
+          p_full_name: name?.trim() || null,
+          p_organization_name: organizationName?.trim() || null,
+          p_phone: phone?.trim() || null,
         });
 
-        const createPayload = (await createResponse.json()) as { ok?: boolean; message?: string };
-        if (!createResponse.ok || !createPayload.ok) {
-          return { ok: false, message: createPayload.message || "Failed to create account." };
-        }
+        if (createError) return { ok: false, message: createError.message };
 
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: email.trim(),
@@ -249,21 +246,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
       deleteOwnAccount: async () => {
         const { data: sessionData } = await supabase.auth.getSession();
-        const accessToken = sessionData.session?.access_token;
-        if (!accessToken) return { ok: false, message: "No active session." };
+        const userSession = sessionData.session?.user;
+        if (!userSession) return { ok: false, message: "No active session." };
 
-        const response = await fetch(`${backendBaseUrl}/accounts/delete`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({}),
+        const { error } = await supabase.rpc("delete_account", {
+          p_target_user_id: userSession.id,
         });
 
-        const payload = (await response.json()) as { ok?: boolean; message?: string };
-        if (!response.ok || !payload.ok) {
-          return { ok: false, message: payload.message || "Failed to delete account." };
+        if (error) {
+          return { ok: false, message: error.message };
         }
 
         await supabase.auth.signOut();
