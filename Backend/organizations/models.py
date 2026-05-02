@@ -1,3 +1,4 @@
+import secrets
 import uuid
 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
@@ -23,7 +24,6 @@ class OrganizationManager(BaseUserManager):
 
 class Organization(AbstractBaseUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    supabase_uid = models.UUIDField(unique=True, null=True, blank=True, help_text="Supabase Auth user ID (sub claim in JWT)")
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
@@ -59,3 +59,20 @@ class Device(models.Model):
 
     def __str__(self):
         return f"{self.device_identifier} ({self.employee_name})"
+
+
+class AuthToken(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="tokens"
+    )
+    key = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.key:
+            self.key = secrets.token_hex(32)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Token for {self.organization}"
