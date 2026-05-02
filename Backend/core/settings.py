@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "gamification",
     "phishing",
     "agent",
+    "datawarehouse",
 ]
 
 MIDDLEWARE = [
