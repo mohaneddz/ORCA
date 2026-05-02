@@ -1,6 +1,7 @@
 import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader, StatGrid, DataTable } from "@/components/cards/BaseCards";
+import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { ROUTES } from "@/config/routes";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -15,6 +16,7 @@ function getInitials(name: string) {
 }
 
 export default function AccountPage() {
+  const { t } = useAppSettings();
   const { user, updateProfile, updatePassword, deleteOwnAccount } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState("");
@@ -174,22 +176,22 @@ export default function AccountPage() {
   return (
     <div className="page-section">
       <PageHeader
-        badge="Account"
-        title="Account and Organization Profile"
-        description="Manage your user and organization info: name, email, phone, profile details, and password update."
+        badge={t("account.badge")}
+        title={t("account.title")}
+        description={t("account.description")}
       />
       <StatGrid
         stats={[
-          { label: "Role", value: user.role === "admin" ? "Organization Admin" : "Organization Staff" },
-          { label: "Organization", value: user.organizationName.length > 18 ? user.organizationName.slice(0, 15) + "..." : user.organizationName },
-          { label: "Account ID", value: user.id.slice(0, 8) + "..." },
-          { label: "Last Login", value: new Date(user.lastLoginAt).toLocaleString(), tone: "ok" },
+          { label: t("account.stats.role"), value: user.role === "admin" ? t("account.role.admin") : t("account.role.staff") },
+          { label: t("account.stats.organization"), value: user.organizationName.length > 18 ? user.organizationName.slice(0, 15) + "..." : user.organizationName },
+          { label: t("account.stats.id"), value: user.id.slice(0, 8) + "..." },
+          { label: t("account.stats.lastLogin"), value: new Date(user.lastLoginAt).toLocaleString(), tone: "ok" },
         ]}
       />
 
       <section className="grid gap-3 xl:grid-cols-2">
         <form className="card p-4" onSubmit={onSaveProfile}>
-          <p className="m-0 text-sm font-semibold text-white">Profile Information</p>
+          <p className="m-0 text-sm font-semibold text-white">{t("account.profile.title")}</p>
           <div className="mt-3 flex items-center gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3">
             {avatarUrl && !avatarLoadFailed ? (
               <img
@@ -204,10 +206,10 @@ export default function AccountPage() {
               </div>
             )}
             <div className="min-w-0">
-              <p className="m-0 text-sm font-medium text-white">Profile picture</p>
-              <p className="m-0 mt-0.5 text-xs text-slate-400">Stored in Supabase bucket: {AVATARS_BUCKET}</p>
+              <p className="m-0 text-sm font-medium text-white">{t("account.profile.picture")}</p>
+              <p className="m-0 mt-0.5 text-xs text-slate-400">{t("account.profile.pictureDesc")} {AVATARS_BUCKET}</p>
               <label className="mt-2 inline-flex cursor-pointer items-center rounded-md border border-[var(--color-border-glow)] bg-[var(--color-surface-hover)] px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-primary-strong)] hover:opacity-80 transition-opacity">
-                {isUploadingAvatar ? "Uploading..." : "Upload New Picture"}
+                {isUploadingAvatar ? t("account.profile.uploading") : t("account.profile.upload")}
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/webp,image/gif"
@@ -223,7 +225,7 @@ export default function AccountPage() {
 
           <div className="mt-3 grid gap-3">
             <label className="grid gap-1 text-sm text-slate-200">
-              Full name
+              {t("account.profile.fullName")}
               <input
                 type="text"
                 value={name}
@@ -232,7 +234,7 @@ export default function AccountPage() {
               />
             </label>
             <label className="grid gap-1 text-sm text-slate-200">
-              Email
+              {t("account.profile.email")}
               <input
                 type="email"
                 value={email}
@@ -241,7 +243,7 @@ export default function AccountPage() {
               />
             </label>
             <label className="grid gap-1 text-sm text-slate-200">
-              Organization name
+              {t("account.profile.orgName")}
               <input
                 type="text"
                 value={organizationName}
@@ -250,7 +252,7 @@ export default function AccountPage() {
               />
             </label>
             <label className="grid gap-1 text-sm text-slate-200">
-              Phone
+              {t("account.profile.phone")}
               <input
                 type="tel"
                 value={phone}
@@ -263,15 +265,15 @@ export default function AccountPage() {
             type="submit"
             className="mt-4 rounded-md border border-[var(--color-border-glow)] bg-[var(--color-surface-hover)] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-primary-strong)] hover:opacity-80 transition-opacity"
           >
-            Save Profile
+            {t("account.profile.save")}
           </button>
         </form>
 
         <form className="card p-4" onSubmit={onSavePassword}>
-          <p className="m-0 text-sm font-semibold text-white">Password Update</p>
+          <p className="m-0 text-sm font-semibold text-white">{t("account.password.title")}</p>
           <div className="mt-3 grid gap-3">
             <label className="grid gap-1 text-sm text-slate-200">
-              New password
+              {t("account.password.new")}
               <input
                 type="password"
                 value={newPassword}
@@ -280,7 +282,7 @@ export default function AccountPage() {
               />
             </label>
             <label className="grid gap-1 text-sm text-slate-200">
-              Confirm new password
+              {t("account.password.confirm")}
               <input
                 type="password"
                 value={confirmPassword}
@@ -293,7 +295,7 @@ export default function AccountPage() {
             type="submit"
             className="mt-4 rounded-md border border-[var(--color-border-glow)] bg-[var(--color-surface-hover)] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-primary-strong)] hover:opacity-80 transition-opacity"
           >
-            Save Password
+            {t("account.password.save")}
           </button>
         </form>
       </section>
@@ -305,24 +307,24 @@ export default function AccountPage() {
       )}
 
       <section className="card p-4">
-        <p className="m-0 text-sm font-semibold text-white">Danger Zone</p>
+        <p className="m-0 text-sm font-semibold text-white">{t("account.danger.title")}</p>
         <p className="m-0 mt-2 text-sm text-[var(--color-neutral-500)]">
-          Delete this account permanently and sign out immediately.
+          {t("account.danger.desc")}
         </p>
         <button
           type="button"
           onClick={onDeleteAccount}
           className="mt-3 rounded-md border border-[var(--color-error)] bg-[var(--color-error)]/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-error)] hover:bg-[var(--color-error)]/20"
         >
-          Delete Account and Sign Out
+          {t("account.danger.button")}
         </button>
       </section>
 
       <DataTable
-        title="Recent Audit Activity"
-        columns={["Action", "Target", "Result", "Date"]}
-        filterColumn="Result"
-        searchPlaceholder="Search action, target, result, or date"
+        title={t("account.audit.title")}
+        columns={[t("account.audit.action"), t("account.audit.target"), t("account.audit.result"), t("account.audit.date")]}
+        filterColumn={t("account.audit.result")}
+        searchPlaceholder={t("account.audit.search")}
         rows={[
           ["Updated profile details", "Account Profile", "Success", "2026-05-02"],
           ["Changed settings tab policy", "Security Settings", "Success", "2026-05-01"],

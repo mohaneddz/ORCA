@@ -1,21 +1,25 @@
 import { DonutGauge, DualAreaChart } from "@/components/ui/TrendChart";
 import { DataTable, PageHeader, StatGrid } from "@/components/cards/BaseCards";
+import { useAppSettings } from "@/contexts/AppSettingsContext";
+import { MOCK_INCIDENTS, MOCK_AUTOMATIONS } from "@/data/mockData";
 
 export default function HomePage() {
+  const { t } = useAppSettings();
+
   return (
     <div className="page-section">
       <PageHeader
-        badge="Home"
-        title="Security Operations Home"
-        description="High-level posture, risk movement, and active queues across devices, identities, and network activity."
+        badge={t("home.badge")}
+        title={t("home.title")}
+        description={t("home.description")}
       />
 
       <StatGrid
         stats={[
-          { label: "Global Risk Score", value: "61 / 100", trend: -2.1 },
-          { label: "Open Incidents", value: "18", tone: "danger", trend: 12.5 },
-          { label: "Managed Devices", value: "142", tone: "ok", trend: 4.8 },
-          { label: "Policy Coverage", value: "93%", trend: 1.4 },
+          { label: t("home.stats.risk"), value: "61 / 100", trend: -2.1 },
+          { label: t("home.stats.incidents"), value: "18", tone: "danger", trend: 12.5 },
+          { label: t("home.stats.devices"), value: "142", tone: "ok", trend: 4.8 },
+          { label: t("home.stats.policy"), value: "93%", trend: 1.4 },
         ]}
       />
 
@@ -31,44 +35,36 @@ export default function HomePage() {
               { name: "Sat", primary: 59, secondary: 46 },
               { name: "Sun", primary: 61, secondary: 58 },
             ]}
-            title="Risk vs Remediation Velocity"
-            primaryLabel="Risk Index"
-            secondaryLabel="Resolved Signals"
+            title={t("home.chart.riskVsRemediation")}
+            primaryLabel={t("home.chart.riskIndex")}
+            secondaryLabel={t("home.chart.resolvedSignals")}
           />
         </div>
         <DonutGauge
-          title="Asset Compliance"
+          title={t("home.gauge.assetCompliance")}
           value={132}
           max={142}
-          label="Compliant"
+          label={t("home.gauge.compliant")}
           breakdown={[
-            { label: "Compliant", value: 132, color: "#10b981" },
-            { label: "Pending", value: 7, color: "#f59e0b" },
-            { label: "Critical", value: 3, color: "#f43f5e" },
+            { label: t("home.gauge.compliant"), value: 132, color: "#10b981" },
+            { label: t("home.gauge.pending"), value: 7, color: "#f59e0b" },
+            { label: t("home.gauge.critical"), value: 3, color: "#f43f5e" },
           ]}
         />
       </section>
 
       <section className="grid gap-3 xl:grid-cols-2">
         <DataTable
-          title="Incident Queue"
-          columns={["Signal", "Entity", "Owner", "Priority", "Status"]}
-          rows={[
-            ["Credential reuse", "finance@org.com", "IAM Team", "P1", "Open"],
-            ["Suspicious binary", "OPS-WIN-09", "SOC", "P1", "Investigating"],
-            ["Unauthorized USB", "HR-LAP-02", "Endpoint", "P2", "Queued"],
-            ["Anomalous DNS", "172.16.10.77", "Network", "P2", "Monitoring"],
-          ]}
+          title={t("home.table.incidentQueue")}
+          columns={[t("table.signal"), t("table.entity"), t("table.priority"), t("table.status")]}
+          rows={MOCK_INCIDENTS.map(row => [row[0], row[1], row[2], t(row[3])])}
+          minWidth={500}
         />
         <DataTable
-          title="Recent Automations"
-          columns={["Automation", "Target", "Result", "Executor", "Time"]}
-          rows={[
-            ["Force MFA", "34 accounts", "Success", "Policy Engine", "09:45"],
-            ["Patch rollout", "12 devices", "In progress", "Endpoint Ops", "09:31"],
-            ["Token revoke", "nadia@org.com", "Success", "Control Center", "09:21"],
-            ["Network isolate", "Unknown-Lenovo", "Success", "NAC", "08:59"],
-          ]}
+          title={t("home.table.recentAutomations")}
+          columns={[t("table.automation"), t("table.target"), t("table.result"), t("table.time")]}
+          rows={MOCK_AUTOMATIONS.map(row => [t(row[0]), row[1], t(row[2]), row[3]])}
+          minWidth={500}
         />
       </section>
     </div>

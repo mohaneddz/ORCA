@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { useAppSettings } from "@/contexts/AppSettingsContext";
 
 /* ─── PageHeader ──────────────────────────────────────── */
 export function PageHeader({
@@ -156,6 +157,7 @@ export function DataTable({
   onRowClick?: (row: string[], rowIndex: number) => void;
   renderCell?: (cell: string, row: string[], rowIndex: number, cellIndex: number) => ReactNode;
 }) {
+  const { t } = useAppSettings();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
   const [sortState, setSortState] = useState<{ index: number; direction: "asc" | "desc" } | null>(null);
@@ -233,7 +235,7 @@ export function DataTable({
           type="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder={searchPlaceholder ?? `Search ${title.toLowerCase()}`}
+          placeholder={searchPlaceholder ?? `${t("table.search")} ${title.toLowerCase()}`}
           className="table-input w-full max-w-xs"
         />
         {filterColumn && (
@@ -243,7 +245,7 @@ export function DataTable({
             className="table-input"
             aria-label={`${title} filter`}
           >
-            <option value="All">All {filterColumn}</option>
+            <option value="All">{t("table.all")} {filterColumn}</option>
             {resolvedFilterOptions.map((option) => (
               <option key={option} value={option}>
                 {option}
@@ -288,7 +290,7 @@ export function DataTable({
             {displayRows.length === 0 && (
               <tr>
                 <td colSpan={columns.length} style={{ color: "var(--color-neutral-400)", textAlign: "center" }}>
-                  No matching records.
+                  {t("table.noRecords")}
                 </td>
               </tr>
             )}
@@ -311,9 +313,10 @@ export function SplitCards({ left, right }: { left: ReactNode; right: ReactNode 
 
 /* ─── ActionButtonRow ─────────────────────────────────── */
 export function ActionButtonRow({ buttons }: { buttons: string[] }) {
+  const { t } = useAppSettings();
   return (
     <section className="card p-5">
-      <p className="m-0 mb-3 text-sm font-semibold text-[var(--color-neutral-100)]">Report Actions</p>
+      <p className="m-0 mb-3 text-sm font-semibold text-[var(--color-neutral-100)]">{t("card.reportActions")}</p>
       <div className="flex flex-wrap gap-2">
         {buttons.map((button) => (
           <button key={button} type="button" className="btn-ghost text-xs uppercase tracking-wider">

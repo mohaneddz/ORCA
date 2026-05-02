@@ -1,21 +1,23 @@
 import { DataTable, PageHeader, StatGrid } from "@/components/cards/BaseCards";
-import { ShieldUser, UserCog, Users, UserX, AlertTriangle } from "lucide-react";
+import { useAppSettings } from "@/contexts/AppSettingsContext";
+import { MOCK_ACCOUNTS } from "@/data/mockData";
 
 export default function AccountsPage() {
+  const { t } = useAppSettings();
   return (
     <div className="page-section min-h-0">
       <PageHeader
-        badge="Accounts"
-        title="Identity and Account Surface"
-        description="Central account visibility with posture distribution, role concentration, and high-risk account tracking."
+        badge={t("accounts.badge")}
+        title={t("accounts.title")}
+        description={t("accounts.description")}
       />
 
       <StatGrid
         stats={[
-          { label: "Total", value: "124" },
-          { label: "Admins", value: "14" },
-          { label: "Staff", value: "98" },
-          { label: "At Risk", value: "5", tone: "danger" },
+          { label: t("accounts.stats.total"), value: "124" },
+          { label: t("accounts.stats.admins"), value: "14" },
+          { label: t("accounts.stats.staff"), value: "98" },
+          { label: t("accounts.stats.atRisk"), value: "5", tone: "danger" },
         ]}
       />
 
@@ -23,35 +25,31 @@ export default function AccountsPage() {
         <div className="xl:col-span-4 min-h-0 flex">
           <DataTable
             className="h-full flex-1"
-            title="Organization Accounts"
-            columns={["Name", "Email", "Role", "Department", "MFA", "Risk", "Status"]}
-            filterColumn="Status"
-            searchPlaceholder="Search account name, email, role, or department"
-            rows={[
-              ["Nadia Karim", "nadia@org.com", "Admin", "Finance", "Enabled", "84", "Critical"],
-              ["Karim Dali", "karim@org.com", "Staff", "Operations", "Enabled", "63", "Review"],
-              ["Sofia Rahal", "sofia@org.com", "Staff", "Marketing", "Enabled", "21", "Healthy"],
-              ["Nour Hadj", "nour@org.com", "Staff", "HR", "Missing", "74", "Action Needed"],
-            ]}
+            title={t("accounts.table.title")}
+            columns={[t("table.name"), t("table.email"), t("table.role"), t("table.mfa"), t("table.status")]}
+            filterColumn={t("table.status")}
+            searchPlaceholder={t("accounts.search")}
+            rows={MOCK_ACCOUNTS}
+            minWidth={500}
           />
         </div>
         <section className="card p-5 h-full">
-          <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">Assist</p>
+          <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">{t("accounts.assist.title")}</p>
           <ul className="m-0 mt-3 space-y-2 pl-5 text-sm text-[var(--color-neutral-400)]">
-            <li>Force password rotation</li>
-            <li>Bulk MFA enforcement</li>
-            <li>Suspend dormant accounts</li>
-            <li>Review privileged roles</li>
+            <li>{t("accounts.assist.forcePassword")}</li>
+            <li>{t("accounts.assist.bulkMfa")}</li>
+            <li>{t("accounts.assist.suspend")}</li>
+            <li>{t("accounts.assist.review")}</li>
           </ul>
         </section>
       </section>
 
       <StatGrid
         stats={[
-          { label: "Password Resets (24h)", value: "12" },
-          { label: "Privileged Accounts", value: "14", tone: "warn" },
-          { label: "No MFA", value: "5", tone: "danger" },
-          { label: "Last Sync", value: "2m ago" },
+          { label: t("accounts.stats2.passwordResets"), value: "12" },
+          { label: t("accounts.stats2.privileged"), value: "14", tone: "warn" },
+          { label: t("accounts.stats2.noMfa"), value: "5", tone: "danger" },
+          { label: t("accounts.stats2.lastSync"), value: "2m ago" },
         ]}
       />
     </div>

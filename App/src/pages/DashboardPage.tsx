@@ -4,6 +4,7 @@ import { usePageDummyQuery } from "@/utils/usePageDummyQuery";
 import { DualAreaChart, GroupedBarChart, DonutGauge } from "@/components/ui/TrendChart";
 import PageSkeleton from "@/components/ui/PageSkeleton";
 import { DataTable, PageHeader, StatGrid } from "@/components/cards/BaseCards";
+import { useAppSettings } from "@/contexts/AppSettingsContext";
 
 type DashboardPageProps = {
   pageKey: string;
@@ -30,9 +31,10 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 function AlertsPanel({ items }: { items: Item[] }) {
+  const { t } = useAppSettings();
   return (
     <section className="card p-5">
-      <p className="m-0 mb-3 text-sm font-semibold text-[var(--color-neutral-100)]">Priority Alerts</p>
+      <p className="m-0 mb-3 text-sm font-semibold text-[var(--color-neutral-100)]">{t("dashboard.alerts.title")}</p>
       <div className="flex flex-col gap-2">
         {items.map((item) => (
           <div
@@ -62,9 +64,10 @@ function AlertsPanel({ items }: { items: Item[] }) {
 }
 
 function TasksPanel({ items }: { items: Item[] }) {
+  const { t } = useAppSettings();
   return (
     <section className="card p-5">
-      <p className="m-0 mb-3 text-sm font-semibold text-[var(--color-neutral-100)]">Next Actions</p>
+      <p className="m-0 mb-3 text-sm font-semibold text-[var(--color-neutral-100)]">{t("dashboard.tasks.title")}</p>
       <div className="space-y-2">
         {items.map((item) => (
           <div
@@ -92,6 +95,7 @@ function TasksPanel({ items }: { items: Item[] }) {
 }
 
 export default function DashboardPage({ pageKey, title, description }: DashboardPageProps) {
+  const { t } = useAppSettings();
   const { user } = useAuth();
   const { data, isLoading } = usePageDummyQuery(pageKey);
 
@@ -165,20 +169,20 @@ export default function DashboardPage({ pageKey, title, description }: Dashboard
       <section className="grid gap-3 xl:grid-cols-[1.4fr_1fr]">
         <DualAreaChart
           data={dualData}
-          title="Activity Overview"
-          primaryLabel="Incidents"
-          secondaryLabel="Resolved"
+          title={t("dashboard.charts.activity")}
+          primaryLabel={t("dashboard.charts.incidents")}
+          secondaryLabel={t("dashboard.charts.resolved")}
         />
         <DonutGauge
-          title="Risk Distribution"
+          title={t("dashboard.charts.riskDist")}
           value={64}
           max={100}
-          label="Risk Score"
+          label={t("dashboard.charts.riskScore")}
           breakdown={[
-            { label: "Critical",  value: 3,  color: "#fb7185" },
-            { label: "High",      value: 9,  color: "#fbbf24" },
-            { label: "Medium",    value: 21, color: "#1d4ed8" },
-            { label: "Low",       value: 31, color: "#38bdf8" },
+            { label: t("dashboard.charts.critical"),  value: 3,  color: "#fb7185" },
+            { label: t("dashboard.charts.high"),      value: 9,  color: "#fbbf24" },
+            { label: t("dashboard.charts.medium"),    value: 21, color: "#1d4ed8" },
+            { label: t("dashboard.charts.low"),       value: 31, color: "#38bdf8" },
           ]}
         />
       </section>
@@ -191,17 +195,17 @@ export default function DashboardPage({ pageKey, title, description }: Dashboard
       <section className="grid gap-3 xl:grid-cols-[1.2fr_1fr]">
         <GroupedBarChart
           data={barData}
-          title="Weekly Activity"
-          primaryLabel="Events"
-          secondaryLabel="Resolved"
+          title={t("dashboard.charts.weekly")}
+          primaryLabel={t("dashboard.charts.events")}
+          secondaryLabel={t("dashboard.charts.resolved")}
         />
         <DataTable
-          title="Entity Snapshot"
-          columns={["Name", "Owner", "State"]}
+          title={t("dashboard.table.snapshot")}
+          columns={[t("table.name"), t("table.owner"), t("table.state")]}
           rows={rows.map((row) => [row.name, row.owner, row.state])}
           minWidth={380}
-          filterColumn="State"
-          searchPlaceholder="Search entities or owners"
+          filterColumn={t("table.state")}
+          searchPlaceholder={t("dashboard.search")}
           renderCell={(cell, row, _rowIndex, cellIndex) =>
             cellIndex === 2 ? <span className={STATUS_COLORS[row[2]] ?? "status-neutral"}>{cell}</span> : cell
           }

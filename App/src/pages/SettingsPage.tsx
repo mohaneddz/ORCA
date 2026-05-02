@@ -11,14 +11,14 @@ import {
 
 type SettingsTabKey = "general" | "api" | "security" | "network" | "mail" | "automation" | "integrations";
 
-const tabs: Array<{ key: SettingsTabKey; label: string }> = [
-  { key: "general", label: "General" },
-  { key: "api", label: "API Keys & Integrations" },
-  { key: "security", label: "Security Policy" },
-  { key: "network", label: "Network Rules" },
-  { key: "mail", label: "Mail Controls" },
-  { key: "automation", label: "Automation" },
-  { key: "integrations", label: "Integrations" },
+const tabs: Array<{ key: SettingsTabKey; labelKey: string }> = [
+  { key: "general", labelKey: "settings.tab.general" },
+  { key: "api", labelKey: "settings.tab.api" },
+  { key: "security", labelKey: "settings.tab.security" },
+  { key: "network", labelKey: "settings.tab.network" },
+  { key: "mail", labelKey: "settings.tab.mail" },
+  { key: "automation", labelKey: "settings.tab.automation" },
+  { key: "integrations", labelKey: "settings.tab.integrations" },
 ];
 
 const tabToggles: Record<Exclude<SettingsTabKey, "general" | "api">, string[]> = {
@@ -128,16 +128,17 @@ type ApiKeyField = {
 };
 
 const API_KEY_FIELDS: ApiKeyField[] = [
-  { key: "pineconeApiKey", label: "Pinecone API Key", type: "password", helper: "Pinecone secret key (pcsk_…)" },
-  { key: "pineconeIndexName", label: "Pinecone Index Name", helper: "e.g. innov" },
-  { key: "pineconeNamespace", label: "Pinecone Namespace", helper: "Leave blank for default namespace" },
-  { key: "pineconeTopK", label: "Pinecone Top-K", type: "number", helper: "Number of results to retrieve" },
-  { key: "groqApiKey", label: "Groq API Key", type: "password", helper: "Groq secret key (gsk_…)" },
-  { key: "groqBaseUrl", label: "Groq Base URL", helper: "e.g. https://api.groq.com/openai/v1" },
-  { key: "groqChatModel", label: "Groq Chat Model", helper: "e.g. llama-3.3-70b-versatile" },
+  { key: "pineconeApiKey", label: "Pinecone API Key", type: "password", helperKey: "settings.api.helper.pineconeKey" },
+  { key: "pineconeIndexName", label: "Pinecone Index Name", helperKey: "settings.api.helper.pineconeIndex" },
+  { key: "pineconeNamespace", label: "Pinecone Namespace", helperKey: "settings.api.helper.pineconeNamespace" },
+  { key: "pineconeTopK", label: "Pinecone Top-K", type: "number", helperKey: "settings.api.helper.pineconeTopK" },
+  { key: "groqApiKey", label: "Groq API Key", type: "password", helperKey: "settings.api.helper.groqKey" },
+  { key: "groqBaseUrl", label: "Groq Base URL", helperKey: "settings.api.helper.groqBaseUrl" },
+  { key: "groqChatModel", label: "Groq Chat Model", helperKey: "settings.api.helper.groqModel" },
 ];
 
 function ApiKeysPanel() {
+  const { t } = useAppSettings();
   const [form, setForm] = useState<Partial<Record<keyof ApiKeysConfig, string>>>({}); 
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [isVisible, setIsVisible] = useState<Record<keyof ApiKeysConfig, boolean>>(
@@ -195,10 +196,9 @@ function ApiKeysPanel() {
   return (
     <section className="card p-4">
       <div className="mb-4">
-        <p className="m-0 text-sm font-semibold text-white">API Keys &amp; Integrations</p>
+        <p className="m-0 text-sm font-semibold text-white">{t("settings.api.title")}</p>
         <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">
-          Override the default environment values. Leave a field blank to use the built-in
-          default. Values are persisted securely in the app store.
+          {t("settings.api.description")}
         </p>
       </div>
 
@@ -224,9 +224,9 @@ function ApiKeysPanel() {
                 >
                   {field.label}
                 </label>
-                {field.helper && (
+                {field.helperKey && (
                   <span className="text-xs text-[var(--color-neutral-500)]">
-                    {field.helper}
+                    {t(field.helperKey)}
                   </span>
                 )}
               </div>
@@ -236,7 +236,7 @@ function ApiKeysPanel() {
                   type={inputType}
                   value={form[field.key] ?? ""}
                   onChange={(e) => handleChange(field.key, e.target.value)}
-                  placeholder={envDefault || "(not set in .env)"}
+                  placeholder={envDefault || t("settings.api.placeholder")}
                   className="w-full rounded-md border border-white/15 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder-slate-500 outline-none ring-cyan-300/40 focus:ring font-mono"
                 />
                 {field.type === "password" && (
@@ -244,9 +244,9 @@ function ApiKeysPanel() {
                     type="button"
                     onClick={() => toggleVisible(field.key)}
                     className="shrink-0 text-xs text-slate-400 hover:text-cyan-300 transition-colors"
-                    aria-label={isVisible[field.key] ? "Hide" : "Reveal"}
+                    aria-label={isVisible[field.key] ? t("settings.api.hide") : t("settings.api.show")}
                   >
-                    {isVisible[field.key] ? "Hide" : "Show"}
+                    {isVisible[field.key] ? t("settings.api.hide") : t("settings.api.show")}
                   </button>
                 )}
               </div>
@@ -262,7 +262,7 @@ function ApiKeysPanel() {
           disabled={status === "saving"}
           className="rounded-md bg-cyan-500/20 border border-cyan-400/30 px-4 py-2 text-sm font-semibold text-cyan-100 hover:bg-cyan-500/30 transition-colors disabled:opacity-50"
         >
-          {status === "saving" ? "Saving…" : "Save overrides"}
+          {status === "saving" ? t("settings.api.saving") : t("settings.api.save")}
         </button>
 
         <button
@@ -270,14 +270,14 @@ function ApiKeysPanel() {
           onClick={() => void handleReset()}
           className="rounded-md border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-white/10 transition-colors"
         >
-          Reset to defaults
+          {t("settings.api.reset")}
         </button>
 
         {status === "saved" && (
-          <span className="text-xs text-emerald-400">✓ Saved</span>
+          <span className="text-xs text-emerald-400">✓ {t("settings.api.saved")}</span>
         )}
         {status === "error" && (
-          <span className="text-xs text-red-400">Failed to save</span>
+          <span className="text-xs text-red-400">{t("settings.api.error")}</span>
         )}
       </div>
     </section>
@@ -313,7 +313,7 @@ export default function SettingsPage() {
                 activeTab === tab.key ? "bg-cyan-500/18 text-cyan-100" : "bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white",
               ].join(" ")}
             >
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </div>
@@ -405,8 +405,8 @@ export default function SettingsPage() {
       {activeTab !== "general" && activeTab !== "api" && (
         <section className="card overflow-hidden">
           <div className="border-b border-white/10 px-4 py-3">
-            <p className="m-0 text-sm font-semibold text-white">{tabs.find((tab) => tab.key === activeTab)?.label}</p>
-            <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">Configuration toggles for the selected settings area.</p>
+            <p className="m-0 text-sm font-semibold text-white">{t(tabs.find((tab) => tab.key === activeTab)?.labelKey || "")}</p>
+            <p className="m-0 mt-1 text-xs text-[var(--color-neutral-500)]">{t("settings.toggles.description")}</p>
           </div>
           <div>
             {tabToggles[activeTab as keyof typeof tabToggles]?.map((toggleLabel, index) => (

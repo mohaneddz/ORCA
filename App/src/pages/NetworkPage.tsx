@@ -1,61 +1,41 @@
 import { DataTable, PageHeader } from "@/components/cards/BaseCards";
+import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { RISK_TREND, EXPOSURE_BY_ZONE, NAC_COMPLIANCE_TREND, MOCK_NETWORK_NODES } from "@/data/mockData";
 
 const AXIS_STYLE = { fill: "#64748b", fontSize: 11 };
 const CHART_PRIMARY = "#1d4ed8";
 const CHART_SECONDARY = "#38bdf8";
 
-const riskTrend = [
-  { name: "00:00", value: 41 },
-  { name: "04:00", value: 46 },
-  { name: "08:00", value: 54 },
-  { name: "12:00", value: 58 },
-  { name: "16:00", value: 63 },
-  { name: "20:00", value: 58 },
-];
-
-const exposureByZone = [
-  { name: "Core", value: 2 },
-  { name: "Branch", value: 3 },
-  { name: "DMZ", value: 5 },
-  { name: "Guest", value: 4 },
-];
-
-const complianceTrend = [
-  { name: "Mon", compliant: 89, target: 95 },
-  { name: "Tue", compliant: 90, target: 95 },
-  { name: "Wed", compliant: 91, target: 95 },
-  { name: "Thu", compliant: 92, target: 95 },
-  { name: "Fri", compliant: 91, target: 95 },
-];
-
 export default function NetworkPage() {
+  const { t } = useAppSettings();
+
   return (
     <div className="page-section">
       <PageHeader
-        badge="Network"
-        title="Network Security Operations"
-        description="Segment health, live traffic anomalies, and broad infrastructure posture at a glance."
+        badge={t("network.badge")}
+        title={t("network.title")}
+        description={t("network.description")}
       />
 
       <section className="grid gap-3 xl:grid-cols-2">
         <section className="card p-5 min-h-[120px]">
-          <p className="m-0 text-xs uppercase tracking-[0.08em] text-slate-400">Traffic Throughput</p>
+          <p className="m-0 text-xs uppercase tracking-[0.08em] text-slate-400">{t("network.throughput")}</p>
           <p className="m-0 mt-2 text-2xl font-bold text-white">8.1 Gbps</p>
         </section>
         <section className="card p-5 min-h-[120px]">
-          <p className="m-0 text-xs uppercase tracking-[0.08em] text-slate-400">Blocked Connections (24h)</p>
+          <p className="m-0 text-xs uppercase tracking-[0.08em] text-slate-400">{t("network.blocked")}</p>
           <p className="m-0 mt-2 text-2xl font-bold text-white">3,412</p>
         </section>
       </section>
 
       <section className="grid gap-3 xl:grid-cols-3">
         <section className="card p-5 min-h-[280px]">
-          <p className="m-0 text-sm font-semibold text-white">Core Segment Risk</p>
-          <p className="m-0 mt-2 text-sm text-slate-400">Score 58/100</p>
+          <p className="m-0 text-sm font-semibold text-white">{t("network.risk.title")}</p>
+          <p className="m-0 mt-2 text-sm text-slate-400">{t("network.risk.subtitle")}</p>
           <div className="mt-3 h-[170px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={riskTrend} margin={{ top: 4, right: 6, left: -20, bottom: 0 }}>
+              <AreaChart data={RISK_TREND} margin={{ top: 4, right: 6, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="riskGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={CHART_PRIMARY} stopOpacity={0.46} />
@@ -76,11 +56,11 @@ export default function NetworkPage() {
         </section>
 
         <section className="card p-5 min-h-[280px]">
-          <p className="m-0 text-sm font-semibold text-white">External Exposure</p>
-          <p className="m-0 mt-2 text-sm text-slate-400">7 critical open ports</p>
+          <p className="m-0 text-sm font-semibold text-white">{t("network.exposure.title")}</p>
+          <p className="m-0 mt-2 text-sm text-slate-400">{t("network.exposure.subtitle")}</p>
           <div className="mt-3 h-[170px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={exposureByZone} barCategoryGap="26%" margin={{ top: 4, right: 6, left: -20, bottom: 0 }}>
+              <BarChart data={EXPOSURE_BY_ZONE} barCategoryGap="26%" margin={{ top: 4, right: 6, left: -20, bottom: 0 }}>
                 <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
                 <XAxis dataKey="name" tick={AXIS_STYLE} tickLine={false} axisLine={false} />
                 <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={34} />
@@ -95,11 +75,11 @@ export default function NetworkPage() {
         </section>
 
         <section className="card p-5 min-h-[280px]">
-          <p className="m-0 text-sm font-semibold text-white">NAC Compliance</p>
-          <p className="m-0 mt-2 text-sm text-slate-400">91% compliant endpoints</p>
+          <p className="m-0 text-sm font-semibold text-white">{t("network.nac.title")}</p>
+          <p className="m-0 mt-2 text-sm text-slate-400">{t("network.nac.subtitle")}</p>
           <div className="mt-3 h-[170px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={complianceTrend} margin={{ top: 4, right: 6, left: -20, bottom: 0 }}>
+              <AreaChart data={NAC_COMPLIANCE_TREND} margin={{ top: 4, right: 6, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="nacGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={CHART_SECONDARY} stopOpacity={0.38} />
@@ -123,14 +103,10 @@ export default function NetworkPage() {
 
       <DataTable
         className="flex-1 min-h-[420px]"
-        title="Network Asset and Event Table"
-        columns={["Node", "Type", "IP", "Segment", "Latest Event", "Severity", "Owner"]}
-        rows={[
-          ["DC-EDGE-02", "Server", "172.16.10.3", "Core", "Suspicious outbound DNS", "High", "Infra"],
-          ["Branch-AP-03", "Access Point", "172.16.20.1", "Branch", "Firmware outdated", "Medium", "Network"],
-          ["Unknown-Lenovo", "Laptop", "172.16.10.77", "Corp-WiFi", "Unauthorized join", "Critical", "Unassigned"],
-          ["FIN-WIN-04", "Workstation", "172.16.10.31", "Finance", "RDP scan detected", "High", "Finance IT"],
-        ]}
+        title={t("network.table.title")}
+        columns={[t("table.node"), t("table.ip"), t("table.segment"), t("table.latestEvent"), t("table.severity")]}
+        rows={MOCK_NETWORK_NODES}
+        minWidth={500}
       />
     </div>
   );

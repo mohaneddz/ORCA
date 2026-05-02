@@ -1,48 +1,37 @@
 import { DataTable, PageHeader } from "@/components/cards/BaseCards";
+import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-const resilienceTrend = [
-  { week: "W1", passRate: 62, reportRate: 44, clickRate: 28 },
-  { week: "W2", passRate: 67, reportRate: 51, clickRate: 25 },
-  { week: "W3", passRate: 72, reportRate: 56, clickRate: 20 },
-  { week: "W4", passRate: 76, reportRate: 62, clickRate: 18 },
-  { week: "W5", passRate: 81, reportRate: 68, clickRate: 15 },
-  { week: "W6", passRate: 86, reportRate: 73, clickRate: 14 },
-];
-
-const campaignBreakdown = [
-  { group: "Finance", completed: 92 },
-  { group: "Ops", completed: 84 },
-  { group: "HR", completed: 88 },
-  { group: "Marketing", completed: 79 },
-];
+import { RESILIENCE_TREND, CAMPAIGN_BREAKDOWN, MOCK_TRAINING_SESSIONS } from "@/data/mockData";
 
 const AXIS_STYLE = { fill: "#64748b", fontSize: 11 };
 const CHART_PRIMARY = "#1d4ed8";
 const CHART_SECONDARY = "#38bdf8";
 
 export default function TrainingPage() {
+  const { t } = useAppSettings();
+
   return (
     <div className="page-section">
       <PageHeader
-        badge="Training"
-        title="Awareness and Simulation Training"
-        description="Campaign outcomes, user resilience progression, and guided response tooling."
+        badge={t("training.badge")}
+        title={t("training.title")}
+        description={t("training.description")}
       />
 
       <section className="grid gap-3 xl:grid-cols-3">
         <section className="card p-5 xl:col-span-2 min-h-[420px]">
-          <p className="m-0 text-sm font-semibold text-white">Training Performance Board</p>
-          <p className="m-0 mt-2 text-sm text-slate-400">Resilience curve, suspicious-report growth, and click-risk decline across active simulations.</p>
+          <p className="m-0 text-sm font-semibold text-white">{t("training.board.title")}</p>
+          <p className="m-0 mt-2 text-sm text-slate-400">{t("training.board.description")}</p>
           <div className="mt-4 grid gap-3 md:grid-cols-[1.65fr_1fr]">
             <section className="rounded-xl border border-white/8 bg-slate-900/30 p-3">
               <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
-                <span>6-Week Behavior Trend</span>
-                <span className="text-cyan-300">Click risk: -50%</span>
+                <span>{t("training.trend.title")}</span>
+                <span className="text-cyan-300">{t("training.trend.risk")}</span>
               </div>
               <div className="h-[230px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={resilienceTrend} margin={{ top: 4, right: 6, left: -20, bottom: 0 }}>
+                  <AreaChart data={RESILIENCE_TREND} margin={{ top: 4, right: 6, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="passRateGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={CHART_PRIMARY} stopOpacity={0.46} />
@@ -67,10 +56,10 @@ export default function TrainingPage() {
               </div>
             </section>
             <section className="rounded-xl border border-white/8 bg-slate-900/30 p-3">
-              <p className="m-0 text-xs text-slate-400">Completion by Department</p>
+              <p className="m-0 text-xs text-slate-400">{t("training.completion.title")}</p>
               <div className="mt-2 h-[230px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={campaignBreakdown} margin={{ top: 4, right: 6, left: -20, bottom: 0 }} barCategoryGap="28%">
+                  <BarChart data={CAMPAIGN_BREAKDOWN} margin={{ top: 4, right: 6, left: -20, bottom: 0 }} barCategoryGap="28%">
                     <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
                     <XAxis dataKey="group" tick={AXIS_STYLE} tickLine={false} axisLine={false} />
                     <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={32} domain={[0, 100]} />
@@ -85,16 +74,21 @@ export default function TrainingPage() {
             </section>
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-            <div className="rounded-lg border border-blue-700/35 bg-blue-900/20 px-3 py-2 text-slate-300 backdrop-blur-sm">Avg Pass Rate <span className="ml-1 font-semibold text-white">74%</span></div>
-            <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-slate-300">Avg Report Rate <span className="ml-1 font-semibold text-white">59%</span></div>
-            <div className="rounded-lg border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-slate-300">Avg Click Rate <span className="ml-1 font-semibold text-white">20%</span></div>
+            <div className="rounded-lg border border-blue-700/35 bg-blue-900/20 px-3 py-2 text-slate-300 backdrop-blur-sm">{t("training.stats.passRate")} <span className="ml-1 font-semibold text-white">74%</span></div>
+            <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-slate-300">{t("training.stats.reportRate")} <span className="ml-1 font-semibold text-white">59%</span></div>
+            <div className="rounded-lg border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-slate-300">{t("training.stats.clickRate")} <span className="ml-1 font-semibold text-white">20%</span></div>
           </div>
         </section>
         <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-1">
-          {["Active Campaigns", "Failure Rate", "Report Rate", "Auto-Enrolled"].map((title, idx) => (
-            <section key={title} className="card p-5 min-h-[96px]">
-              <p className="m-0 text-xs uppercase tracking-[0.08em] text-slate-400">{title}</p>
-              <p className="m-0 mt-2 text-xl font-bold text-white">{["9", "14%", "73%", "22"][idx]}</p>
+          {[
+            { key: "training.kpi.active", val: "9" },
+            { key: "training.kpi.failure", val: "14%" },
+            { key: "training.kpi.report", val: "73%" },
+            { key: "training.kpi.enrolled", val: "22" }
+          ].map((item) => (
+            <section key={item.key} className="card p-5 min-h-[96px]">
+              <p className="m-0 text-xs uppercase tracking-[0.08em] text-slate-400">{t(item.key)}</p>
+              <p className="m-0 mt-2 text-xl font-bold text-white">{item.val}</p>
             </section>
           ))}
         </div>
@@ -103,23 +97,19 @@ export default function TrainingPage() {
       <section className="grid gap-3 xl:grid-cols-5">
         <div className="xl:col-span-4">
           <DataTable
-            title="Training Sessions"
-            columns={["Session", "Target", "Result", "Assigned Follow-Up", "Date"]}
-            rows={[
-              ["Invoice Clone v2", "Finance", "5 clicks", "Mandatory module", "2026-05-02"],
-              ["Credential Harvest Drill", "Operations", "2 submissions", "1:1 coaching", "2026-05-01"],
-              ["Link Safety Sprint", "HR", "89% pass", "None", "2026-04-30"],
-              ["Attachment Trap", "All Staff", "11 risky opens", "Micro-training", "2026-04-29"],
-            ]}
+            title={t("training.table.title")}
+            columns={[t("table.session"), t("table.target"), t("table.result"), t("table.date")]}
+            rows={MOCK_TRAINING_SESSIONS.map(r => [r[0], r[1], r[2], r[4]])}
+            minWidth={500}
           />
         </div>
         <section className="card p-5">
-          <p className="m-0 text-sm font-semibold text-white">Assisting Tools</p>
+          <p className="m-0 text-sm font-semibold text-white">{t("training.tools.title")}</p>
           <ul className="m-0 mt-3 space-y-2 pl-5 text-sm text-slate-400">
-            <li>Template generator</li>
-            <li>Adaptive difficulty</li>
-            <li>Auto-remediation links</li>
-            <li>Behavior score export</li>
+            <li>{t("training.tools.generator")}</li>
+            <li>{t("training.tools.difficulty")}</li>
+            <li>{t("training.tools.remediation")}</li>
+            <li>{t("training.tools.export")}</li>
           </ul>
         </section>
       </section>

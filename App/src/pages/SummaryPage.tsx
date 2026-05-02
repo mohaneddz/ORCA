@@ -3,7 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { DualAreaChart } from "@/components/ui/TrendChart";
 import { DataTable, PageHeader, StatGrid } from "@/components/cards/BaseCards";
+import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { logger } from "@/lib/logger";
+import { SUMMARY_FALLBACK } from "@/data/mockData";
 
 type SummarySnapshot = {
   generatedAt: string;
@@ -149,24 +151,20 @@ Explain what this means in simple terms.`;
     interpretation = {
       ...groq,
       guidance: [
-        { action: "Handle the most urgent open issues first", why: "This quickly lowers the biggest risk to daily work.", priority: "High" },
-        { action: "Check why a few devices are behind standard rules", why: "This prevents those devices from becoming future problems.", priority: "Medium" },
-        { action: "Send a short status update to managers", why: "Everyone stays informed without waiting for a long report.", priority: "Low" },
+        { action: "summary.step1.title", why: "summary.step1.desc", priority: "High" },
+        { action: "summary.step2.title", why: "summary.step2.desc", priority: "Medium" },
+        { action: "summary.step3.title", why: "summary.step3.desc", priority: "Low" },
       ],
     };
   } catch {
     logger.warn("summary.snapshot.groq_fallback_used");
     interpretation = {
-      headline: "Overall status is stable: the team is keeping up with new issues.",
-      highlights: [
-        "There are active issues, but they are being managed.",
-        "The response speed is close to the incoming issue rate.",
-        "Most users and devices remain in good standing.",
-      ],
+      headline: SUMMARY_FALLBACK.headline,
+      highlights: SUMMARY_FALLBACK.highlights,
       guidance: [
-        { action: "Close a portion of urgent open issues today", why: "Fewer urgent items means less chance of disruption.", priority: "High" },
-        { action: "Review older devices for missing updates", why: "This helps avoid avoidable breakdowns later.", priority: "Medium" },
-        { action: "Make sure each issue has one clear owner", why: "Clear ownership reduces delays and confusion.", priority: "Low" },
+        { action: "summary.step1.title", why: "summary.step1.desc", priority: "High" },
+        { action: "summary.step2.title", why: "summary.step2.desc", priority: "Medium" },
+        { action: "summary.step3.title", why: "summary.step3.desc", priority: "Low" },
       ],
     };
   }
@@ -175,10 +173,10 @@ Explain what this means in simple terms.`;
     generatedAt: new Date().toISOString(),
     company: "ORCA Company",
     kpis: [
-      { label: "Open Issues", value: String(metrics.incidents), helper: "Items still waiting to be fixed", trend: 4.2 },
-      { label: "Fixed Today", value: String(metrics.resolved), helper: "Problems solved in this cycle", trend: 6.1 },
-      { label: "Active Company Devices", value: String(metrics.activeDevices), helper: "Devices currently reporting", trend: 1.7 },
-      { label: "Accounts In Good Shape", value: `${metrics.secureAccounts}%`, helper: "Accounts following safety rules", trend: 2.3 },
+      { label: "summary.stats.openIssues", value: String(metrics.incidents), helper: "summary.stats.openIssuesDesc", trend: 4.2 },
+      { label: "summary.stats.fixedToday", value: String(metrics.resolved), helper: "summary.stats.fixedTodayDesc", trend: 6.1 },
+      { label: "summary.stats.activeDevices", value: String(metrics.activeDevices), helper: "summary.stats.activeDevicesDesc", trend: 1.7 },
+      { label: "summary.stats.accountsGood", value: `${metrics.secureAccounts}%`, helper: "summary.stats.accountsGoodDesc", trend: 2.3 },
     ],
     chart,
     interpretation,
@@ -190,6 +188,7 @@ Explain what this means in simple terms.`;
 }
 
 export default function SummaryPage() {
+  const { t } = useAppSettings();
   const { data, isFetching, refetch } = useQuery({
     queryKey: ["summary-page"],
     queryFn: ({ meta }) => buildSummarySnapshot(Boolean(meta?.forceRefresh)),
@@ -197,17 +196,17 @@ export default function SummaryPage() {
   });
 
   const generatedLabel = useMemo(() => {
-    if (!data?.generatedAt) return "No data yet";
+    if (!data?.generatedAt) return t("summary.badge");
     const time = new Date(data.generatedAt);
-    return `Updated ${time.toLocaleTimeString()}`;
-  }, [data?.generatedAt]);
+    return `${t("summary.refresh")} ${time.toLocaleTimeString()}`;
+  }, [data?.generatedAt, t]);
 
   return (
-    <div className="page-section pb-10">
+    <div className="page-section">
       <PageHeader
-        badge="Summary"
-        title="Summary"
-        description="A simple snapshot of how the company is doing right now, explained in plain language."
+        badge={t("summary.badge")}
+        title={t("summary.title")}
+        description={t("summary.description")}
         actions={
           <button
             type="button"
@@ -221,7 +220,7 @@ export default function SummaryPage() {
           >
             <span className="inline-flex items-center gap-1.5">
               <RefreshCw size={14} className={isFetching ? "animate-spin" : ""} />
-              Refresh
+              {t("summary.refresh")}
             </span>
           </button>
         }
@@ -235,19 +234,19 @@ export default function SummaryPage() {
         <>
           <section className="card p-5">
             <p className="m-0 text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--color-primary-soft)" }}>
-              What Is Happening
+              {t("summary.status")}
             </p>
-            <p className="m-0 mt-2 text-base font-semibold text-white">{data.interpretation.headline}</p>
+            <p className="m-0 mt-2 text-base font-semibold text-white">{t(data.interpretation.headline)}</p>
             <p className="m-0 mt-2 text-sm leading-relaxed" style={{ color: "#94a3b8" }}>
-              This page turns technical signals into everyday language so non-technical teams can quickly understand the situation.
+              {t("summary.explanation")}
             </p>
           </section>
 
           <StatGrid
             stats={data.kpis.map((kpi, index) => ({
-              label: kpi.label,
+              label: t(kpi.label),
               value: kpi.value,
-              helper: kpi.helper,
+              helper: t(kpi.helper),
               trend: kpi.trend,
               tone: index === 0 ? "warn" : "default",
             }))}
@@ -256,15 +255,15 @@ export default function SummaryPage() {
           <section className="grid gap-3 xl:grid-cols-[1.4fr_1fr]">
             <DualAreaChart
               data={data.chart}
-              title="New Issues vs Fixed Issues (This Week)"
-              primaryLabel="New Issues"
-              secondaryLabel="Fixed Issues"
+              title={t("summary.chart.title")}
+              primaryLabel={t("summary.chart.primary")}
+              secondaryLabel={t("summary.chart.secondary")}
             />
             <section className="card p-5">
-              <p className="m-0 text-sm font-semibold text-white">Quick Explanation</p>
+              <p className="m-0 text-sm font-semibold text-white">{t("summary.quickExplain")}</p>
               <ul className="m-0 mt-3 space-y-2 pl-5 text-sm" style={{ color: "#94a3b8" }}>
                 {data.interpretation.highlights.map((point) => (
-                  <li key={point}>{point}</li>
+                  <li key={point}>{t(point)}</li>
                 ))}
               </ul>
             </section>
@@ -272,31 +271,31 @@ export default function SummaryPage() {
 
           <section className="grid gap-3 xl:grid-cols-[1.2fr_1fr]">
             <DataTable
-              title="Suggested Next Steps"
-              columns={["What To Do", "Why It Helps", "Priority"]}
-              rows={data.interpretation.guidance.map((item) => [item.action, item.why, item.priority])}
-              minWidth={700}
-              searchPlaceholder="Search actions"
-              filterColumn="Priority"
-              filterOptions={["High", "Medium", "Low"]}
+              title={t("summary.table.steps")}
+              columns={[t("table.action"), t("table.why"), t("table.priority")]}
+              rows={data.interpretation.guidance.map((item) => [t(item.action), t(item.why), item.priority])}
+              minWidth={500}
+              searchPlaceholder={t("summary.table.search")}
+              filterColumn={t("table.priority")}
+              filterOptions={[t("table.priority.high"), t("table.priority.medium"), t("table.priority.low")]}
               renderCell={(cell, row, _rowIndex, cellIndex) => {
                 if (cellIndex !== 2) return cell;
                 const tone =
-                  row[2] === "High" ? "status-danger" : row[2] === "Medium" ? "status-warn" : "status-ok";
+                  row[2] === t("table.priority.high") ? "status-danger" : row[2] === t("table.priority.medium") ? "status-warn" : "status-ok";
                 return <span className={tone}>{cell}</span>;
               }}
             />
             <section className="card p-5">
-              <p className="m-0 text-sm font-semibold text-white">Simple Guidance</p>
+              <p className="m-0 text-sm font-semibold text-white">{t("summary.guidance.title")}</p>
               <div className="mt-3 space-y-3 text-sm">
                 <p className="m-0 leading-relaxed" style={{ color: "#94a3b8" }}>
-                  First finish urgent items, then handle medium items, then send a short update.
+                  {t("summary.guidance.p1")}
                 </p>
                 <p className="m-0 leading-relaxed" style={{ color: "#94a3b8" }}>
-                  If the numbers get worse after two refreshes in a row, ask for extra help from leadership.
+                  {t("summary.guidance.p2")}
                 </p>
                 <p className="m-0 leading-relaxed" style={{ color: "#94a3b8" }}>
-                  After important fixes, press Refresh to get a new explanation and see if things improved.
+                  {t("summary.guidance.p3")}
                 </p>
               </div>
             </section>
