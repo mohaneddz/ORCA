@@ -23,18 +23,37 @@ class DeviceSnapshot(models.Model):
     # When our backend received it
     received_at = models.DateTimeField(auto_now_add=True)
 
-    # Indexed device fields (for fast queries without touching raw JSON)
+    # ── Hardware ──────────────────────────────────────────────────────────
     hostname = models.CharField(max_length=255, blank=True, default="")
     os_name = models.CharField(max_length=100, blank=True, default="")
     os_version = models.CharField(max_length=100, blank=True, default="")
-    architecture = models.CharField(max_length=50, blank=True, default="")
-    uptime_seconds = models.BigIntegerField(null=True, blank=True)
-    cpu_cores = models.IntegerField(null=True, blank=True)
-    total_memory_mb = models.IntegerField(null=True, blank=True)
+    os_build = models.CharField(max_length=50, blank=True, default="")
+    cpu_model = models.CharField(max_length=255, blank=True, default="")
+    ram_total_mb = models.IntegerField(null=True, blank=True)
+    disk_total_gb = models.FloatField(null=True, blank=True)
+    disk_free_gb = models.FloatField(null=True, blank=True)
+    machine_uuid = models.CharField(max_length=100, blank=True, default="")
+    primary_mac = models.CharField(max_length=50, blank=True, default="")
 
-    # Indexed user fields
-    is_admin = models.BooleanField(default=False)
-    local_admin_count = models.IntegerField(default=0)
+    # ── Patch status ──────────────────────────────────────────────────────
+    patch_is_current = models.BooleanField(null=True, blank=True)
+    patch_last_updated = models.DateField(null=True, blank=True)
+    patch_days_since_update = models.IntegerField(null=True, blank=True)
+
+    # ── Antivirus ─────────────────────────────────────────────────────────
+    antivirus_detected = models.BooleanField(null=True, blank=True)
+    antivirus_name = models.CharField(max_length=255, blank=True, default="")
+    antivirus_enabled = models.BooleanField(null=True, blank=True)
+    antivirus_up_to_date = models.BooleanField(null=True, blank=True)
+
+    # ── Disk encryption ───────────────────────────────────────────────────
+    disk_encrypted = models.BooleanField(null=True, blank=True)
+
+    # ── Network / peripherals ─────────────────────────────────────────────
+    usb_enabled = models.BooleanField(null=True, blank=True)
+    lan_device_count = models.IntegerField(null=True, blank=True)
+    local_port_count = models.IntegerField(null=True, blank=True)
+    wifi_open_network_count = models.IntegerField(default=0)
 
     # Backend-computed risk (NOT from the agent)
     risk_score = models.IntegerField(null=True, blank=True)
@@ -56,6 +75,156 @@ class DeviceSnapshot(models.Model):
 
     def __str__(self):
         return f"{self.hostname} — {self.employee} — {self.collected_at:%Y-%m-%d %H:%M}"
+
+
+class NetworkDeviceSnapshot(models.Model):
+    """
+    SNMP / NetFlow telemetry from a network device (router, switch, AP).
+    The user runs an SNMP collector (pysnmp / Telegraf) and POSTs the JSON output.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    employee = models.ForeignKey(
+        Employee, on_delete=models.CASCADE, related_name="network_snapshots"
+    )
+    collected_at = models.DateTimeField()
+    received_at = models.DateTimeField(auto_now_add=True)
+
+    # Device identity
+    device_ip = models.GenericIPAddressField(null=True, blank=True)
+    device_hostname = models.CharField(max_length=255, blank=True, default="")
+    device_type = models.CharField(max_length=100, blank=True, default="")   # router/switch/ap
+    vendor = models.CharField(max_length=100, blank=True, default="")
+    sys_description = models.TextField(blank=True, default="")               # SNMP sysDescr
+
+    # Interface-level counters (aggregated)
+    interface_count = models.IntegerField(null=True, blank=True)
+    interfaces_down = models.IntegerField(default=0)                         # ifOperStatus != 1
+    high_error_interfaces = models.IntegerField(default=0)                   # ifInErrors > threshold
+
+    # Traffic (bytes, from NetFlow / SNMP counters)
+    total_in_bytes = models.BigIntegerField(null=True, blank=True)
+    total_out_bytes = models.BigIntegerField(null=True, blank=True)
+
+    # Risk
+    risk_score = models.IntegerField(null=True, blank=True)
+    risk_level = models.CharField(max_length=20, blank=True, default="")
+    risk_signals = models.JSONField(default=list)
+
+    raw = models.JSONField()
+
+    class Meta:
+        ordering = ["-collected_at"]
+        indexes = [
+            models.Index(fields=["employee", "-collected_at"]),
+            models.Index(fields=["risk_level"]),
+        ]
+
+    def __str__(self):
+        return f"NetSnap {self.device_ip} — {self.employee} — {self.collected_at:%Y-%m-%d %H:%M}"
+
+
+class SystemMetricsSnapshot(models.Model):
+    """
+    CPU / RAM / process metrics from Node Exporter or Telegraf.
+    The user runs the agent locally and POSTs the JSON output.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    employee = models.ForeignKey(
+        Employee, on_delete=models.CASCADE, related_name="system_metrics_snapshots"
+    )
+    collected_at = models.DateTimeField()
+    received_at = models.DateTimeField(auto_now_add=True)
+
+    hostname = models.CharField(max_length=255, blank=True, default="")
+
+    # CPU
+    cpu_usage_percent = models.FloatField(null=True, blank=True)
+    cpu_cores = models.IntegerField(null=True, blank=True)
+    cpu_load_1m = models.FloatField(null=True, blank=True)
+    cpu_load_5m = models.FloatField(null=True, blank=True)
+    cpu_load_15m = models.FloatField(null=True, blank=True)
+
+    # Memory
+    ram_total_mb = models.IntegerField(null=True, blank=True)
+    ram_used_mb = models.IntegerField(null=True, blank=True)
+    ram_usage_percent = models.FloatField(null=True, blank=True)
+    swap_usage_percent = models.FloatField(null=True, blank=True)
+
+    # Processes
+    process_count = models.IntegerField(null=True, blank=True)
+    zombie_process_count = models.IntegerField(default=0)
+    high_cpu_processes = models.JSONField(default=list)   # top N processes by cpu%
+
+    # Risk
+    risk_score = models.IntegerField(null=True, blank=True)
+    risk_level = models.CharField(max_length=20, blank=True, default="")
+    risk_signals = models.JSONField(default=list)
+
+    raw = models.JSONField()
+
+    class Meta:
+        ordering = ["-collected_at"]
+        indexes = [
+            models.Index(fields=["employee", "-collected_at"]),
+            models.Index(fields=["risk_level"]),
+        ]
+
+    def __str__(self):
+        return f"SysMetrics {self.hostname} — {self.employee} — {self.collected_at:%Y-%m-%d %H:%M}"
+
+
+class DiskHealthSnapshot(models.Model):
+    """
+    SMART disk health data from smartctl / pySMART.
+    One record per physical disk per collection run.
+    """
+    HEALTH_CHOICES = [
+        ("PASSED", "Passed"),
+        ("FAILED", "Failed"),
+        ("UNKNOWN", "Unknown"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    employee = models.ForeignKey(
+        Employee, on_delete=models.CASCADE, related_name="disk_health_snapshots"
+    )
+    collected_at = models.DateTimeField()
+    received_at = models.DateTimeField(auto_now_add=True)
+
+    hostname = models.CharField(max_length=255, blank=True, default="")
+
+    # Disk identity
+    device_path = models.CharField(max_length=100, blank=True, default="")   # e.g. /dev/sda
+    model = models.CharField(max_length=255, blank=True, default="")
+    serial = models.CharField(max_length=100, blank=True, default="")
+    capacity_gb = models.FloatField(null=True, blank=True)
+    disk_type = models.CharField(max_length=20, blank=True, default="")      # HDD / SSD / NVMe
+
+    # SMART summary
+    smart_health = models.CharField(max_length=10, choices=HEALTH_CHOICES, default="UNKNOWN")
+    reallocated_sectors = models.IntegerField(null=True, blank=True)
+    pending_sectors = models.IntegerField(null=True, blank=True)
+    uncorrectable_errors = models.IntegerField(null=True, blank=True)
+    power_on_hours = models.IntegerField(null=True, blank=True)
+    temperature_c = models.IntegerField(null=True, blank=True)
+
+    # Risk
+    risk_score = models.IntegerField(null=True, blank=True)
+    risk_level = models.CharField(max_length=20, blank=True, default="")
+    risk_signals = models.JSONField(default=list)
+
+    raw = models.JSONField()
+
+    class Meta:
+        ordering = ["-collected_at"]
+        indexes = [
+            models.Index(fields=["employee", "-collected_at"]),
+            models.Index(fields=["smart_health"]),
+            models.Index(fields=["risk_level"]),
+        ]
+
+    def __str__(self):
+        return f"DiskHealth {self.device_path} ({self.model}) — {self.employee} — {self.collected_at:%Y-%m-%d %H:%M}"
 
 
 class ApprovedSoftware(models.Model):

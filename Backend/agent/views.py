@@ -10,8 +10,8 @@ from django.views.decorators.csrf import csrf_exempt
 from organizations.models import Employee
 from organizations.views import get_org_from_request
 
-from .models import ApprovedSoftware, DeviceSnapshot
-from .risk import _RISKY_PORTS, compute_risk
+from .models import ApprovedSoftware, DeviceSnapshot, DiskHealthSnapshot, NetworkDeviceSnapshot, SystemMetricsSnapshot
+from .risk import _RISKY_PORTS, compute_disk_risk, compute_network_risk, compute_risk, compute_system_risk
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -52,10 +52,87 @@ class SnapshotIngestView(View):
         except ValueError:
             return JsonResponse({"error": "Invalid collectedAtUtc format."}, status=400)
 
-        # ── Extract indexed fields ────────────────────────────────────────
-        device = payload.get("device") or {}
-        hardware = device.get("hardware") or {}
-        user = payload.get("user") or {}
+        # ── Extract indexed fields (supports both old and new agent format) ─
+        # New format: hardware.*, patchStatus.*, antivirus.*, diskEncryption.*, localPorts.*
+        # Old format: device.*, security.*, network.listeningPorts
+        # Rule: prefer new-format keys; fall back to old-format keys if absent.
+
+        hardware = payload.get("hardware") or {}
+        # Old format kept hardware nested under "device"
+        _device = payload.get("device") or {}
+        if not hardware and _device:
+            hardware = {
+                "hostname": _device.get("hostname", ""),
+                "osName": _device.get("osName", ""),
+                "osVersion": _device.get("osVersion", ""),
+                "osBuild": _device.get("kernelVersion", ""),
+                "cpuModel": "",
+                "ramTotalMb": (_device.get("hardware") or {}).get("totalMemoryMb"),
+                "diskTotalGb": None,
+                "diskFreeGb": None,
+                "machineUuid": "",
+                "primaryMacAddress": "",
+            }
+
+        # patchStatus (new) vs security.osUpdatesCurrent (old)
+        patch = payload.get("patchStatus") or {}
+        if not patch:
+            _sec = payload.get("security") or {}
+            os_current = _sec.get("osUpdatesCurrent")
+            if os_current is not None:
+                patch = {"isCurrent": os_current, "lastUpdated": None, "daysSinceUpdate": None}
+
+        # antivirus (new flat block) vs security.antivirus[] (old array)
+        av = payload.get("antivirus") or {}
+        if not av:
+            _sec = payload.get("security") or {}
+            _av_list = _sec.get("antivirus") or []
+            if _av_list:
+                first = _av_list[0]
+                av = {
+                    "avDetected": True,
+                    "productName": first.get("name"),
+                    "enabledStatus": first.get("enabled"),
+                    "signatureUpToDate": first.get("upToDate"),
+                }
+
+        # diskEncryption (new) vs security.diskEncryptionEnabled (old)
+        disk_enc = payload.get("diskEncryption") or {}
+        if not disk_enc:
+            _sec = payload.get("security") or {}
+            enc_val = _sec.get("diskEncryptionEnabled")
+            if enc_val is not None:
+                disk_enc = {"encrypted": enc_val, "provider": ""}
+
+        usb_block = payload.get("usb") or {}
+        lan = payload.get("lan") or {}
+
+        # localPorts (new) vs network.listeningPorts (old)
+        ports_block = payload.get("localPorts") or {}
+        if not ports_block:
+            _net = payload.get("network") or {}
+            _old_ports = _net.get("listeningPorts") or []
+            if _old_ports:
+                ports_block = {
+                    "ports": [
+                        {"port": p.get("port"), "protocol": p.get("protocol"), "owningProcess": p.get("process"), "riskLevel": "unknown"}
+                        for p in _old_ports if p.get("port")
+                    ]
+                }
+
+        wifi = payload.get("wifi") or {}
+
+        wifi_profiles = wifi.get("profiles") or []
+        open_wifi = sum(1 for p in wifi_profiles if p.get("isOpenNetwork") is True)
+
+        patch_last_raw = patch.get("lastUpdated")
+        patch_last_updated = None
+        if patch_last_raw:
+            try:
+                from datetime import date
+                patch_last_updated = date.fromisoformat(patch_last_raw[:10])
+            except ValueError:
+                pass
 
         # ── Backend risk computation (ignore any risk block from agent) ───
         risk = compute_risk(payload)
@@ -67,15 +144,34 @@ class SnapshotIngestView(View):
         snapshot = DeviceSnapshot.objects.create(
             employee=employee,
             collected_at=collected_at,
-            hostname=device.get("hostname", ""),
-            os_name=device.get("osName", ""),
-            os_version=device.get("osVersion", ""),
-            architecture=device.get("architecture", ""),
-            uptime_seconds=device.get("uptimeSeconds"),
-            cpu_cores=hardware.get("cpuCores"),
-            total_memory_mb=hardware.get("totalMemoryMb"),
-            is_admin=bool(user.get("isAdminEstimate", False)),
-            local_admin_count=len(user.get("localAdmins") or []),
+            # Hardware
+            hostname=hardware.get("hostname", ""),
+            os_name=hardware.get("osName", ""),
+            os_version=hardware.get("osVersion", ""),
+            os_build=hardware.get("osBuild", ""),
+            cpu_model=(hardware.get("cpuModel") or "").strip(),
+            ram_total_mb=hardware.get("ramTotalMb"),
+            disk_total_gb=hardware.get("diskTotalGb"),
+            disk_free_gb=hardware.get("diskFreeGb"),
+            machine_uuid=hardware.get("machineUuid", ""),
+            primary_mac=hardware.get("primaryMacAddress", ""),
+            # Patch
+            patch_is_current=patch.get("isCurrent"),
+            patch_last_updated=patch_last_updated,
+            patch_days_since_update=patch.get("daysSinceUpdate"),
+            # Antivirus
+            antivirus_detected=av.get("avDetected"),
+            antivirus_name=av.get("productName") or "",
+            antivirus_enabled=av.get("enabledStatus"),
+            antivirus_up_to_date=av.get("signatureUpToDate"),
+            # Disk encryption
+            disk_encrypted=disk_enc.get("encrypted"),
+            # Network / peripherals
+            usb_enabled=usb_block.get("enabled"),
+            lan_device_count=len(lan.get("devices") or []),
+            local_port_count=len(ports_block.get("ports") or []),
+            wifi_open_network_count=open_wifi,
+            # Risk
             risk_score=risk["score"],
             risk_level=risk["level"],
             risk_signals=risk["signals"],
@@ -178,10 +274,11 @@ class DeviceDriftView(View):
             return {(s.get("name") or "").strip() for s in (items or []) if s.get("name")}
 
         def _ports(snap):
-            net = snap.raw.get("network") or {}
-            return {p.get("port") for p in (net.get("listeningPorts") or []) if p.get("port")}
+            ports_block = snap.raw.get("localPorts") or {}
+            return {p.get("port") for p in (ports_block.get("ports") or []) if p.get("port")}
 
         def _procs(snap):
+            # processes[] — PENDING in agent v2; returns empty set until available
             return {(p.get("name") or "").strip() for p in (snap.raw.get("processes") or []) if p.get("name")}
 
         sw_new = _sw_names(latest) - _sw_names(previous)
@@ -251,8 +348,8 @@ class PortAuditView(View):
         # Aggregate risky ports across all devices
         risky_port_map = {}  # port_number -> {label, affected_devices: [...]}
         for snap in snapshots:
-            net = snap.raw.get("network") or {}
-            open_ports = {p.get("port") for p in (net.get("listeningPorts") or []) if p.get("port")}
+            ports_block = snap.raw.get("localPorts") or {}
+            open_ports = {p.get("port") for p in (ports_block.get("ports") or []) if p.get("port")}
             for port, label in _RISKY_PORTS.items():
                 if port in open_ports:
                     if port not in risky_port_map:
@@ -411,3 +508,277 @@ class ApprovedSoftwareView(View):
 
         entry.delete()
         return JsonResponse({"deleted": True, "id": str(entry_id)})
+
+
+# ---------------------------------------------------------------------------
+# Network Device Snapshot Ingest
+# POST /api/agent/network-snapshot/
+#
+# Expected JSON body:
+# {
+#   "collectedAtUtc": "2026-05-02T11:00:00+00:00",
+#   "employee_id": "<uuid>",          // or ?employee_id= query param
+#   "device": {
+#     "ip": "192.168.1.1",
+#     "hostname": "core-switch-01",
+#     "type": "switch",               // router | switch | ap
+#     "vendor": "Cisco",
+#     "sysDescr": "Cisco IOS 15.2"
+#   },
+#   "interfaces": [
+#     { "name": "Gi0/1", "operStatus": "up", "ifInErrors": 0, "ifOutErrors": 0 }
+#   ],
+#   "traffic": { "inBytes": 123456789, "outBytes": 98765432 }
+# }
+# ---------------------------------------------------------------------------
+@method_decorator(csrf_exempt, name="dispatch")
+class NetworkSnapshotView(View):
+    def post(self, request):
+        org, err = get_org_from_request(request)
+        if err:
+            return err
+
+        try:
+            payload = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON."}, status=400)
+
+        employee_id = request.GET.get("employee_id") or payload.get("employee_id")
+        if not employee_id:
+            return JsonResponse({"error": "employee_id is required."}, status=400)
+        try:
+            employee = Employee.objects.get(id=employee_id, organization=org)
+        except Employee.DoesNotExist:
+            return JsonResponse({"error": "Employee not found."}, status=404)
+
+        collected_at_raw = payload.get("collectedAtUtc")
+        if not collected_at_raw:
+            return JsonResponse({"error": "collectedAtUtc is required."}, status=400)
+        try:
+            collected_at_raw = collected_at_raw.replace("Z", "+00:00")
+            collected_at = datetime.fromisoformat(collected_at_raw)
+            if collected_at.tzinfo is None:
+                collected_at = collected_at.replace(tzinfo=timezone.utc)
+        except ValueError:
+            return JsonResponse({"error": "Invalid collectedAtUtc format."}, status=400)
+
+        device = payload.get("device") or {}
+        interfaces = payload.get("interfaces") or []
+        traffic = payload.get("traffic") or {}
+
+        risk = compute_network_risk(payload)
+
+        snapshot = NetworkDeviceSnapshot.objects.create(
+            employee=employee,
+            collected_at=collected_at,
+            device_ip=device.get("ip") or None,
+            device_hostname=device.get("hostname", ""),
+            device_type=device.get("type", ""),
+            vendor=device.get("vendor", ""),
+            sys_description=device.get("sysDescr", ""),
+            interface_count=len(interfaces),
+            interfaces_down=sum(
+                1 for i in interfaces
+                if str(i.get("operStatus", "")).lower() not in ("up", "1")
+            ),
+            high_error_interfaces=sum(
+                1 for i in interfaces
+                if (i.get("ifInErrors") or 0) + (i.get("ifOutErrors") or 0) > 1000
+            ),
+            total_in_bytes=traffic.get("inBytes"),
+            total_out_bytes=traffic.get("outBytes"),
+            risk_score=risk["score"],
+            risk_level=risk["level"],
+            risk_signals=risk["signals"],
+            raw={k: v for k, v in payload.items() if k != "employee_id"},
+        )
+
+        return JsonResponse(
+            {"id": str(snapshot.id), "received_at": snapshot.received_at.isoformat(), "risk": risk},
+            status=201,
+        )
+
+
+# ---------------------------------------------------------------------------
+# System Metrics Snapshot Ingest
+# POST /api/agent/system-metrics/
+#
+# Expected JSON body:
+# {
+#   "collectedAtUtc": "2026-05-02T11:00:00+00:00",
+#   "employee_id": "<uuid>",
+#   "hostname": "DESKTOP-ABC",
+#   "cpu": {
+#     "usagePercent": 45.2,
+#     "cores": 8,
+#     "load1m": 2.1,
+#     "load5m": 1.8,
+#     "load15m": 1.5
+#   },
+#   "memory": {
+#     "totalMb": 16384,
+#     "usedMb": 12000,
+#     "usagePercent": 73.2,
+#     "swapUsagePercent": 10.0
+#   },
+#   "processes": {
+#     "total": 312,
+#     "zombies": 0,
+#     "topByCpu": [
+#       { "name": "chrome.exe", "pid": 1234, "cpuPercent": 18.5 }
+#     ]
+#   }
+# }
+# ---------------------------------------------------------------------------
+@method_decorator(csrf_exempt, name="dispatch")
+class SystemMetricsView(View):
+    def post(self, request):
+        org, err = get_org_from_request(request)
+        if err:
+            return err
+
+        try:
+            payload = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON."}, status=400)
+
+        employee_id = request.GET.get("employee_id") or payload.get("employee_id")
+        if not employee_id:
+            return JsonResponse({"error": "employee_id is required."}, status=400)
+        try:
+            employee = Employee.objects.get(id=employee_id, organization=org)
+        except Employee.DoesNotExist:
+            return JsonResponse({"error": "Employee not found."}, status=404)
+
+        collected_at_raw = payload.get("collectedAtUtc")
+        if not collected_at_raw:
+            return JsonResponse({"error": "collectedAtUtc is required."}, status=400)
+        try:
+            collected_at_raw = collected_at_raw.replace("Z", "+00:00")
+            collected_at = datetime.fromisoformat(collected_at_raw)
+            if collected_at.tzinfo is None:
+                collected_at = collected_at.replace(tzinfo=timezone.utc)
+        except ValueError:
+            return JsonResponse({"error": "Invalid collectedAtUtc format."}, status=400)
+
+        cpu = payload.get("cpu") or {}
+        memory = payload.get("memory") or {}
+        processes = payload.get("processes") or {}
+
+        risk = compute_system_risk(payload)
+
+        snapshot = SystemMetricsSnapshot.objects.create(
+            employee=employee,
+            collected_at=collected_at,
+            hostname=payload.get("hostname", ""),
+            cpu_usage_percent=cpu.get("usagePercent"),
+            cpu_cores=cpu.get("cores"),
+            cpu_load_1m=cpu.get("load1m"),
+            cpu_load_5m=cpu.get("load5m"),
+            cpu_load_15m=cpu.get("load15m"),
+            ram_total_mb=memory.get("totalMb"),
+            ram_used_mb=memory.get("usedMb"),
+            ram_usage_percent=memory.get("usagePercent"),
+            swap_usage_percent=memory.get("swapUsagePercent"),
+            process_count=processes.get("total"),
+            zombie_process_count=processes.get("zombies") or 0,
+            high_cpu_processes=processes.get("topByCpu") or [],
+            risk_score=risk["score"],
+            risk_level=risk["level"],
+            risk_signals=risk["signals"],
+            raw={k: v for k, v in payload.items() if k != "employee_id"},
+        )
+
+        return JsonResponse(
+            {"id": str(snapshot.id), "received_at": snapshot.received_at.isoformat(), "risk": risk},
+            status=201,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Disk Health Snapshot Ingest
+# POST /api/agent/disk-health/
+#
+# Expected JSON body (one disk per request):
+# {
+#   "collectedAtUtc": "2026-05-02T11:00:00+00:00",
+#   "employee_id": "<uuid>",
+#   "hostname": "DESKTOP-ABC",
+#   "device": {
+#     "path": "/dev/sda",            // or "PhysicalDrive0" on Windows
+#     "model": "Samsung SSD 870 EVO",
+#     "serial": "S4PBNX0T123456",
+#     "capacityGb": 500,
+#     "type": "SSD"                  // HDD | SSD | NVMe
+#   },
+#   "smart": {
+#     "health": "PASSED",            // PASSED | FAILED | UNKNOWN
+#     "reallocatedSectors": 0,
+#     "pendingSectors": 0,
+#     "uncorrectableErrors": 0,
+#     "powerOnHours": 4821,
+#     "temperatureC": 38
+#   }
+# }
+# ---------------------------------------------------------------------------
+@method_decorator(csrf_exempt, name="dispatch")
+class DiskHealthView(View):
+    def post(self, request):
+        org, err = get_org_from_request(request)
+        if err:
+            return err
+
+        try:
+            payload = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON."}, status=400)
+
+        employee_id = request.GET.get("employee_id") or payload.get("employee_id")
+        if not employee_id:
+            return JsonResponse({"error": "employee_id is required."}, status=400)
+        try:
+            employee = Employee.objects.get(id=employee_id, organization=org)
+        except Employee.DoesNotExist:
+            return JsonResponse({"error": "Employee not found."}, status=404)
+
+        collected_at_raw = payload.get("collectedAtUtc")
+        if not collected_at_raw:
+            return JsonResponse({"error": "collectedAtUtc is required."}, status=400)
+        try:
+            collected_at_raw = collected_at_raw.replace("Z", "+00:00")
+            collected_at = datetime.fromisoformat(collected_at_raw)
+            if collected_at.tzinfo is None:
+                collected_at = collected_at.replace(tzinfo=timezone.utc)
+        except ValueError:
+            return JsonResponse({"error": "Invalid collectedAtUtc format."}, status=400)
+
+        device = payload.get("device") or {}
+        smart = payload.get("smart") or {}
+
+        risk = compute_disk_risk(payload)
+
+        snapshot = DiskHealthSnapshot.objects.create(
+            employee=employee,
+            collected_at=collected_at,
+            hostname=payload.get("hostname", ""),
+            device_path=device.get("path", ""),
+            model=device.get("model", ""),
+            serial=device.get("serial", ""),
+            capacity_gb=device.get("capacityGb"),
+            disk_type=device.get("type", ""),
+            smart_health=str(smart.get("health") or "UNKNOWN").upper()[:10],
+            reallocated_sectors=smart.get("reallocatedSectors"),
+            pending_sectors=smart.get("pendingSectors"),
+            uncorrectable_errors=smart.get("uncorrectableErrors"),
+            power_on_hours=smart.get("powerOnHours"),
+            temperature_c=smart.get("temperatureC"),
+            risk_score=risk["score"],
+            risk_level=risk["level"],
+            risk_signals=risk["signals"],
+            raw={k: v for k, v in payload.items() if k != "employee_id"},
+        )
+
+        return JsonResponse(
+            {"id": str(snapshot.id), "received_at": snapshot.received_at.isoformat(), "risk": risk},
+            status=201,
+        )

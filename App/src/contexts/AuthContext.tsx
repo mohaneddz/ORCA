@@ -1,5 +1,6 @@
-﻿import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { APP_URLS } from "@/config/urls";
+import { logger } from "@/lib/logger";
 
 export type UserRole = "admin" | "staff";
 
@@ -9,6 +10,7 @@ export type SessionUser = {
   email: string;
   organizationName: string;
   phone: string;
+  avatarUrl?: string;
   role: UserRole;
   lastLoginAt: string;
 };
@@ -32,6 +34,7 @@ type ProfileUpdateInput = {
   email: string;
   organizationName: string;
   phone: string;
+  avatarUrl?: string;
 };
 
 type PasswordUpdateInput = {
@@ -69,8 +72,8 @@ type AuthApiResponse = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-const AUTH_STORAGE_KEY = "innov.auth.session";
-const DEFAULT_ORG_NAME = "InnovByte Organization";
+const AUTH_STORAGE_KEY = "orca.auth.session";
+const DEFAULT_ORG_NAME = "ORCA Organization";
 
 function normalizeRole(value: string | undefined): UserRole {
   return value === "admin" ? "admin" : "staff";
@@ -83,6 +86,7 @@ function loadStoredSession(): StoredSession | null {
   try {
     return JSON.parse(raw) as StoredSession;
   } catch {
+    logger.warn("auth.session_corrupt");
     localStorage.removeItem(AUTH_STORAGE_KEY);
     return null;
   }
@@ -115,6 +119,7 @@ function mapOrganizationToUser(
 
 async function authRequest<T>(path: string, options?: RequestInit): Promise<{ ok: boolean; data?: T; message?: string }> {
   try {
+    logger.debug("auth.request.start", { path, method: options?.method ?? "GET" });
     const response = await fetch(`${APP_URLS.api.backendBase}${path}`, {
       headers: {
         "Content-Type": "application/json",
@@ -125,12 +130,16 @@ async function authRequest<T>(path: string, options?: RequestInit): Promise<{ ok
 
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
+      logger.warn("auth.request.failed", { path, status: response.status });
       return { ok: false, message: (data as { error?: string })?.error || `Request failed: ${response.status}` };
     }
 
+    logger.info("auth.request.success", { path, status: response.status });
     return { ok: true, data: data as T };
-  } catch (error: any) {
-    return { ok: false, message: error?.message || "Network error." };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Network error.";
+    logger.error("auth.request.error", { path, message });
+    return { ok: false, message };
   }
 }
 
@@ -150,6 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (session) {
       setToken(session.token);
       setUser(session.user);
+      logger.info("auth.session.restored", { userId: session.user.id });
     }
     setIsInitializing(false);
   }, []);
@@ -161,6 +171,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       login: async ({ email, password }) => {
         if (!email.trim()) return { ok: false, message: "Email is required." };
         if (!password.trim()) return { ok: false, message: "Password is required." };
+
+        logger.info("auth.login.attempt", { email: email.trim().toLowerCase() });
 
         const result = await authRequest<AuthApiResponse>("/api/auth/login", {
           method: "POST",
@@ -181,12 +193,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(result.data.token);
         setUser(nextUser);
         saveStoredSession(session);
+        logger.info("auth.login.success", { userId: nextUser.id, role: nextUser.role });
 
         return { ok: true };
       },
       signup: async ({ email, password, role, name, organizationName, phone }) => {
         if (!email.trim()) return { ok: false, message: "Email is required." };
         if (!password.trim()) return { ok: false, message: "Password is required." };
+
+        logger.info("auth.signup.attempt", { email: email.trim().toLowerCase(), role });
 
         const organization = organizationName?.trim() || name?.trim() || DEFAULT_ORG_NAME;
         const result = await authRequest<AuthApiResponse>("/api/auth/register", {
@@ -209,10 +224,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(result.data.token);
         setUser(nextUser);
         saveStoredSession(session);
+        logger.info("auth.signup.success", { userId: nextUser.id, role: nextUser.role });
 
         return { ok: true };
       },
-      updateProfile: async ({ name, email, organizationName, phone }) => {
+      updateProfile: async ({ name, email, organizationName, phone, avatarUrl }) => {
         if (!user) return { ok: false, message: "No active user session." };
 
         const updatedUser: SessionUser = {
@@ -221,18 +237,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: email.trim().toLowerCase(),
           organizationName: organizationName.trim(),
           phone: phone.trim(),
+          avatarUrl: avatarUrl ?? user.avatarUrl,
         };
 
         setUser(updatedUser);
         if (token) saveStoredSession({ token, user: updatedUser });
+        logger.info("auth.profile.updated", { userId: updatedUser.id });
 
         return { ok: true };
       },
       updatePassword: async ({ newPassword }) => {
         if (!newPassword.trim()) return { ok: false, message: "New password is required." };
+        logger.warn("auth.password.update_unavailable");
         return { ok: false, message: "Password update endpoint is not available yet in backend auth API." };
       },
       deleteOwnAccount: async () => {
+        logger.warn("auth.account.delete_unavailable");
         return { ok: false, message: "Account deletion endpoint is not available yet in backend auth API." };
       },
       logout: async () => {
@@ -246,6 +266,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(null);
         setUser(null);
         saveStoredSession(null);
+        logger.info("auth.logout.success");
         return { ok: true };
       },
     }),
@@ -262,4 +283,3 @@ export function useAuth() {
   }
   return context;
 }
-

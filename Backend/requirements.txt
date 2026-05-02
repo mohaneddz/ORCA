@@ -1,4 +1,10 @@
-python-dotenv
-psycopg2-binary
-dj-database-url
-requests
+Django>=5.1,<6.0
+dj-database-url>=2.2.0
+python-dotenv>=1.0.1
+psycopg2-binary>=2.9.9
+PyJWT>=2.9.0
+requests>=2.32.0
+scikit-learn
+numpy
+gunicorn
+whitenoise

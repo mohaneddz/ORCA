@@ -398,3 +398,395 @@ Response `200`:
 | Processes running from suspicious paths | up to −15 |
 | High-risk port open | −12 per port |
 | Risk-flagged software installed | up to −15 |
+
+---
+
+## Network Device Monitoring (SNMP / NetFlow)
+
+### `POST /api/agent/network-snapshot/`
+
+Ingest telemetry collected from a **Cisco router, switch, or access point** via SNMP (pysnmp / net-snmp) or Telegraf. The backend scores the device health and stores the snapshot for trend analysis.
+
+**Authentication:** `Authorization: Token <org_token>`
+
+**Query param or body field:** `employee_id` (UUID of the submitting employee)
+
+**Request body:**
+
+```json
+{
+  "collectedAtUtc": "2026-05-02T11:00:00+00:00",
+  "employee_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "device": {
+    "ip": "192.168.1.1",
+    "hostname": "core-switch-01",
+    "type": "switch",
+    "vendor": "Cisco",
+    "sysDescr": "Cisco IOS Software, Version 15.2(7)E4"
+  },
+  "interfaces": [
+    {
+      "name": "GigabitEthernet0/1",
+      "operStatus": "up",
+      "ifInErrors": 0,
+      "ifOutErrors": 0
+    },
+    {
+      "name": "GigabitEthernet0/2",
+      "operStatus": "down",
+      "ifInErrors": 0,
+      "ifOutErrors": 0
+    }
+  ],
+  "traffic": {
+    "inBytes": 1234567890,
+    "outBytes": 987654321
+  }
+}
+```
+
+**Field reference:**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `collectedAtUtc` | ISO 8601 datetime | ✅ | When the data was collected on the device |
+| `employee_id` | UUID string | ✅ | Can also be passed as `?employee_id=` query param |
+| `device.ip` | string (IP) | — | Device management IP |
+| `device.hostname` | string | — | SNMP sysName or DNS hostname |
+| `device.type` | string | — | `router` / `switch` / `ap` |
+| `device.vendor` | string | — | e.g. `Cisco`, `Juniper`, `Ubiquiti` |
+| `device.sysDescr` | string | — | SNMP OID 1.3.6.1.2.1.1.1.0 |
+| `interfaces[]` | array | — | One entry per network interface |
+| `interfaces[].name` | string | — | Interface name (e.g. `Gi0/1`) |
+| `interfaces[].operStatus` | string | — | `up` or `down` (or SNMP integer `1`/`2`) |
+| `interfaces[].ifInErrors` | int | — | Inbound error counter |
+| `interfaces[].ifOutErrors` | int | — | Outbound error counter |
+| `traffic.inBytes` | int | — | Total received bytes (NetFlow / SNMP counter) |
+| `traffic.outBytes` | int | — | Total transmitted bytes |
+
+> All fields except `collectedAtUtc` and `employee_id` are optional. Missing fields produce no risk penalty — they are stored as-is in `raw`.
+
+**Success response `201 Created`:**
+
+```json
+{
+  "id": "a1b2c3d4-...",
+  "received_at": "2026-05-02T11:00:01.123456+00:00",
+  "risk": {
+    "score": 80,
+    "level": "low",
+    "signals": []
+  }
+}
+```
+
+**Risk scoring — Network:**
+
+| Signal | Penalty |
+|---|---|
+| 1 interface down | −10 per interface (max −30) |
+| Interface error count > 1,000 | −8 per interface (max −25) |
+| No interface data reported | −10 |
+
+**How to collect SNMP data (Python):**
+
+```bash
+pip install pysnmp
+```
+
+```python
+from pysnmp.hlapi import *
+import json, datetime
+
+def snmp_get(host, oid, community="public"):
+    iterator = getCmd(
+        SnmpEngine(),
+        CommunityData(community),
+        UdpTransportTarget((host, 161)),
+        ContextData(),
+        ObjectType(ObjectIdentity(oid)),
+    )
+    errorIndication, errorStatus, errorIndex, varBinds = next(iterator)
+    if errorIndication or errorStatus:
+        return None
+    return str(varBinds[0][1])
+
+payload = {
+    "collectedAtUtc": datetime.datetime.utcnow().isoformat() + "+00:00",
+    "employee_id": "<uuid>",
+    "device": {
+        "ip": "192.168.1.1",
+        "sysDescr": snmp_get("192.168.1.1", "1.3.6.1.2.1.1.1.0"),
+    },
+    # Populate interfaces[] from ifTable (OID 1.3.6.1.2.1.2.2.1)
+}
+```
+
+**Errors:**
+
+| Status | Error |
+|---|---|
+| `400` | `collectedAtUtc` missing or invalid format |
+| `400` | `employee_id` missing |
+| `404` | Employee not found or does not belong to org |
+| `401` | Missing or invalid org token |
+
+---
+
+## Server & Workstation System Metrics
+
+### `POST /api/agent/system-metrics/`
+
+Ingest **CPU, RAM, and process** telemetry from **Node Exporter** (Prometheus), **Telegraf**, or any custom script. Used to monitor server load, detect resource saturation, and flag zombie processes.
+
+**Authentication:** `Authorization: Token <org_token>`
+
+**Request body:**
+
+```json
+{
+  "collectedAtUtc": "2026-05-02T11:00:00+00:00",
+  "employee_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "hostname": "prod-server-01",
+  "cpu": {
+    "usagePercent": 45.2,
+    "cores": 8,
+    "load1m": 2.1,
+    "load5m": 1.8,
+    "load15m": 1.5
+  },
+  "memory": {
+    "totalMb": 16384,
+    "usedMb": 12000,
+    "usagePercent": 73.2,
+    "swapUsagePercent": 10.0
+  },
+  "processes": {
+    "total": 312,
+    "zombies": 0,
+    "topByCpu": [
+      { "name": "chrome.exe", "pid": 1234, "cpuPercent": 18.5 },
+      { "name": "python.exe", "pid": 5678, "cpuPercent": 12.1 }
+    ]
+  }
+}
+```
+
+**Field reference:**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `collectedAtUtc` | ISO 8601 datetime | ✅ | |
+| `employee_id` | UUID string | ✅ | |
+| `hostname` | string | — | Machine hostname |
+| `cpu.usagePercent` | float | — | Overall CPU usage 0–100 |
+| `cpu.cores` | int | — | Logical core count (used to normalise load avg) |
+| `cpu.load1m` | float | — | 1-minute load average |
+| `cpu.load5m` | float | — | 5-minute load average |
+| `cpu.load15m` | float | — | 15-minute load average |
+| `memory.totalMb` | int | — | Total installed RAM in MB |
+| `memory.usedMb` | int | — | Used RAM in MB |
+| `memory.usagePercent` | float | — | RAM usage 0–100 |
+| `memory.swapUsagePercent` | float | — | Swap usage 0–100 |
+| `processes.total` | int | — | Total running processes |
+| `processes.zombies` | int | — | Zombie (defunct) process count |
+| `processes.topByCpu` | array | — | Top processes by CPU (name, pid, cpuPercent) |
+
+**Success response `201 Created`:**
+
+```json
+{
+  "id": "b2c3d4e5-...",
+  "received_at": "2026-05-02T11:00:02.000000+00:00",
+  "risk": {
+    "score": 90,
+    "level": "low",
+    "signals": []
+  }
+}
+```
+
+**Risk scoring — System Metrics:**
+
+| Signal | Penalty |
+|---|---|
+| CPU usage ≥ 95% | −20 |
+| CPU usage ≥ 80% | −10 |
+| Load avg / cores ≥ 2.0 | −15 |
+| Load avg / cores ≥ 1.0 | −7 |
+| RAM usage ≥ 95% | −20 |
+| RAM usage ≥ 85% | −10 |
+| Swap usage ≥ 80% | −10 |
+| Zombie processes ≥ 5 | −10 |
+| Zombie processes > 0 | −3 |
+
+**How to collect with Node Exporter / Telegraf (Linux):**
+
+```bash
+# Node Exporter exposes /metrics — scrape and convert to this schema
+curl http://localhost:9100/metrics | grep -E "^(node_cpu|node_memory|node_load)"
+```
+
+```bash
+# Telegraf with outputs.http plugin — configure to POST to this endpoint
+[outputs.http]
+  url = "http://localhost:8000/api/agent/system-metrics/?employee_id=<uuid>"
+  method = "POST"
+  data_format = "json"
+```
+
+**Errors:**
+
+| Status | Error |
+|---|---|
+| `400` | `collectedAtUtc` missing or invalid |
+| `400` | `employee_id` missing |
+| `404` | Employee not found |
+| `401` | Invalid org token |
+
+---
+
+## Disk Health (SMART)
+
+### `POST /api/agent/disk-health/`
+
+Ingest **SMART diagnostic data** from `smartctl` or `pySMART` for a **single physical disk**. Send one request per disk. The backend scores failure risk based on reallocated sectors, pending sectors, temperature, and power-on hours.
+
+**Authentication:** `Authorization: Token <org_token>`
+
+**Request body:**
+
+```json
+{
+  "collectedAtUtc": "2026-05-02T11:00:00+00:00",
+  "employee_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "hostname": "DESKTOP-M7DKHI4",
+  "device": {
+    "path": "/dev/sda",
+    "model": "Samsung SSD 870 EVO 500GB",
+    "serial": "S4PBNX0T123456",
+    "capacityGb": 500,
+    "type": "SSD"
+  },
+  "smart": {
+    "health": "PASSED",
+    "reallocatedSectors": 0,
+    "pendingSectors": 0,
+    "uncorrectableErrors": 0,
+    "powerOnHours": 4821,
+    "temperatureC": 38
+  }
+}
+```
+
+**Field reference:**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `collectedAtUtc` | ISO 8601 datetime | ✅ | |
+| `employee_id` | UUID string | ✅ | |
+| `hostname` | string | — | Machine the disk is installed in |
+| `device.path` | string | — | `/dev/sda` on Linux, `PhysicalDrive0` on Windows |
+| `device.model` | string | — | Disk model string |
+| `device.serial` | string | — | Disk serial number |
+| `device.capacityGb` | float | — | Formatted capacity in GB |
+| `device.type` | string | — | `HDD` / `SSD` / `NVMe` |
+| `smart.health` | string | — | `PASSED` / `FAILED` / `UNKNOWN` |
+| `smart.reallocatedSectors` | int | — | SMART attribute 5 — remapped bad sectors |
+| `smart.pendingSectors` | int | — | SMART attribute 197 — unstable sectors |
+| `smart.uncorrectableErrors` | int | — | SMART attribute 198 — offline uncorrectable |
+| `smart.powerOnHours` | int | — | SMART attribute 9 — total drive runtime |
+| `smart.temperatureC` | int | — | Current drive temperature |
+
+**Success response `201 Created`:**
+
+```json
+{
+  "id": "c3d4e5f6-...",
+  "received_at": "2026-05-02T11:00:03.000000+00:00",
+  "risk": {
+    "score": 95,
+    "level": "low",
+    "signals": []
+  }
+}
+```
+
+**Risk scoring — Disk Health:**
+
+| Signal | Penalty |
+|---|---|
+| SMART health = `FAILED` | −40 |
+| SMART health = `UNKNOWN` | −5 |
+| Reallocated sectors ≥ 50 | −25 |
+| Reallocated sectors ≥ 10 | −15 |
+| Reallocated sectors > 0 | −5 |
+| Pending sectors > 0 | −2 per sector (max −20) |
+| Uncorrectable errors > 0 | −4 per error (max −20) |
+| Temperature ≥ 60°C | −15 |
+| Temperature ≥ 50°C | −7 |
+| Power-on hours ≥ end-of-life threshold | −10 |
+| Power-on hours ≥ 75% of threshold | −5 |
+
+> End-of-life threshold: **35,000 h** for HDD, **40,000 h** for SSD/NVMe.
+
+**How to collect SMART data:**
+
+```bash
+# Linux / macOS
+sudo smartctl -a /dev/sda -j   # -j = JSON output
+
+# Windows (PowerShell) — requires smartmontools
+smartctl -a /dev/sda -j
+```
+
+```python
+# pySMART (Python)
+pip install pySMART
+
+from pySMART import Device
+import json, datetime
+
+disk = Device("/dev/sda")
+payload = {
+    "collectedAtUtc": datetime.datetime.utcnow().isoformat() + "+00:00",
+    "employee_id": "<uuid>",
+    "hostname": "my-server",
+    "device": {
+        "path": "/dev/sda",
+        "model": disk.model,
+        "serial": disk.serial,
+        "type": disk.interface.upper(),
+    },
+    "smart": {
+        "health": "PASSED" if disk.assessment == "PASS" else "FAILED",
+        "reallocatedSectors": int(disk.attributes[5].raw) if disk.attributes[5] else None,
+        "pendingSectors":     int(disk.attributes[197].raw) if disk.attributes[197] else None,
+        "uncorrectableErrors":int(disk.attributes[198].raw) if disk.attributes[198] else None,
+        "powerOnHours":       int(disk.attributes[9].raw)   if disk.attributes[9]   else None,
+        "temperatureC":       int(disk.attributes[194].raw) if disk.attributes[194] else None,
+    }
+}
+```
+
+**Errors:**
+
+| Status | Error |
+|---|---|
+| `400` | `collectedAtUtc` missing or invalid |
+| `400` | `employee_id` missing |
+| `404` | Employee not found |
+| `401` | Invalid org token |
+
+---
+
+## Risk Level Reference (all agent endpoints)
+
+| Score | Level |
+|---|---|
+| 80 – 100 | `low` ✅ |
+| 55 – 79 | `medium` ⚠️ |
+| 30 – 54 | `high` 🔴 |
+| 0 – 29 | `critical` 💀 |
+
+All three new endpoints return the same `{ score, level, signals }` risk block as the existing `POST /api/agent/snapshot/` endpoint.

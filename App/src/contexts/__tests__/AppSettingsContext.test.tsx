@@ -1,9 +1,9 @@
-﻿import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { AppSettingsProvider, useAppSettings } from "@/contexts/AppSettingsContext";
 
-const invokeMock = vi.fn(async () => undefined);
+const invokeMock = vi.fn(async (..._args: unknown[]) => undefined);
 const isTauriMock = vi.fn(() => true);
 const isAutostartEnabledMock = vi.fn(async () => false);
 
@@ -56,15 +56,16 @@ describe("AppSettingsProvider", () => {
     await waitFor(() => {
       expect(screen.getByTestId("lang").textContent).toBe("fr");
       expect(screen.getByTestId("hide").textContent).toBe("false");
-      expect(invokeMock.mock.calls.some(([command, payload]) => {
-        if (command !== "sync_runtime_settings") {
-          return false;
-        }
-        const settings = (payload as { settings?: { hideToTray?: boolean; language?: string } })?.settings;
-        return settings?.hideToTray === false && settings?.language === "fr";
-      })).toBe(true);
+      expect(
+        invokeMock.mock.calls.some((call) => {
+          const [command, payload] = call as [string, { settings?: { hideToTray?: boolean; language?: string } } | undefined];
+          if (command !== "sync_runtime_settings") {
+            return false;
+          }
+          const settings = payload?.settings;
+          return settings?.hideToTray === false && settings?.language === "fr";
+        }),
+      ).toBe(true);
     });
   });
 });
-
-

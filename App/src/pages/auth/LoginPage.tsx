@@ -1,4 +1,4 @@
-﻿import { type FormEvent, useState } from "react";
+import { type FormEvent, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth, type UserRole } from "@/contexts/AuthContext";
 import { ROUTES } from "@/config/routes";
@@ -12,7 +12,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("staff");
   const [name, setName] = useState("");
-  const [organizationName, setOrganizationName] = useState("InnovByte Organization");
+  const [organizationName, setOrganizationName] = useState("ORCA Organization");
   const [phone, setPhone] = useState("");
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,7 +58,7 @@ export default function LoginPage() {
           <p className="m-0 text-xs uppercase tracking-[0.08em] text-cyan-200">
             {mode === "signin" ? "Sign In" : "Create Account"}
           </p>
-        <h1 className="m-0 mt-2 text-3xl font-bold text-white">InnovByte Console Access</h1>
+        <h1 className="m-0 mt-2 text-3xl font-bold text-white">ORCA Console Access</h1>
         <p className="m-0 mt-2 text-sm text-[var(--color-neutral-500)]">
           Authenticate against backend auth endpoints for your organization account.
         </p>

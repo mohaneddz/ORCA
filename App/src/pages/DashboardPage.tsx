@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePageDummyQuery } from "@/utils/usePageDummyQuery";
-import TrendChart, { DualAreaChart, GroupedBarChart, DonutGauge } from "@/components/ui/TrendChart";
+import { DualAreaChart, GroupedBarChart, DonutGauge } from "@/components/ui/TrendChart";
 import PageSkeleton from "@/components/ui/PageSkeleton";
-import { PageHeader, StatGrid } from "@/components/cards/BaseCards";
+import { DataTable, PageHeader, StatGrid } from "@/components/cards/BaseCards";
 
 type DashboardPageProps = {
   pageKey: string;
@@ -32,23 +32,23 @@ const STATUS_COLORS: Record<string, string> = {
 function AlertsPanel({ items }: { items: Item[] }) {
   return (
     <section className="card p-5">
-      <p className="m-0 mb-3 text-sm font-semibold text-white">Priority Alerts</p>
+      <p className="m-0 mb-3 text-sm font-semibold text-[var(--color-neutral-100)]">Priority Alerts</p>
       <div className="flex flex-col gap-2">
         {items.map((item) => (
           <div
             key={item.title}
             className="rounded-xl px-4 py-3 transition-colors"
             style={{
-              background: "rgba(255,255,255,0.025)",
-              border: "1px solid rgba(255,255,255,0.06)",
+              background: "var(--color-surface-muted)",
+              border: "1px solid var(--color-border-subtle)",
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = "rgba(168,85,247,0.06)")}
-            onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.025)")}
+            onMouseEnter={e => (e.currentTarget.style.background = "var(--color-surface-hover)")}
+            onMouseLeave={e => (e.currentTarget.style.background = "var(--color-surface-muted)")}
           >
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="m-0 text-sm font-medium text-white">{item.title}</p>
-                <p className="m-0 mt-0.5 text-xs" style={{ color: "#64748b" }}>{item.subtitle}</p>
+                <p className="m-0 text-sm font-medium text-[var(--color-neutral-100)]">{item.title}</p>
+                <p className="m-0 mt-0.5 text-xs" style={{ color: "var(--color-neutral-500)" }}>{item.subtitle}</p>
               </div>
               <span className={STATUS_COLORS[item.status] ?? "status-neutral"}>
                 {item.status}
@@ -64,65 +64,28 @@ function AlertsPanel({ items }: { items: Item[] }) {
 function TasksPanel({ items }: { items: Item[] }) {
   return (
     <section className="card p-5">
-      <p className="m-0 mb-3 text-sm font-semibold text-white">Next Actions</p>
+      <p className="m-0 mb-3 text-sm font-semibold text-[var(--color-neutral-100)]">Next Actions</p>
       <div className="space-y-2">
         {items.map((item) => (
           <div
             key={item.title}
             className="flex items-center justify-between rounded-xl px-4 py-3 transition-colors"
             style={{
-              background: "rgba(255,255,255,0.025)",
-              border: "1px solid rgba(255,255,255,0.06)",
+              background: "var(--color-surface-muted)",
+              border: "1px solid var(--color-border-subtle)",
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = "rgba(34,211,238,0.05)")}
-            onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.025)")}
+            onMouseEnter={e => (e.currentTarget.style.background = "var(--color-surface-hover)")}
+            onMouseLeave={e => (e.currentTarget.style.background = "var(--color-surface-muted)")}
           >
             <div>
-              <p className="m-0 text-sm font-medium text-white">{item.title}</p>
-              <p className="m-0 text-xs" style={{ color: "#64748b" }}>{item.subtitle}</p>
+              <p className="m-0 text-sm font-medium text-[var(--color-neutral-100)]">{item.title}</p>
+              <p className="m-0 text-xs" style={{ color: "var(--color-neutral-500)" }}>{item.subtitle}</p>
             </div>
             <span className={STATUS_COLORS[item.status] ?? "status-neutral"}>
               {item.status}
             </span>
           </div>
         ))}
-      </div>
-    </section>
-  );
-}
-
-function EntityTable({ rows }: { rows: Array<{ name: string; owner: string; state: string }> }) {
-  return (
-    <section className="card overflow-hidden">
-      <div
-        className="px-5 py-3.5"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
-      >
-        <p className="m-0 text-sm font-semibold text-white">Entity Snapshot</p>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="data-table" style={{ minWidth: 380 }}>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Owner</th>
-              <th>State</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.name}>
-                <td>{row.name}</td>
-                <td>{row.owner}</td>
-                <td>
-                  <span className={STATUS_COLORS[row.state] ?? "status-neutral"}>
-                    {row.state}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </div>
     </section>
   );
@@ -214,8 +177,8 @@ export default function DashboardPage({ pageKey, title, description }: Dashboard
           breakdown={[
             { label: "Critical",  value: 3,  color: "#fb7185" },
             { label: "High",      value: 9,  color: "#fbbf24" },
-            { label: "Medium",    value: 21, color: "#a855f7" },
-            { label: "Low",       value: 31, color: "#22d3ee" },
+            { label: "Medium",    value: 21, color: "#1d4ed8" },
+            { label: "Low",       value: 31, color: "#38bdf8" },
           ]}
         />
       </section>
@@ -232,7 +195,17 @@ export default function DashboardPage({ pageKey, title, description }: Dashboard
           primaryLabel="Events"
           secondaryLabel="Resolved"
         />
-        <EntityTable rows={rows} />
+        <DataTable
+          title="Entity Snapshot"
+          columns={["Name", "Owner", "State"]}
+          rows={rows.map((row) => [row.name, row.owner, row.state])}
+          minWidth={380}
+          filterColumn="State"
+          searchPlaceholder="Search entities or owners"
+          renderCell={(cell, row, _rowIndex, cellIndex) =>
+            cellIndex === 2 ? <span className={STATUS_COLORS[row[2]] ?? "status-neutral"}>{cell}</span> : cell
+          }
+        />
       </section>
     </div>
   );

@@ -1,10 +1,12 @@
-﻿export type AppLanguage = "en" | "fr";
+export type AppLanguage = "en" | "fr";
+export type AppTheme = "dark" | "light";
 
 export type AppSettings = {
   launchAtStartup: boolean;
   startMinimized: boolean;
   hideToTray: boolean;
   language: AppLanguage;
+  theme: AppTheme;
 };
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -12,6 +14,5 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   startMinimized: false,
   hideToTray: true,
   language: "en",
+  theme: "dark",
 };
-
-

@@ -1,104 +1,76 @@
-import TrendChart, { DonutGauge, DualAreaChart } from "@/components/ui/TrendChart";
-import { BulletActions, DataTable, PageHeader, SplitCards, StatGrid } from "@/components/cards/BaseCards";
+import { DonutGauge, DualAreaChart } from "@/components/ui/TrendChart";
+import { DataTable, PageHeader, StatGrid } from "@/components/cards/BaseCards";
 
 export default function HomePage() {
   return (
     <div className="page-section">
       <PageHeader
-        badge="Overview"
-        title="Organization Security Overview"
-        description="General stats and current security posture across accounts, devices, network traffic, and employee behavior."
+        badge="Home"
+        title="Security Operations Home"
+        description="High-level posture, risk movement, and active queues across devices, identities, and network activity."
       />
 
       <StatGrid
         stats={[
-          { label: "Organization Risk Score", value: "64 / 100", helper: "Updated 2 minutes ago",  trend: -3.2 },
-          { label: "Connected Devices",        value: "38",        helper: "31 managed, 7 unmanaged", trend: 8.1 },
-          { label: "Critical Threats",         value: "3",         helper: "Need immediate action",   trend: -50, tone: "danger" },
-          { label: "Google Accounts",          value: "124",       helper: "5 need password reset",   trend: 0 },
-          { label: "Suspicious Sign-Ins",      value: "9",         helper: "Last 24h",                trend: 12.5, tone: "danger" },
-          { label: "Awareness Score",          value: "82%",       helper: "Employee playground outcomes", trend: 9.0, tone: "ok" },
+          { label: "Global Risk Score", value: "61 / 100", trend: -2.1 },
+          { label: "Open Incidents", value: "18", tone: "danger", trend: 12.5 },
+          { label: "Managed Devices", value: "142", tone: "ok", trend: 4.8 },
+          { label: "Policy Coverage", value: "93%", trend: 1.4 },
         ]}
       />
 
-      {/* Main chart split */}
-      <section className="grid gap-3 xl:grid-cols-[1.5fr_1fr]">
-        <DualAreaChart
-          data={[
-            { name: "Mon", primary: 58, secondary: 45 },
-            { name: "Tue", primary: 62, secondary: 50 },
-            { name: "Wed", primary: 55, secondary: 48 },
-            { name: "Thu", primary: 67, secondary: 52 },
-            { name: "Fri", primary: 64, secondary: 58 },
-            { name: "Sat", primary: 60, secondary: 55 },
-            { name: "Sun", primary: 66, secondary: 60 },
-          ]}
-          title="Risk Score vs Resolved Events"
-          primaryLabel="Risk Score"
-          secondaryLabel="Resolved"
-        />
+      <section className="grid gap-3 xl:grid-cols-[1.7fr_1fr]">
+        <div className="min-h-[280px]">
+          <DualAreaChart
+            data={[
+              { name: "Mon", primary: 72, secondary: 38 },
+              { name: "Tue", primary: 66, secondary: 44 },
+              { name: "Wed", primary: 63, secondary: 47 },
+              { name: "Thu", primary: 68, secondary: 51 },
+              { name: "Fri", primary: 64, secondary: 54 },
+              { name: "Sat", primary: 59, secondary: 46 },
+              { name: "Sun", primary: 61, secondary: 58 },
+            ]}
+            title="Risk vs Remediation Velocity"
+            primaryLabel="Risk Index"
+            secondaryLabel="Resolved Signals"
+          />
+        </div>
         <DonutGauge
-          title="Device Distribution"
-          value={31}
-          max={38}
-          label="Managed"
+          title="Asset Compliance"
+          value={132}
+          max={142}
+          label="Compliant"
           breakdown={[
-            { label: "Trusted",      value: 29, color: "#10b981" },
-            { label: "Needs Review", value: 6,  color: "#f59e0b" },
-            { label: "Blocked",      value: 3,  color: "#f43f5e" },
+            { label: "Compliant", value: 132, color: "#10b981" },
+            { label: "Pending", value: 7, color: "#f59e0b" },
+            { label: "Critical", value: 3, color: "#f43f5e" },
           ]}
         />
       </section>
 
-      <SplitCards
-        left={
-          <BulletActions
-            title="Executive Highlights"
-            items={[
-              "Most exposed area: endpoint passwords reused on unmanaged SaaS.",
-              "Network drift detected: 4 unknown devices joined in the last 6 hours.",
-              "Phishing resilience improved by 9% after last simulation cycle.",
-              "2 departments have not completed policy acknowledgment this week.",
-            ]}
-          />
-        }
-        right={
-          <BulletActions
-            title="Immediate Priorities"
-            items={[
-              "Force password rotation for all accounts flagged as reused.",
-              "Review control center queue for device + account lock actions.",
-              "Quarantine unknown network devices pending owner assignment.",
-              "Run high-risk phishing simulation for finance and procurement teams.",
-            ]}
-          />
-        }
-      />
-
-      <TrendChart
-        data={[
-          { name: "Mon", value: 58 },
-          { name: "Tue", value: 62 },
-          { name: "Wed", value: 55 },
-          { name: "Thu", value: 67 },
-          { name: "Fri", value: 64 },
-          { name: "Sat", value: 60 },
-          { name: "Sun", value: 66 },
-        ]}
-        title="7-Day Risk Score Trend"
-        color="cyan"
-      />
-
-      <DataTable
-        title="Latest Security Feed"
-        columns={["Category", "Signal", "Entity", "Owner", "Time", "Status"]}
-        rows={[
-          ["Network",    "New unmanaged device discovered",     "172.16.10.77",       "Unknown",         "09:31", "Queued"],
-          ["Accounts",   "Password reused on 3 external sites", "nadia@org.com",       "Nadia K.",        "09:18", "Open"],
-          ["Device",     "Local admin account enabled",          "OPS-WIN-09",          "Karim D.",        "08:57", "Investigating"],
-          ["Playground", "Phishing simulation clicked",          "invoice-campaign",    "Procurement Team","08:33", "Training Needed"],
-        ]}
-      />
+      <section className="grid gap-3 xl:grid-cols-2">
+        <DataTable
+          title="Incident Queue"
+          columns={["Signal", "Entity", "Owner", "Priority", "Status"]}
+          rows={[
+            ["Credential reuse", "finance@org.com", "IAM Team", "P1", "Open"],
+            ["Suspicious binary", "OPS-WIN-09", "SOC", "P1", "Investigating"],
+            ["Unauthorized USB", "HR-LAP-02", "Endpoint", "P2", "Queued"],
+            ["Anomalous DNS", "172.16.10.77", "Network", "P2", "Monitoring"],
+          ]}
+        />
+        <DataTable
+          title="Recent Automations"
+          columns={["Automation", "Target", "Result", "Executor", "Time"]}
+          rows={[
+            ["Force MFA", "34 accounts", "Success", "Policy Engine", "09:45"],
+            ["Patch rollout", "12 devices", "In progress", "Endpoint Ops", "09:31"],
+            ["Token revoke", "nadia@org.com", "Success", "Control Center", "09:21"],
+            ["Network isolate", "Unknown-Lenovo", "Success", "NAC", "08:59"],
+          ]}
+        />
+      </section>
     </div>
   );
 }

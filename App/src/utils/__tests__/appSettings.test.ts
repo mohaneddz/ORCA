@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { DEFAULT_APP_SETTINGS } from "@/types/settings";
 import { persistAppSettings, readAppSettings } from "@/utils/appSettings";
 
@@ -13,6 +13,7 @@ describe("appSettings", () => {
       startMinimized: true,
       hideToTray: false,
       language: "fr" as const,
+      theme: "light" as const,
     };
 
     persistAppSettings(settings);
@@ -22,12 +23,13 @@ describe("appSettings", () => {
 
   it("sanitizes malformed stored payload", () => {
     localStorage.setItem(
-      "innovbyte-app-settings-v1",
+      "ORCA-app-settings-v1",
       JSON.stringify({
         launchAtStartup: "yes",
         startMinimized: 1,
         hideToTray: null,
         language: "ar",
+        theme: "blue",
       }),
     );
 
