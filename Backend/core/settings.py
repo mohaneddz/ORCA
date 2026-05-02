@@ -47,7 +47,6 @@ INSTALLED_APPS = [
     "organizations",
     "extension",
     "gamification",
-    "phishing",
 ]
 
 MIDDLEWARE = [

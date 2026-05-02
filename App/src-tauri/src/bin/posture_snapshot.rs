@@ -3,10 +3,10 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use innov_lib::config::app_config::AppConfig;
-use innov_lib::models::posture::PostureReport;
-use innov_lib::services::posture_service;
-use innov_lib::services::wave3_posture_service::{self, Wave3PostureReport};
+use orca_lib::config::app_config::AppConfig;
+use orca_lib::models::posture::PostureReport;
+use orca_lib::services::posture_service;
+use orca_lib::services::wave3_posture_service::{self, Wave3PostureReport};
 
 fn main() {
     let desktop_dir = parse_out_dir().unwrap_or_else(|| PathBuf::from("../logs/desktop"));

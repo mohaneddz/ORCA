@@ -41,7 +41,7 @@ use crate::services::wave3_posture_service::{self, Wave3PostureReport};
 
 const MAIN_WINDOW_LABEL: &str = "main";
 const SETTINGS_FILE_NAME: &str = "app-settings.json";
-const TRAY_ID: &str = "innov-tray";
+const TRAY_ID: &str = "orca-tray";
 const TRAY_TOGGLE_ID: &str = "tray_toggle";
 const TRAY_QUIT_ID: &str = "tray_quit";
 const GLOBAL_TOGGLE_SHORTCUT: &str = "Ctrl+Shift+L";
@@ -173,8 +173,8 @@ fn is_autostart_launch() -> bool {
 
 fn build_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let toggle_item =
-        MenuItem::with_id(app, TRAY_TOGGLE_ID, "Show / Hide Innov", true, None::<&str>)?;
-    let quit_item = MenuItem::with_id(app, TRAY_QUIT_ID, "Quit Innov", true, None::<&str>)?;
+        MenuItem::with_id(app, TRAY_TOGGLE_ID, "Show / Hide ORCA", true, None::<&str>)?;
+    let quit_item = MenuItem::with_id(app, TRAY_QUIT_ID, "Quit ORCA", true, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
 
     let menu = Menu::with_items(app, &[&toggle_item, &separator, &quit_item])?;
@@ -182,7 +182,7 @@ fn build_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let mut builder = TrayIconBuilder::with_id(TRAY_ID)
         .menu(&menu)
         .show_menu_on_left_click(true)
-        .tooltip("Innov")
+        .tooltip("ORCA")
         .on_menu_event(|app, event| match event.id().as_ref() {
             TRAY_TOGGLE_ID => {
                 let _ = toggle_main_window(app);

@@ -19,7 +19,7 @@ use crate::utils::errors::AppResult;
 use crate::utils::redaction::{categorize_domain, categorize_path, is_risky_path, redact_path};
 use crate::utils::time::now_utc_rfc3339;
 
-const FALLBACK_SALT: &str = "innov-private-telemetry-salt";
+const FALLBACK_SALT: &str = "orca-private-telemetry-salt";
 
 pub fn collect_private_signals(config: PrivacyConfig) -> AppResult<PrivateSignalsReport> {
     let salt = std::env::var("PRIVACY_SALT").unwrap_or_else(|_| FALLBACK_SALT.to_string());

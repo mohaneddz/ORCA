@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 /* ─── PageHeader ──────────────────────────────────────── */
@@ -19,13 +19,13 @@ export function PageHeader({
         {badge && (
           <span
             className="mb-2 inline-block text-[10px] font-semibold uppercase tracking-[0.1em]"
-            style={{ color: "#a855f7" }}
+            style={{ color: "var(--color-primary)" }}
           >
             {badge}
           </span>
         )}
-        <h1 className="m-0 text-2xl font-bold tracking-tight text-white">{title}</h1>
-        <p className="m-0 mt-1.5 max-w-[78ch] text-sm" style={{ color: "#64748b" }}>
+        <h1 className="m-0 text-2xl font-bold tracking-tight text-[var(--color-neutral-100)]">{title}</h1>
+        <p className="m-0 mt-1.5 max-w-[78ch] text-sm" style={{ color: "var(--color-neutral-500)" }}>
           {description}
         </p>
       </div>
@@ -56,7 +56,7 @@ export function StatGrid({ stats }: { stats: StatItem[] }) {
           stat.tone === "danger" ? "#fb7185"
           : stat.tone === "ok"   ? "#34d399"
           : stat.tone === "warn" ? "#fbbf24"
-          : "#fff";
+          : "var(--color-neutral-100)";
 
         return (
           <article
@@ -67,7 +67,7 @@ export function StatGrid({ stats }: { stats: StatItem[] }) {
             <div className="flex items-start justify-between mb-3">
               <p
                 className="m-0 text-[11px] font-semibold uppercase tracking-[0.08em]"
-                style={{ color: "#64748b" }}
+                style={{ color: "var(--color-neutral-500)" }}
               >
                 {stat.label}
               </p>
@@ -99,7 +99,7 @@ export function StatGrid({ stats }: { stats: StatItem[] }) {
             </p>
 
             {stat.helper && (
-              <p className="m-0 mt-1.5 text-xs" style={{ color: "#475569" }}>
+              <p className="m-0 mt-1.5 text-xs" style={{ color: "var(--color-neutral-500)" }}>
                 {stat.helper}
               </p>
             )}
@@ -114,10 +114,10 @@ export function StatGrid({ stats }: { stats: StatItem[] }) {
 export function BulletActions({ title, items }: { title: string; items: string[] }) {
   return (
     <section className="card p-5">
-      <p className="m-0 mb-3 text-sm font-semibold text-white">{title}</p>
-      <ul className="m-0 space-y-2.5 pl-5 text-sm" style={{ color: "#64748b" }}>
+      <p className="m-0 mb-3 text-sm font-semibold text-[var(--color-neutral-100)]">{title}</p>
+      <ul className="m-0 space-y-2.5 pl-5 text-sm" style={{ color: "var(--color-neutral-500)" }}>
         {items.map((item) => (
-          <li key={item} className="leading-relaxed" style={{ color: "#94a3b8" }}>
+          <li key={item} className="leading-relaxed" style={{ color: "var(--color-neutral-400)" }}>
             {item}
           </li>
         ))}
@@ -131,44 +131,167 @@ export function DataTable({
   title,
   columns,
   rows,
+  className,
   actions,
+  filterColumn,
+  filterOptions,
+  searchPlaceholder,
+  minWidth = 720,
+  sortable = true,
+  fillHeight = false,
+  onRowClick,
+  renderCell,
 }: {
   title: string;
   columns: string[];
   rows: string[][];
+  className?: string;
   actions?: ReactNode;
+  filterColumn?: string;
+  filterOptions?: string[];
+  searchPlaceholder?: string;
+  minWidth?: number;
+  sortable?: boolean;
+  fillHeight?: boolean;
+  onRowClick?: (row: string[], rowIndex: number) => void;
+  renderCell?: (cell: string, row: string[], rowIndex: number, cellIndex: number) => ReactNode;
 }) {
+  const [search, setSearch] = useState("");
+  const [activeFilter, setActiveFilter] = useState("All");
+  const [sortState, setSortState] = useState<{ index: number; direction: "asc" | "desc" } | null>(null);
+
+  const filterIndex = filterColumn ? columns.indexOf(filterColumn) : -1;
+
+  const resolvedFilterOptions = useMemo(() => {
+    if (!filterColumn) return [];
+    if (filterOptions?.length) return filterOptions;
+    if (filterIndex < 0) return [];
+    return Array.from(new Set(rows.map((row) => row[filterIndex]).filter(Boolean)));
+  }, [filterColumn, filterIndex, filterOptions, rows]);
+
+  const filteredRows = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
+    const searched = normalizedSearch
+      ? rows.filter((row) => row.some((cell) => cell.toLowerCase().includes(normalizedSearch)))
+      : rows;
+
+    if (!filterColumn || filterIndex < 0 || activeFilter === "All") {
+      return searched;
+    }
+
+    return searched.filter((row) => row[filterIndex] === activeFilter);
+  }, [activeFilter, filterColumn, filterIndex, rows, search]);
+
+  const displayRows = useMemo(() => {
+    if (!sortState) return filteredRows;
+    const next = [...filteredRows];
+    next.sort((a, b) => {
+      const left = a[sortState.index] ?? "";
+      const right = b[sortState.index] ?? "";
+      const leftNum = Number(left);
+      const rightNum = Number(right);
+      const bothNumeric = !Number.isNaN(leftNum) && !Number.isNaN(rightNum);
+      const compare = bothNumeric ? leftNum - rightNum : left.localeCompare(right, undefined, { sensitivity: "base" });
+      return sortState.direction === "asc" ? compare : -compare;
+    });
+    return next;
+  }, [filteredRows, sortState]);
+
+  const toggleSort = (columnIndex: number) => {
+    if (!sortable) return;
+    setSortState((prev) => {
+      if (!prev || prev.index !== columnIndex) {
+        return { index: columnIndex, direction: "asc" };
+      }
+      if (prev.direction === "asc") {
+        return { index: columnIndex, direction: "desc" };
+      }
+      return null;
+    });
+  };
+
   return (
-    <section className="card overflow-hidden">
+    <section
+      className={[
+        "card overflow-hidden",
+        fillHeight ? "h-full min-h-0 flex flex-col" : "",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <div
         className="flex items-center justify-between px-5 py-3.5"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+        style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
       >
-        <p className="m-0 text-sm font-semibold text-white">{title}</p>
+        <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">{title}</p>
         {actions}
       </div>
-      <div className="overflow-x-auto">
-        <table className="data-table" style={{ minWidth: 720 }}>
+      <div className="flex flex-wrap items-center gap-2 px-5 py-3" style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
+        <input
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder={searchPlaceholder ?? `Search ${title.toLowerCase()}`}
+          className="table-input w-full max-w-xs"
+        />
+        {filterColumn && (
+          <select
+            value={activeFilter}
+            onChange={(event) => setActiveFilter(event.target.value)}
+            className="table-input"
+            aria-label={`${title} filter`}
+          >
+            <option value="All">All {filterColumn}</option>
+            {resolvedFilterOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+      <div className={fillHeight ? "min-h-0 flex-1 overflow-auto" : "overflow-x-auto"}>
+        <table className="data-table" style={{ minWidth }}>
           <thead>
             <tr>
-              {columns.map((column) => (
-                <th key={column}>{column}</th>
+              {columns.map((column, index) => (
+                <th
+                  key={column}
+                  onClick={() => toggleSort(index)}
+                  style={sortable ? { cursor: "pointer", userSelect: "none" } : undefined}
+                >
+                  {column}
+                  {sortState?.index === index ? (sortState.direction === "asc" ? " ↑" : " ↓") : ""}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, index) => (
-              <tr key={`${row[0]}-${index}`}>
+            {displayRows.map((row, index) => (
+              <tr
+                key={`${row[0]}-${index}`}
+                onClick={onRowClick ? () => onRowClick(row, index) : undefined}
+                className={onRowClick ? "cursor-pointer" : undefined}
+              >
                 {row.map((cell, cellIndex) => (
                   <td
                     key={`${cell}-${cellIndex}`}
-                    style={cellIndex === 0 ? { color: "#fff", fontWeight: 500 } : undefined}
+                    style={cellIndex === 0 ? { color: "var(--color-neutral-200)", fontWeight: 500 } : undefined}
                   >
-                    {cell}
+                    {renderCell ? renderCell(cell, row, index, cellIndex) : cell}
                   </td>
                 ))}
               </tr>
             ))}
+            {displayRows.length === 0 && (
+              <tr>
+                <td colSpan={columns.length} style={{ color: "var(--color-neutral-400)", textAlign: "center" }}>
+                  No matching records.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -190,7 +313,7 @@ export function SplitCards({ left, right }: { left: ReactNode; right: ReactNode 
 export function ActionButtonRow({ buttons }: { buttons: string[] }) {
   return (
     <section className="card p-5">
-      <p className="m-0 mb-3 text-sm font-semibold text-white">Report Actions</p>
+      <p className="m-0 mb-3 text-sm font-semibold text-[var(--color-neutral-100)]">Report Actions</p>
       <div className="flex flex-wrap gap-2">
         {buttons.map((button) => (
           <button key={button} type="button" className="btn-ghost text-xs uppercase tracking-wider">
