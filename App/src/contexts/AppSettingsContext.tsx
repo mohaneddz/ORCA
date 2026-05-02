@@ -1,4 +1,4 @@
-﻿import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { isTauri, invoke } from "@tauri-apps/api/core";
 import {
   disable as disableAutostart,
@@ -6,8 +6,9 @@ import {
   isEnabled as isAutostartEnabled,
 } from "@tauri-apps/plugin-autostart";
 import { translate } from "@/i18n/translations";
-import { type AppLanguage, type AppSettings } from "@/types/settings";
+import { type AppLanguage, type AppSettings, type AppTheme } from "@/types/settings";
 import { persistAppSettings, readAppSettings } from "@/utils/appSettings";
+import { logger } from "@/lib/logger";
 
 type AppSettingsContextValue = {
   settings: AppSettings;
@@ -16,18 +17,25 @@ type AppSettingsContextValue = {
   setLaunchAtStartup: (enabled: boolean) => Promise<void>;
   setStartMinimized: (enabled: boolean) => Promise<void>;
   setLanguage: (language: AppLanguage) => Promise<void>;
+  setTheme: (theme: AppTheme) => Promise<void>;
   t: (key: string) => string;
 };
 
 const AppSettingsContext = createContext<AppSettingsContextValue | null>(null);
+
+function applyTheme(theme: AppTheme): void {
+  document.documentElement.setAttribute("data-theme", theme);
+}
 
 async function syncRuntimeSettings(settings: AppSettings): Promise<void> {
   if (!isTauri()) {
     return;
   }
 
+  logger.debug("settings.runtime_sync.start", { hideToTray: settings.hideToTray });
   await invoke("sync_runtime_settings", { settings });
   await invoke("set_hide_to_tray", { enabled: settings.hideToTray });
+  logger.info("settings.runtime_sync.success");
 }
 
 export function AppSettingsProvider({ children }: { children: React.ReactNode }) {
@@ -40,7 +48,12 @@ export function AppSettingsProvider({ children }: { children: React.ReactNode })
   }, [settings]);
 
   useEffect(() => {
+    applyTheme(settings.theme);
+  }, [settings.theme]);
+
+  useEffect(() => {
     void syncRuntimeSettings(settings).catch(() => {
+      logger.warn("settings.runtime_sync.initial_failed");
       // Ignore sync errors in dev web mode.
     });
     // Runs once on mount with initial settings snapshot.
@@ -54,6 +67,7 @@ export function AppSettingsProvider({ children }: { children: React.ReactNode })
 
     void isAutostartEnabled()
       .then((enabled) => {
+        logger.info("settings.autostart.probe.success", { enabled });
         setSettings((current) => {
           const next = {
             ...current,
@@ -66,6 +80,7 @@ export function AppSettingsProvider({ children }: { children: React.ReactNode })
         });
       })
       .catch(() => {
+        logger.warn("settings.autostart.probe.failed");
         // Keep local fallback settings.
       });
   }, []);
@@ -75,6 +90,7 @@ export function AppSettingsProvider({ children }: { children: React.ReactNode })
     settingsRef.current = nextSettings;
     setSettings(nextSettings);
     persistAppSettings(nextSettings);
+    logger.info("settings.updated", updates);
     await syncRuntimeSettings(nextSettings);
   };
 
@@ -100,6 +116,7 @@ export function AppSettingsProvider({ children }: { children: React.ReactNode })
             startMinimized: enabled ? settings.startMinimized : false,
           });
         } catch {
+          logger.error("settings.autostart.update_failed", { enabled });
           setStartupError("Could not update startup registration.");
         }
       },
@@ -108,6 +125,9 @@ export function AppSettingsProvider({ children }: { children: React.ReactNode })
       },
       setLanguage: async (language) => {
         await patchSettings({ language });
+      },
+      setTheme: async (theme) => {
+        await patchSettings({ theme });
       },
       t: (key) => translate(settings.language, key),
     }),
@@ -124,5 +144,3 @@ export function useAppSettings() {
   }
   return context;
 }
-
-

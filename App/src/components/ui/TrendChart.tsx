@@ -4,8 +4,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
-  Legend,
   RadialBar,
   RadialBarChart,
   ResponsiveContainer,
@@ -14,24 +12,26 @@ import {
   YAxis,
 } from "recharts";
 
+const CHART_PRIMARY = "#1d4ed8";
+const CHART_SECONDARY = "#38bdf8";
+const CHART_PRIMARY_BORDER = "rgba(29,78,216,0.45)";
+
 /* ─── Shared tooltip ──────────────────────────────────── */
 function DarkTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value?: number; name?: string; color?: string }>; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
     <div
+      className="rounded-[10px] border px-3 py-2 text-xs shadow-[var(--shadow-floating)]"
       style={{
-        background: "#0c1220",
-        border: "1px solid rgba(168,85,247,0.25)",
-        borderRadius: 10,
-        padding: "8px 12px",
-        fontSize: 12,
-        color: "#e2e8f0",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+        background: "color-mix(in srgb, var(--color-surface-1) 78%, transparent)",
+        borderColor: CHART_PRIMARY_BORDER,
+        backdropFilter: "blur(10px)",
+        color: "var(--color-neutral-200)",
       }}
     >
-      {label && <p style={{ margin: 0, marginBottom: 4, color: "#64748b", fontSize: 11 }}>{label}</p>}
+      {label && <p className="m-0 mb-1 text-[11px]" style={{ color: "var(--color-neutral-500)" }}>{label}</p>}
       {payload.map((p, i) => (
-        <p key={i} style={{ margin: 0, color: p.color ?? "#a855f7", fontWeight: 600 }}>
+        <p key={i} className="m-0 font-semibold" style={{ color: p.color ?? CHART_PRIMARY }}>
           {p.name}: {p.value}
         </p>
       ))}
@@ -43,38 +43,38 @@ function DarkTooltip({ active, payload, label }: { active?: boolean; payload?: A
 function GradientDefs() {
   return (
     <defs>
-      <linearGradient id="gradPurple" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%"   stopColor="#a855f7" stopOpacity={0.5} />
-        <stop offset="100%" stopColor="#a855f7" stopOpacity={0.02} />
+      <linearGradient id="gradPrimaryBlue" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stopColor={CHART_PRIMARY} stopOpacity={0.46} />
+        <stop offset="100%" stopColor={CHART_PRIMARY} stopOpacity={0.03} />
       </linearGradient>
-      <linearGradient id="gradCyan" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%"   stopColor="#22d3ee" stopOpacity={0.4} />
-        <stop offset="100%" stopColor="#22d3ee" stopOpacity={0.02} />
+      <linearGradient id="gradSecondaryBlue" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stopColor={CHART_SECONDARY} stopOpacity={0.38} />
+        <stop offset="100%" stopColor={CHART_SECONDARY} stopOpacity={0.02} />
       </linearGradient>
     </defs>
   );
 }
 
-const AXIS_STYLE = { fill: "#475569", fontSize: 11 };
+const AXIS_STYLE = { fill: "var(--color-neutral-500)", fontSize: 11 };
 
-/* ─── TrendChart (single line – purple) ──────────────── */
+/* ─── TrendChart (single line – blue) ────────────────── */
 type TrendChartProps = {
   data: Array<{ name: string; value: number }>;
   title?: string;
-  color?: "purple" | "cyan";
+  color?: "blue" | "cyan";
 };
 
-export default function TrendChart({ data, title = "Weekly Trend", color = "purple" }: TrendChartProps) {
-  const stroke  = color === "cyan" ? "#22d3ee" : "#a855f7";
-  const gradId  = color === "cyan" ? "gradCyan" : "gradPurple";
+export default function TrendChart({ data, title = "Weekly Trend", color = "blue" }: TrendChartProps) {
+  const stroke  = color === "cyan" ? CHART_SECONDARY : CHART_PRIMARY;
+  const gradId  = color === "cyan" ? "gradSecondaryBlue" : "gradPrimaryBlue";
 
   return (
-    <div className="card p-5">
-      <p className="m-0 mb-4 text-sm font-semibold text-white">{title}</p>
+    <div className="card p-5 h-full flex flex-col">
+      <p className="m-0 mb-4 text-sm font-semibold text-[var(--color-neutral-100)]">{title}</p>
       <ResponsiveContainer width="100%" height={220}>
         <AreaChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
           <GradientDefs />
-          <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
+          <CartesianGrid stroke="var(--color-border-subtle)" vertical={false} />
           <XAxis dataKey="name" tick={AXIS_STYLE} tickLine={false} axisLine={false} />
           <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={36} />
           <Tooltip content={<DarkTooltip />} />
@@ -86,7 +86,7 @@ export default function TrendChart({ data, title = "Weekly Trend", color = "purp
             strokeWidth={2.5}
             fill={`url(#${gradId})`}
             dot={false}
-            activeDot={{ r: 5, fill: stroke, stroke: "#0c1220", strokeWidth: 2 }}
+            activeDot={{ r: 5, fill: stroke, stroke: "var(--color-surface-1)", strokeWidth: 2 }}
           />
         </AreaChart>
       </ResponsiveContainer>
@@ -109,16 +109,16 @@ export function DualAreaChart({
   secondaryLabel = "Secondary",
 }: DualAreaChartProps) {
   return (
-    <div className="card p-5">
+    <div className="card p-5 h-full flex flex-col">
       <div className="mb-4 flex items-center justify-between">
-        <p className="m-0 text-sm font-semibold text-white">{title}</p>
-        <div className="flex items-center gap-4 text-xs" style={{ color: "#64748b" }}>
+        <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">{title}</p>
+        <div className="flex items-center gap-4 text-xs text-[var(--color-neutral-500)]">
           <span className="flex items-center gap-1.5">
-            <span style={{ width: 8, height: 8, borderRadius: 2, background: "#a855f7", display: "inline-block" }} />
+            <span className="w-2 h-2 rounded-[2px] inline-block" style={{ background: CHART_PRIMARY }} />
             {primaryLabel}
           </span>
           <span className="flex items-center gap-1.5">
-            <span style={{ width: 8, height: 8, borderRadius: 2, background: "#22d3ee", display: "inline-block" }} />
+            <span className="w-2 h-2 rounded-[2px] inline-block" style={{ background: CHART_SECONDARY }} />
             {secondaryLabel}
           </span>
         </div>
@@ -126,7 +126,7 @@ export function DualAreaChart({
       <ResponsiveContainer width="100%" height={220}>
         <AreaChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
           <GradientDefs />
-          <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
+          <CartesianGrid stroke="var(--color-border-subtle)" vertical={false} />
           <XAxis dataKey="name" tick={AXIS_STYLE} tickLine={false} axisLine={false} />
           <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={36} />
           <Tooltip content={<DarkTooltip />} />
@@ -134,21 +134,21 @@ export function DualAreaChart({
             type="monotone"
             dataKey="primary"
             name={primaryLabel}
-            stroke="#a855f7"
+            stroke={CHART_PRIMARY}
             strokeWidth={2.5}
-            fill="url(#gradPurple)"
+            fill="url(#gradPrimaryBlue)"
             dot={false}
-            activeDot={{ r: 5, fill: "#a855f7", stroke: "#0c1220", strokeWidth: 2 }}
+            activeDot={{ r: 5, fill: CHART_PRIMARY, stroke: "var(--color-surface-1)", strokeWidth: 2 }}
           />
           <Area
             type="monotone"
             dataKey="secondary"
             name={secondaryLabel}
-            stroke="#22d3ee"
+            stroke={CHART_SECONDARY}
             strokeWidth={2.5}
-            fill="url(#gradCyan)"
+            fill="url(#gradSecondaryBlue)"
             dot={false}
-            activeDot={{ r: 5, fill: "#22d3ee", stroke: "#0c1220", strokeWidth: 2 }}
+            activeDot={{ r: 5, fill: CHART_SECONDARY, stroke: "var(--color-surface-1)", strokeWidth: 2 }}
           />
         </AreaChart>
       </ResponsiveContainer>
@@ -156,7 +156,7 @@ export function DualAreaChart({
   );
 }
 
-/* ─── GroupedBarChart – purple + cyan bars ───────────── */
+/* ─── GroupedBarChart – deep blue + cyan bars ────────── */
 type GroupedBarChartProps = {
   data: Array<{ name: string; primary: number; secondary: number }>;
   title?: string;
@@ -171,28 +171,28 @@ export function GroupedBarChart({
   secondaryLabel = "Secondary",
 }: GroupedBarChartProps) {
   return (
-    <div className="card p-5">
+    <div className="card p-5 h-full flex flex-col">
       <div className="mb-4 flex items-center justify-between">
-        <p className="m-0 text-sm font-semibold text-white">{title}</p>
-        <div className="flex items-center gap-4 text-xs" style={{ color: "#64748b" }}>
+        <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">{title}</p>
+        <div className="flex items-center gap-4 text-xs text-[var(--color-neutral-500)]">
           <span className="flex items-center gap-1.5">
-            <span style={{ width: 8, height: 8, borderRadius: 2, background: "#a855f7", display: "inline-block" }} />
+            <span className="w-2 h-2 rounded-[2px] inline-block" style={{ background: CHART_PRIMARY }} />
             {primaryLabel}
           </span>
           <span className="flex items-center gap-1.5">
-            <span style={{ width: 8, height: 8, borderRadius: 2, background: "#22d3ee", display: "inline-block" }} />
+            <span className="w-2 h-2 rounded-[2px] inline-block" style={{ background: CHART_SECONDARY }} />
             {secondaryLabel}
           </span>
         </div>
       </div>
       <ResponsiveContainer width="100%" height={220}>
         <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} barCategoryGap="30%">
-          <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
+          <CartesianGrid stroke="var(--color-border-subtle)" vertical={false} />
           <XAxis dataKey="name" tick={AXIS_STYLE} tickLine={false} axisLine={false} />
           <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={36} />
           <Tooltip content={<DarkTooltip />} />
-          <Bar dataKey="primary" name={primaryLabel} fill="#a855f7" radius={[4, 4, 0, 0]} maxBarSize={20} />
-          <Bar dataKey="secondary" name={secondaryLabel} fill="#22d3ee" radius={[4, 4, 0, 0]} maxBarSize={20} />
+          <Bar dataKey="primary" name={primaryLabel} fill={CHART_PRIMARY} radius={[4, 4, 0, 0]} maxBarSize={20} />
+          <Bar dataKey="secondary" name={secondaryLabel} fill={CHART_SECONDARY} radius={[4, 4, 0, 0]} maxBarSize={20} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -224,9 +224,9 @@ export function DonutGauge({
 
   return (
     <div className="card p-5">
-      {title && <p className="m-0 mb-4 text-sm font-semibold text-white">{title}</p>}
+      {title && <p className="m-0 mb-4 text-sm font-semibold text-[var(--color-neutral-100)]">{title}</p>}
       <div className="flex flex-col items-center">
-        <div style={{ position: "relative", width: 180, height: 180 }}>
+        <div className="relative w-[180px] h-[180px]">
           <ResponsiveContainer width="100%" height="100%">
             <RadialBarChart
               cx="50%"
@@ -235,33 +235,24 @@ export function DonutGauge({
               outerRadius="100%"
               startAngle={210}
               endAngle={-30}
-              data={[{ value: 100, fill: "rgba(255,255,255,0.06)" }, ...radialData]}
+              data={[{ value: 100, fill: "var(--color-border-subtle)" }, ...radialData]}
               barSize={16}
             >
               <defs>
                 <linearGradient id="radialGrad" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor="#7c3aed" />
-                  <stop offset="100%" stopColor="#22d3ee" />
+                  <stop offset="0%" stopColor={CHART_PRIMARY} />
+                  <stop offset="100%" stopColor={CHART_SECONDARY} />
                 </linearGradient>
               </defs>
               <RadialBar background={false} dataKey="value" cornerRadius={8} />
             </RadialBarChart>
           </ResponsiveContainer>
           {/* Center label */}
-          <div
-            style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              textAlign: "center",
-              marginTop: 6,
-            }}
-          >
-            <p style={{ margin: 0, fontSize: 26, fontWeight: 800, color: "#fff", lineHeight: 1 }}>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center mt-1.5">
+            <p className="m-0 text-[26px] font-extrabold text-[var(--color-neutral-100)] leading-none">
               {value}
             </p>
-            <p style={{ margin: 0, fontSize: 11, color: "#64748b", marginTop: 3 }}>{label}</p>
+            <p className="m-0 mt-[3px] text-[11px] text-[var(--color-neutral-500)]">{label}</p>
           </div>
         </div>
 
@@ -269,20 +260,14 @@ export function DonutGauge({
           <div className="w-full mt-3 space-y-2">
             {breakdown.map((item) => (
               <div key={item.label} className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2" style={{ color: "#94a3b8" }}>
+                <span className="flex items-center gap-2 text-[var(--color-neutral-400)]">
                   <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      background: item.color,
-                      display: "inline-block",
-                      flexShrink: 0,
-                    }}
+                    className="w-2 h-2 rounded-full inline-block shrink-0"
+                    style={{ background: item.color }}
                   />
                   {item.label}
                 </span>
-                <span style={{ color: "#fff", fontWeight: 600 }}>{item.value}</span>
+                <span className="font-semibold text-[var(--color-neutral-100)]">{item.value}</span>
               </div>
             ))}
           </div>
@@ -291,3 +276,4 @@ export function DonutGauge({
     </div>
   );
 }
+

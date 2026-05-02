@@ -1,19 +1,23 @@
-﻿import type { AppLanguage } from "@/types/settings";
+import type { AppLanguage } from "@/types/settings";
 
 type TranslationMap = Record<string, string>;
 
 const en: TranslationMap = {
-  "app.name": "Innov",
+  "app.name": "ORCA",
   "app.console": "CyberBase Console",
   "sidebar.section.overview": "Overview",
   "sidebar.section.functionalities": "Functionalities",
   "sidebar.section.misc": "Miscellaneous",
   "sidebar.item.home": "Home",
+  "sidebar.item.summary": "Summary",
   "sidebar.item.control-center": "Control Center",
-  "sidebar.item.registered-devices": "Registered Devices",
+  "sidebar.item.devices": "Devices",
   "sidebar.item.network": "Network",
   "sidebar.item.accounts": "Accounts",
-  "sidebar.item.employee-playground": "Employee Playground",
+  "sidebar.item.training": "Training",
+  "sidebar.item.billing-usage": "Billing & Usage",
+  "sidebar.item.chat": "Chat",
+  "sidebar.item.virtual-machines": "Virtual Machines",
   "sidebar.item.settings": "Settings",
   "sidebar.item.account": "Account",
   "action.signout": "Sign out",
@@ -23,8 +27,12 @@ const en: TranslationMap = {
   "settings.desktop.description": "System integration for startup, tray behavior, language, and global shortcut.",
   "settings.language": "Language",
   "settings.language.helper": "Choose the interface language.",
+  "settings.theme": "Theme",
+  "settings.theme.helper": "Switch between dark and light interface.",
+  "settings.theme.dark": "Dark",
+  "settings.theme.light": "Light",
   "settings.launchAtStartup": "Launch At Startup",
-  "settings.launchAtStartup.helper": "Run Innov automatically when you sign in.",
+  "settings.launchAtStartup.helper": "Run ORCA automatically when you sign in.",
   "settings.startMinimized": "Start Minimized",
   "settings.startMinimized.helper": "When launched at startup, start minimized instead of focused.",
   "settings.hideToTray": "Hide To Tray On Close",
@@ -36,17 +44,21 @@ const en: TranslationMap = {
 };
 
 const fr: TranslationMap = {
-  "app.name": "Innov",
+  "app.name": "ORCA",
   "app.console": "Console CyberBase",
   "sidebar.section.overview": "Vue d'ensemble",
   "sidebar.section.functionalities": "Fonctionnalites",
   "sidebar.section.misc": "Divers",
   "sidebar.item.home": "Accueil",
+  "sidebar.item.summary": "Resume",
   "sidebar.item.control-center": "Centre de controle",
-  "sidebar.item.registered-devices": "Appareils enregistres",
+  "sidebar.item.devices": "Appareils",
   "sidebar.item.network": "Reseau",
   "sidebar.item.accounts": "Comptes",
-  "sidebar.item.employee-playground": "Simulation employes",
+  "sidebar.item.training": "Formation",
+  "sidebar.item.billing-usage": "Facturation et utilisation",
+  "sidebar.item.chat": "Chat",
+  "sidebar.item.virtual-machines": "Machines Virtuelles",
   "sidebar.item.settings": "Parametres",
   "sidebar.item.account": "Compte",
   "action.signout": "Se deconnecter",
@@ -56,8 +68,12 @@ const fr: TranslationMap = {
   "settings.desktop.description": "Integration systeme pour le demarrage, le tray, la langue et le raccourci global.",
   "settings.language": "Langue",
   "settings.language.helper": "Choisissez la langue de l'interface.",
+  "settings.theme": "Theme",
+  "settings.theme.helper": "Basculez entre le mode sombre et clair.",
+  "settings.theme.dark": "Sombre",
+  "settings.theme.light": "Clair",
   "settings.launchAtStartup": "Lancer au Demarrage",
-  "settings.launchAtStartup.helper": "Demarrer Innov automatiquement a l'ouverture de session.",
+  "settings.launchAtStartup.helper": "Demarrer ORCA automatiquement a l'ouverture de session.",
   "settings.startMinimized": "Demarrer Reduit",
   "settings.startMinimized.helper": "Au demarrage automatique, ouvrir reduit au lieu de premier plan.",
   "settings.hideToTray": "Masquer vers le Tray a la Fermeture",
@@ -73,5 +89,3 @@ const translationsByLanguage: Record<AppLanguage, TranslationMap> = { en, fr };
 export function translate(language: AppLanguage, key: string): string {
   return translationsByLanguage[language][key] ?? translationsByLanguage.en[key] ?? key;
 }
-
-

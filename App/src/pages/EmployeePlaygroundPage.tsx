@@ -1,61 +1,128 @@
-﻿import { BulletActions, DataTable, PageHeader, SplitCards, StatGrid } from "@/components/cards/BaseCards";
+import { DataTable, PageHeader } from "@/components/cards/BaseCards";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-export default function EmployeePlaygroundPage() {
+const resilienceTrend = [
+  { week: "W1", passRate: 62, reportRate: 44, clickRate: 28 },
+  { week: "W2", passRate: 67, reportRate: 51, clickRate: 25 },
+  { week: "W3", passRate: 72, reportRate: 56, clickRate: 20 },
+  { week: "W4", passRate: 76, reportRate: 62, clickRate: 18 },
+  { week: "W5", passRate: 81, reportRate: 68, clickRate: 15 },
+  { week: "W6", passRate: 86, reportRate: 73, clickRate: 14 },
+];
+
+const campaignBreakdown = [
+  { group: "Finance", completed: 92 },
+  { group: "Ops", completed: 84 },
+  { group: "HR", completed: 88 },
+  { group: "Marketing", completed: 79 },
+];
+
+const AXIS_STYLE = { fill: "#64748b", fontSize: 11 };
+const CHART_PRIMARY = "#1d4ed8";
+const CHART_SECONDARY = "#38bdf8";
+
+export default function TrainingPage() {
   return (
     <div className="page-section">
       <PageHeader
-        badge="Employee Playground"
-        title="Employee Playground"
-        description="Security-awareness lab to test employee resilience with phishing simulations, controlled password guess simulations, and passive guesser campaigns."
-      />
-      <StatGrid
-        stats={[
-          { label: "Simulations This Month", value: "22" },
-          { label: "Phishing Click Rate", value: "14%", tone: "danger" },
-          { label: "Report Rate", value: "73%", tone: "ok" },
-          { label: "Password Guess Success", value: "9 accounts", tone: "danger" },
-          { label: "Passive Guesser Running", value: "Yes" },
-          { label: "High-Risk Employees", value: "12" },
-        ]}
+        badge="Training"
+        title="Awareness and Simulation Training"
+        description="Campaign outcomes, user resilience progression, and guided response tooling."
       />
 
-      <SplitCards
-        left={
-          <BulletActions
-            title="Simulation Actions"
-            items={[
-              "Launch fake phishing email campaign by department.",
-              "Clone login pages for controlled credential-harvest drills.",
-              "Trigger fake external-share alerts and measure response time.",
-              "Auto-enroll failed users into targeted training modules.",
-            ]}
-          />
-        }
-        right={
-          <BulletActions
-            title="Password Guessing Lab"
-            items={[
-              "Run controlled brute-guess for workstation lock screens.",
-              "Run account password guess checks against approved dictionaries.",
-              "Enable passive guesser to score weak credential patterns continuously.",
-              "Immediately force reset when guess confidence crosses threshold.",
-            ]}
-          />
-        }
-      />
+      <section className="grid gap-3 xl:grid-cols-3">
+        <section className="card p-5 xl:col-span-2 min-h-[420px]">
+          <p className="m-0 text-sm font-semibold text-white">Training Performance Board</p>
+          <p className="m-0 mt-2 text-sm text-slate-400">Resilience curve, suspicious-report growth, and click-risk decline across active simulations.</p>
+          <div className="mt-4 grid gap-3 md:grid-cols-[1.65fr_1fr]">
+            <section className="rounded-xl border border-white/8 bg-slate-900/30 p-3">
+              <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
+                <span>6-Week Behavior Trend</span>
+                <span className="text-cyan-300">Click risk: -50%</span>
+              </div>
+              <div className="h-[230px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={resilienceTrend} margin={{ top: 4, right: 6, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="passRateGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={CHART_PRIMARY} stopOpacity={0.46} />
+                        <stop offset="100%" stopColor={CHART_PRIMARY} stopOpacity={0.03} />
+                      </linearGradient>
+                      <linearGradient id="reportRateGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={CHART_SECONDARY} stopOpacity={0.38} />
+                        <stop offset="100%" stopColor={CHART_SECONDARY} stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <XAxis dataKey="week" tick={AXIS_STYLE} tickLine={false} axisLine={false} />
+                    <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={32} domain={[0, 100]} />
+                    <Tooltip
+                      contentStyle={{ background: "rgba(10, 25, 49, 0.76)", border: "1px solid rgba(29,78,216,0.45)", borderRadius: 10, color: "#e2e8f0", backdropFilter: "blur(10px)" }}
+                      labelStyle={{ color: "#64748b" }}
+                    />
+                    <Area type="monotone" dataKey="passRate" name="Pass rate %" stroke={CHART_PRIMARY} strokeWidth={2.4} fill="url(#passRateGradient)" dot={false} />
+                    <Area type="monotone" dataKey="reportRate" name="Report rate %" stroke={CHART_SECONDARY} strokeWidth={2.4} fill="url(#reportRateGradient)" dot={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </section>
+            <section className="rounded-xl border border-white/8 bg-slate-900/30 p-3">
+              <p className="m-0 text-xs text-slate-400">Completion by Department</p>
+              <div className="mt-2 h-[230px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={campaignBreakdown} margin={{ top: 4, right: 6, left: -20, bottom: 0 }} barCategoryGap="28%">
+                    <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <XAxis dataKey="group" tick={AXIS_STYLE} tickLine={false} axisLine={false} />
+                    <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={32} domain={[0, 100]} />
+                    <Tooltip
+                      contentStyle={{ background: "rgba(10, 25, 49, 0.76)", border: "1px solid rgba(56,189,248,0.4)", borderRadius: 10, color: "#e2e8f0", backdropFilter: "blur(10px)" }}
+                      labelStyle={{ color: "#64748b" }}
+                    />
+                    <Bar dataKey="completed" name="Completed %" fill={CHART_SECONDARY} radius={[5, 5, 0, 0]} maxBarSize={24} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </section>
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+            <div className="rounded-lg border border-blue-700/35 bg-blue-900/20 px-3 py-2 text-slate-300 backdrop-blur-sm">Avg Pass Rate <span className="ml-1 font-semibold text-white">74%</span></div>
+            <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-slate-300">Avg Report Rate <span className="ml-1 font-semibold text-white">59%</span></div>
+            <div className="rounded-lg border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-slate-300">Avg Click Rate <span className="ml-1 font-semibold text-white">20%</span></div>
+          </div>
+        </section>
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-1">
+          {["Active Campaigns", "Failure Rate", "Report Rate", "Auto-Enrolled"].map((title, idx) => (
+            <section key={title} className="card p-5 min-h-[96px]">
+              <p className="m-0 text-xs uppercase tracking-[0.08em] text-slate-400">{title}</p>
+              <p className="m-0 mt-2 text-xl font-bold text-white">{["9", "14%", "73%", "22"][idx]}</p>
+            </section>
+          ))}
+        </div>
+      </section>
 
-      <DataTable
-        title="Campaign and Guessing Results"
-        columns={["Scenario", "Target Group", "Result", "Auto Action", "Date"]}
-        rows={[
-          ["Invoice-Clone-07", "Finance", "5 clicked, 3 submitted", "Force training + manager notice", "2026-05-01"],
-          ["Password Guess Pass #18", "Operations", "2 weak passwords cracked", "Password reset + MFA enforce", "2026-04-30"],
-          ["Passive Guesser Sweep", "All Staff", "9 high-confidence weak patterns", "Reset queued", "2026-04-29"],
-          ["Secure-Share Trap", "HR", "1 suspicious upload approved", "Awareness drill assigned", "2026-04-27"],
-        ]}
-      />
+      <section className="grid gap-3 xl:grid-cols-5">
+        <div className="xl:col-span-4">
+          <DataTable
+            title="Training Sessions"
+            columns={["Session", "Target", "Result", "Assigned Follow-Up", "Date"]}
+            rows={[
+              ["Invoice Clone v2", "Finance", "5 clicks", "Mandatory module", "2026-05-02"],
+              ["Credential Harvest Drill", "Operations", "2 submissions", "1:1 coaching", "2026-05-01"],
+              ["Link Safety Sprint", "HR", "89% pass", "None", "2026-04-30"],
+              ["Attachment Trap", "All Staff", "11 risky opens", "Micro-training", "2026-04-29"],
+            ]}
+          />
+        </div>
+        <section className="card p-5">
+          <p className="m-0 text-sm font-semibold text-white">Assisting Tools</p>
+          <ul className="m-0 mt-3 space-y-2 pl-5 text-sm text-slate-400">
+            <li>Template generator</li>
+            <li>Adaptive difficulty</li>
+            <li>Auto-remediation links</li>
+            <li>Behavior score export</li>
+          </ul>
+        </section>
+      </section>
     </div>
   );
 }
-
-

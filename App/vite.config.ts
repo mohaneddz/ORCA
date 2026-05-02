@@ -12,6 +12,7 @@ const dummyData = process.env.DUMMY_DATA ?? process.env.VITE_DUMMY_DATA ?? "true
 export default defineConfig(async () => ({
   root: path.resolve(__dirname),
   envDir: path.resolve(__dirname),
+  envPrefix: ["VITE_", "GROQ_", "PINECONE_"],
   plugins: [tailwindcss(), react()],
   define: {
     __DUMMY_DATA__: JSON.stringify(dummyData),

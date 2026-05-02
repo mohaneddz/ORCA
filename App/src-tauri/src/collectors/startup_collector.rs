@@ -62,17 +62,17 @@ fn platform_method() -> String {
 fn startup_template() -> String {
     #[cfg(target_os = "windows")]
     {
-        return "schtasks /Create /SC ONLOGON /TN InnovAgent /TR \"innov.exe\"".to_string();
+        return "schtasks /Create /SC ONLOGON /TN ORCAAgent /TR \"orca.exe\"".to_string();
     }
 
     #[cfg(target_os = "macos")]
     {
-        return "~/Library/LaunchAgents/com.innov.agent.plist template generated".to_string();
+        return "~/Library/LaunchAgents/com.orca.agent.plist template generated".to_string();
     }
 
     #[cfg(target_os = "linux")]
     {
-        return "~/.config/systemd/user/innov-agent.service template generated".to_string();
+        return "~/.config/systemd/user/orca-agent.service template generated".to_string();
     }
 
     #[allow(unreachable_code)]
