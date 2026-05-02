@@ -53,9 +53,26 @@ class SnapshotIngestView(View):
             return JsonResponse({"error": "Invalid collectedAtUtc format."}, status=400)
 
         # ── Extract indexed fields ────────────────────────────────────────
-        device = payload.get("device") or {}
-        hardware = device.get("hardware") or {}
-        user = payload.get("user") or {}
+        hardware = payload.get("hardware") or {}
+        patch = payload.get("patchStatus") or {}
+        av = payload.get("antivirus") or {}
+        disk_enc = payload.get("diskEncryption") or {}
+        usb_block = payload.get("usb") or {}
+        lan = payload.get("lan") or {}
+        ports_block = payload.get("localPorts") or {}
+        wifi = payload.get("wifi") or {}
+
+        wifi_profiles = wifi.get("profiles") or []
+        open_wifi = sum(1 for p in wifi_profiles if p.get("isOpenNetwork") is True)
+
+        patch_last_raw = patch.get("lastUpdated")
+        patch_last_updated = None
+        if patch_last_raw:
+            try:
+                from datetime import date
+                patch_last_updated = date.fromisoformat(patch_last_raw[:10])
+            except ValueError:
+                pass
 
         # ── Backend risk computation (ignore any risk block from agent) ───
         risk = compute_risk(payload)
@@ -67,15 +84,34 @@ class SnapshotIngestView(View):
         snapshot = DeviceSnapshot.objects.create(
             employee=employee,
             collected_at=collected_at,
-            hostname=device.get("hostname", ""),
-            os_name=device.get("osName", ""),
-            os_version=device.get("osVersion", ""),
-            architecture=device.get("architecture", ""),
-            uptime_seconds=device.get("uptimeSeconds"),
-            cpu_cores=hardware.get("cpuCores"),
-            total_memory_mb=hardware.get("totalMemoryMb"),
-            is_admin=bool(user.get("isAdminEstimate", False)),
-            local_admin_count=len(user.get("localAdmins") or []),
+            # Hardware
+            hostname=hardware.get("hostname", ""),
+            os_name=hardware.get("osName", ""),
+            os_version=hardware.get("osVersion", ""),
+            os_build=hardware.get("osBuild", ""),
+            cpu_model=(hardware.get("cpuModel") or "").strip(),
+            ram_total_mb=hardware.get("ramTotalMb"),
+            disk_total_gb=hardware.get("diskTotalGb"),
+            disk_free_gb=hardware.get("diskFreeGb"),
+            machine_uuid=hardware.get("machineUuid", ""),
+            primary_mac=hardware.get("primaryMacAddress", ""),
+            # Patch
+            patch_is_current=patch.get("isCurrent"),
+            patch_last_updated=patch_last_updated,
+            patch_days_since_update=patch.get("daysSinceUpdate"),
+            # Antivirus
+            antivirus_detected=av.get("avDetected"),
+            antivirus_name=av.get("productName") or "",
+            antivirus_enabled=av.get("enabledStatus"),
+            antivirus_up_to_date=av.get("signatureUpToDate"),
+            # Disk encryption
+            disk_encrypted=disk_enc.get("encrypted"),
+            # Network / peripherals
+            usb_enabled=usb_block.get("enabled"),
+            lan_device_count=len(lan.get("devices") or []),
+            local_port_count=len(ports_block.get("ports") or []),
+            wifi_open_network_count=open_wifi,
+            # Risk
             risk_score=risk["score"],
             risk_level=risk["level"],
             risk_signals=risk["signals"],
@@ -178,10 +214,11 @@ class DeviceDriftView(View):
             return {(s.get("name") or "").strip() for s in (items or []) if s.get("name")}
 
         def _ports(snap):
-            net = snap.raw.get("network") or {}
-            return {p.get("port") for p in (net.get("listeningPorts") or []) if p.get("port")}
+            ports_block = snap.raw.get("localPorts") or {}
+            return {p.get("port") for p in (ports_block.get("ports") or []) if p.get("port")}
 
         def _procs(snap):
+            # processes[] — PENDING in agent v2; returns empty set until available
             return {(p.get("name") or "").strip() for p in (snap.raw.get("processes") or []) if p.get("name")}
 
         sw_new = _sw_names(latest) - _sw_names(previous)
@@ -251,8 +288,8 @@ class PortAuditView(View):
         # Aggregate risky ports across all devices
         risky_port_map = {}  # port_number -> {label, affected_devices: [...]}
         for snap in snapshots:
-            net = snap.raw.get("network") or {}
-            open_ports = {p.get("port") for p in (net.get("listeningPorts") or []) if p.get("port")}
+            ports_block = snap.raw.get("localPorts") or {}
+            open_ports = {p.get("port") for p in (ports_block.get("ports") or []) if p.get("port")}
             for port, label in _RISKY_PORTS.items():
                 if port in open_ports:
                     if port not in risky_port_map:

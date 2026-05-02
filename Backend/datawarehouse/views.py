@@ -453,8 +453,12 @@ class ExportView(View):
     def _devices(self, org):
         cols = [
             "snapshot_id", "employee_id", "employee_name", "hostname",
-            "os_name", "os_version", "architecture",
-            "is_admin", "local_admin_count",
+            "os_name", "os_version", "os_build", "cpu_model",
+            "ram_total_mb", "disk_total_gb", "disk_free_gb",
+            "patch_is_current", "patch_days_since_update",
+            "antivirus_detected", "antivirus_name", "antivirus_enabled", "antivirus_up_to_date",
+            "disk_encrypted", "usb_enabled",
+            "lan_device_count", "local_port_count", "wifi_open_network_count",
             "risk_score", "risk_level", "risk_signals_count",
             "collected_at", "received_at",
         ]
@@ -466,9 +470,22 @@ class ExportView(View):
                 "hostname": s.hostname,
                 "os_name": s.os_name,
                 "os_version": s.os_version,
-                "architecture": s.architecture,
-                "is_admin": s.is_admin,
-                "local_admin_count": s.local_admin_count,
+                "os_build": s.os_build,
+                "cpu_model": s.cpu_model,
+                "ram_total_mb": s.ram_total_mb,
+                "disk_total_gb": s.disk_total_gb,
+                "disk_free_gb": s.disk_free_gb,
+                "patch_is_current": s.patch_is_current,
+                "patch_days_since_update": s.patch_days_since_update,
+                "antivirus_detected": s.antivirus_detected,
+                "antivirus_name": s.antivirus_name,
+                "antivirus_enabled": s.antivirus_enabled,
+                "antivirus_up_to_date": s.antivirus_up_to_date,
+                "disk_encrypted": s.disk_encrypted,
+                "usb_enabled": s.usb_enabled,
+                "lan_device_count": s.lan_device_count,
+                "local_port_count": s.local_port_count,
+                "wifi_open_network_count": s.wifi_open_network_count,
                 "risk_score": s.risk_score,
                 "risk_level": s.risk_level,
                 "risk_signals_count": len(s.risk_signals or []),
@@ -521,3 +538,298 @@ class ExportView(View):
             f'attachment; filename="{resource}_export.csv"'
         )
         return response
+
+
+# ---------------------------------------------------------------------------
+# ML — Flat feature export
+# GET /api/dw/ml/features/?format=json|csv
+# One row per DeviceSnapshot with numeric features for external ML training.
+# ---------------------------------------------------------------------------
+@method_decorator(csrf_exempt, name="dispatch")
+class MLFeatureExportView(View):
+    _COLUMNS = [
+        "snapshot_id", "employee_id", "collected_at",
+        # Boolean security features (0/1)
+        "antivirus_detected", "antivirus_enabled", "antivirus_up_to_date",
+        "disk_encrypted", "patch_is_current", "usb_enabled",
+        # Numeric features
+        "ram_total_mb", "disk_total_gb", "disk_free_gb", "disk_free_pct",
+        "local_port_count", "lan_device_count", "wifi_open_network_count",
+        "patch_days_since_update",
+        # Target / label
+        "risk_score", "risk_level",
+    ]
+
+    @staticmethod
+    def _bool_int(val):
+        if val is True:
+            return 1
+        if val is False:
+            return 0
+        return None  # unknown
+
+    def get(self, request):
+        org, err = _get_org(request)
+        if err:
+            return err
+
+        fmt = request.GET.get("format", "json").lower()
+        if fmt not in ("json", "csv"):
+            return JsonResponse({"error": "format must be 'json' or 'csv'."}, status=400)
+
+        rows = []
+        for s in (
+            DeviceSnapshot.objects.filter(employee__organization=org)
+            .order_by("employee_id", "collected_at")
+        ):
+            disk_free_pct = None
+            if s.disk_total_gb and s.disk_free_gb is not None:
+                disk_free_pct = round(s.disk_free_gb / s.disk_total_gb * 100, 2)
+
+            rows.append(
+                {
+                    "snapshot_id": str(s.id),
+                    "employee_id": str(s.employee_id),
+                    "collected_at": s.collected_at.isoformat(),
+                    "antivirus_detected": self._bool_int(s.antivirus_detected),
+                    "antivirus_enabled": self._bool_int(s.antivirus_enabled),
+                    "antivirus_up_to_date": self._bool_int(s.antivirus_up_to_date),
+                    "disk_encrypted": self._bool_int(s.disk_encrypted),
+                    "patch_is_current": self._bool_int(s.patch_is_current),
+                    "usb_enabled": self._bool_int(s.usb_enabled),
+                    "ram_total_mb": s.ram_total_mb,
+                    "disk_total_gb": s.disk_total_gb,
+                    "disk_free_gb": s.disk_free_gb,
+                    "disk_free_pct": disk_free_pct,
+                    "local_port_count": s.local_port_count,
+                    "lan_device_count": s.lan_device_count,
+                    "wifi_open_network_count": s.wifi_open_network_count,
+                    "patch_days_since_update": s.patch_days_since_update,
+                    "risk_score": s.risk_score,
+                    "risk_level": s.risk_level,
+                }
+            )
+
+        if fmt == "csv":
+            buf = io.StringIO()
+            writer = csv.DictWriter(buf, fieldnames=self._COLUMNS, extrasaction="ignore")
+            writer.writeheader()
+            writer.writerows(rows)
+            buf.seek(0)
+            response = HttpResponse(buf.read(), content_type="text/csv")
+            response["Content-Disposition"] = 'attachment; filename="ml_features.csv"'
+            return response
+
+        return JsonResponse({"count": len(rows), "columns": self._COLUMNS, "data": rows})
+
+
+# ---------------------------------------------------------------------------
+# ML — Z-score anomaly detection per employee
+# GET /api/dw/ml/anomalies/?threshold=2.0
+# Flags employees whose latest risk score is ≥ threshold standard deviations
+# below their historical mean, OR whose score dropped > 25 points from previous.
+# ---------------------------------------------------------------------------
+@method_decorator(csrf_exempt, name="dispatch")
+class AnomalyDetectionView(View):
+    def get(self, request):
+        import math
+
+        org, err = _get_org(request)
+        if err:
+            return err
+
+        try:
+            threshold = float(request.GET.get("threshold", 2.0))
+        except ValueError:
+            threshold = 2.0
+
+        employees = Employee.objects.filter(organization=org, is_active=True)
+
+        anomalies = []
+        checked = 0
+
+        for emp in employees:
+            snaps = list(
+                DeviceSnapshot.objects.filter(employee=emp)
+                .order_by("collected_at")
+                .values("id", "collected_at", "risk_score")
+            )
+            scores = [s["risk_score"] for s in snaps if s["risk_score"] is not None]
+            if len(scores) < 3:
+                # Not enough history for meaningful anomaly detection
+                continue
+
+            checked += 1
+            latest_score = scores[-1]
+            prev_score = scores[-2]
+            history = scores[:-1]  # all but latest
+
+            mean = sum(history) / len(history)
+            variance = sum((x - mean) ** 2 for x in history) / len(history)
+            std = math.sqrt(variance)
+
+            reasons = []
+
+            # Z-score anomaly: score dropped significantly below historical mean
+            if std > 0:
+                z = (mean - latest_score) / std  # positive when score is BELOW mean
+                if z >= threshold:
+                    reasons.append(
+                        f"Risk score ({latest_score}) is {z:.1f}σ below historical mean ({mean:.1f})"
+                    )
+
+            # Sudden drop from previous snapshot
+            delta = prev_score - latest_score
+            if delta > 25:
+                reasons.append(
+                    f"Risk score dropped {delta} points from previous snapshot ({prev_score} → {latest_score})"
+                )
+
+            if reasons:
+                anomalies.append(
+                    {
+                        "employee_id": str(emp.id),
+                        "employee_name": emp.name,
+                        "department": emp.department,
+                        "latest_risk_score": latest_score,
+                        "historical_mean": round(mean, 1),
+                        "historical_std": round(std, 2),
+                        "previous_score": prev_score,
+                        "snapshot_count": len(scores),
+                        "reasons": reasons,
+                        "latest_snapshot_at": snaps[-1]["collected_at"].isoformat(),
+                    }
+                )
+
+        anomalies.sort(key=lambda x: x["latest_risk_score"])
+        return JsonResponse(
+            {
+                "threshold_sigma": threshold,
+                "employees_checked": checked,
+                "anomalies_found": len(anomalies),
+                "anomalies": anomalies,
+            }
+        )
+
+
+# ---------------------------------------------------------------------------
+# ML — RandomForest risk prediction for a specific employee
+# GET /api/dw/ml/predict/<employee_id>/
+# Trains a RandomForest on ALL org snapshots (min 20), then predicts the
+# risk level for the employee's latest snapshot using that model.
+# ---------------------------------------------------------------------------
+@method_decorator(csrf_exempt, name="dispatch")
+class RiskPredictionView(View):
+    _FEATURES = [
+        "antivirus_detected", "antivirus_enabled", "antivirus_up_to_date",
+        "disk_encrypted", "patch_is_current", "usb_enabled",
+        "ram_total_mb", "disk_total_gb", "disk_free_gb",
+        "local_port_count", "lan_device_count", "wifi_open_network_count",
+        "patch_days_since_update",
+    ]
+    _LEVEL_ORDER = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+
+    @staticmethod
+    def _bool_int(val):
+        if val is True:
+            return 1.0
+        if val is False:
+            return 0.0
+        return 0.5  # unknown treated as neutral for training
+
+    def _snap_to_row(self, s):
+        return [
+            self._bool_int(s.antivirus_detected),
+            self._bool_int(s.antivirus_enabled),
+            self._bool_int(s.antivirus_up_to_date),
+            self._bool_int(s.disk_encrypted),
+            self._bool_int(s.patch_is_current),
+            self._bool_int(s.usb_enabled),
+            s.ram_total_mb or 0,
+            s.disk_total_gb or 0,
+            s.disk_free_gb or 0,
+            s.local_port_count or 0,
+            s.lan_device_count or 0,
+            s.wifi_open_network_count or 0,
+            s.patch_days_since_update or 0,
+        ]
+
+    def get(self, request, employee_id):
+        from sklearn.ensemble import RandomForestClassifier
+
+        org, err = _get_org(request)
+        if err:
+            return err
+
+        # Resolve employee
+        try:
+            employee = Employee.objects.get(id=employee_id, organization=org)
+        except Employee.DoesNotExist:
+            return JsonResponse({"error": "Employee not found."}, status=404)
+
+        # Gather all labelled snapshots for org (exclude those with null risk_level)
+        all_snaps = list(
+            DeviceSnapshot.objects.filter(
+                employee__organization=org,
+                risk_level__isnull=False,
+            ).order_by("collected_at")
+        )
+
+        MIN_SAMPLES = 20
+        if len(all_snaps) < MIN_SAMPLES:
+            return JsonResponse(
+                {
+                    "status": "insufficient_data",
+                    "message": f"Need at least {MIN_SAMPLES} labelled snapshots to train. "
+                               f"Currently have {len(all_snaps)}.",
+                    "snapshots_available": len(all_snaps),
+                },
+                status=200,
+            )
+
+        # Latest snapshot for the target employee
+        latest = (
+            DeviceSnapshot.objects.filter(employee=employee)
+            .order_by("-collected_at")
+            .first()
+        )
+        if not latest:
+            return JsonResponse({"error": "No snapshots found for this employee."}, status=404)
+
+        # Build training set
+        X_train = [self._snap_to_row(s) for s in all_snaps]
+        y_train = [s.risk_level for s in all_snaps]
+
+        clf = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
+        clf.fit(X_train, y_train)
+
+        # Predict
+        X_pred = [self._snap_to_row(latest)]
+        predicted_level = clf.predict(X_pred)[0]
+        proba = clf.predict_proba(X_pred)[0]
+        classes = list(clf.classes_)
+        confidence = round(float(proba[classes.index(predicted_level)]) * 100, 1)
+
+        # Feature importances
+        importances = [
+            {"feature": name, "importance": round(float(imp), 4)}
+            for name, imp in zip(self._FEATURES, clf.feature_importances_)
+        ]
+        importances.sort(key=lambda x: -x["importance"])
+
+        return JsonResponse(
+            {
+                "employee_id": str(employee.id),
+                "employee_name": employee.name,
+                "training_samples": len(all_snaps),
+                "latest_snapshot_at": latest.collected_at.isoformat(),
+                "actual_risk_level": latest.risk_level,
+                "predicted_risk_level": predicted_level,
+                "confidence_pct": confidence,
+                "class_probabilities": {
+                    cls: round(float(p) * 100, 1) for cls, p in zip(classes, proba)
+                },
+                "feature_importances": importances[:8],  # top 8
+            }
+        )
+

@@ -23,18 +23,37 @@ class DeviceSnapshot(models.Model):
     # When our backend received it
     received_at = models.DateTimeField(auto_now_add=True)
 
-    # Indexed device fields (for fast queries without touching raw JSON)
+    # ── Hardware ──────────────────────────────────────────────────────────
     hostname = models.CharField(max_length=255, blank=True, default="")
     os_name = models.CharField(max_length=100, blank=True, default="")
     os_version = models.CharField(max_length=100, blank=True, default="")
-    architecture = models.CharField(max_length=50, blank=True, default="")
-    uptime_seconds = models.BigIntegerField(null=True, blank=True)
-    cpu_cores = models.IntegerField(null=True, blank=True)
-    total_memory_mb = models.IntegerField(null=True, blank=True)
+    os_build = models.CharField(max_length=50, blank=True, default="")
+    cpu_model = models.CharField(max_length=255, blank=True, default="")
+    ram_total_mb = models.IntegerField(null=True, blank=True)
+    disk_total_gb = models.FloatField(null=True, blank=True)
+    disk_free_gb = models.FloatField(null=True, blank=True)
+    machine_uuid = models.CharField(max_length=100, blank=True, default="")
+    primary_mac = models.CharField(max_length=50, blank=True, default="")
 
-    # Indexed user fields
-    is_admin = models.BooleanField(default=False)
-    local_admin_count = models.IntegerField(default=0)
+    # ── Patch status ──────────────────────────────────────────────────────
+    patch_is_current = models.BooleanField(null=True, blank=True)
+    patch_last_updated = models.DateField(null=True, blank=True)
+    patch_days_since_update = models.IntegerField(null=True, blank=True)
+
+    # ── Antivirus ─────────────────────────────────────────────────────────
+    antivirus_detected = models.BooleanField(null=True, blank=True)
+    antivirus_name = models.CharField(max_length=255, blank=True, default="")
+    antivirus_enabled = models.BooleanField(null=True, blank=True)
+    antivirus_up_to_date = models.BooleanField(null=True, blank=True)
+
+    # ── Disk encryption ───────────────────────────────────────────────────
+    disk_encrypted = models.BooleanField(null=True, blank=True)
+
+    # ── Network / peripherals ─────────────────────────────────────────────
+    usb_enabled = models.BooleanField(null=True, blank=True)
+    lan_device_count = models.IntegerField(null=True, blank=True)
+    local_port_count = models.IntegerField(null=True, blank=True)
+    wifi_open_network_count = models.IntegerField(default=0)
 
     # Backend-computed risk (NOT from the agent)
     risk_score = models.IntegerField(null=True, blank=True)
