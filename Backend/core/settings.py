@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "organizations",
     "extension",
     "gamification",
+    "phishing",
 ]
 
 MIDDLEWARE = [
@@ -134,3 +135,36 @@ AUTH_USER_MODEL = "organizations.Organization"
 # Supabase
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+
+# -----------------------------------------------------------------
+# Email / SMTP
+# Set these in your .env file.
+#
+# Example for Gmail:
+#   EMAIL_HOST=smtp.gmail.com
+#   EMAIL_PORT=587
+#   EMAIL_HOST_USER=you@gmail.com
+#   EMAIL_HOST_PASSWORD=your-app-password
+#   EMAIL_USE_TLS=True
+#
+# Example for SendGrid:
+#   EMAIL_HOST=smtp.sendgrid.net
+#   EMAIL_PORT=587
+#   EMAIL_HOST_USER=apikey
+#   EMAIL_HOST_PASSWORD=SG.xxxxx
+#   EMAIL_USE_TLS=True
+#
+# PHISHING_BASE_URL is the public-facing base URL of this backend,
+# used to build click-tracking links in simulation emails.
+#   PHISHING_BASE_URL=https://yourdomain.com
+# -----------------------------------------------------------------
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True"
+EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "False") == "True"
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
+
+PHISHING_BASE_URL = os.environ.get("PHISHING_BASE_URL", "http://localhost:8000")
