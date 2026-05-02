@@ -11,6 +11,10 @@ class DLPLog(models.Model):
         ("cancel", "Cancel"),
         ("force", "Force"),
     ]
+    EVENT_CHANNEL_CHOICES = [
+        ("file_upload", "File Upload"),
+        ("ai_prompt", "AI Prompt"),
+    ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     employee = models.ForeignKey(
@@ -19,6 +23,19 @@ class DLPLog(models.Model):
     filename = models.CharField(max_length=512)
     website = models.URLField(max_length=2048)
     action_taken = models.CharField(max_length=10, choices=ACTION_CHOICES)
+    event_channel = models.CharField(
+        max_length=32, choices=EVENT_CHANNEL_CHOICES, default="file_upload"
+    )
+    document_topic = models.TextField(blank=True, default="")
+    semantic_score = models.FloatField(null=True, blank=True)
+    detection_tier = models.CharField(max_length=64, blank=True, default="")
+    detection_reason = models.TextField(blank=True, default="")
+    matched_pattern = models.CharField(max_length=255, blank=True, default="")
+    input_size_bytes = models.BigIntegerField(null=True, blank=True)
+    input_size_chars = models.IntegerField(null=True, blank=True)
+    threshold_type = models.CharField(max_length=64, blank=True, default="")
+    threshold_value = models.FloatField(null=True, blank=True)
+    decision_score = models.FloatField(null=True, blank=True)
     logged_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -55,17 +72,3 @@ class AdminEvent(models.Model):
 
     def __str__(self):
         return f"{self.event_type} for {self.employee} (delivered={self.is_delivered})"
-
-
-class PhishingLog(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    employee = models.ForeignKey(
-        Employee, on_delete=models.CASCADE, related_name="phishing_logs"
-    )
-    clicked = models.BooleanField()
-    website = models.URLField(max_length=2048)
-    logged_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        action = "clicked" if self.clicked else "ignored"
-        return f"{self.employee}: {action} phishing test on {self.website}"

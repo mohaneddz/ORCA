@@ -1,8 +1,28 @@
+const crypto = require("crypto");
 const http = require("http");
 const { URL } = require("url");
 
 const HOST = process.env.MOCK_HOST || "127.0.0.1";
 const PORT = Number(process.env.MOCK_PORT || 8000);
+
+const EMPLOYEE_ID =
+  process.env.MOCK_EMPLOYEE_ID || "550e8400-e29b-41d4-a716-446655440001";
+const ORG_ID = process.env.MOCK_ORG_ID || "550e8400-e29b-41d4-a716-446655440000";
+const EMPLOYEE_EMAIL = (process.env.MOCK_EMPLOYEE_EMAIL || "employee@acme.test").toLowerCase();
+const EMPLOYEE_PASSWORD = process.env.MOCK_EMPLOYEE_PASSWORD || "secret123";
+
+const EMPLOYEE_PROFILE = {
+  id: EMPLOYEE_ID,
+  name: process.env.MOCK_EMPLOYEE_NAME || "Alice Smith",
+  email: EMPLOYEE_EMAIL,
+  department: "Engineering",
+  role: "Security Analyst",
+  seniority: "mid",
+  organization: {
+    id: ORG_ID,
+    name: process.env.MOCK_ORG_NAME || "Acme Corp",
+  },
+};
 
 const state = {
   dlpLogs: [],
@@ -10,13 +30,24 @@ const state = {
   quizSubmissions: [],
   eventsByEmployee: new Map(),
   blacklistDomains: ["malware-test.local", "credential-harvest-test.local", "eicar.org"],
+  aiTargets: {
+    domains: [
+      "chat.openai.com",
+      "chatgpt.com",
+      "claude.ai",
+      "gemini.google.com",
+      "copilot.microsoft.com",
+    ],
+    keywords: ["chatgpt", "claude", "gemini", "copilot", "assistant", "ai chat", "prompt"],
+  },
+  employeeTokens: new Map(),
 };
 
 function sendJson(res, statusCode, body) {
   res.writeHead(statusCode, {
     "Content-Type": "application/json; charset=utf-8",
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
   });
   res.end(JSON.stringify(body));
@@ -43,15 +74,55 @@ function normalizePath(pathname) {
   return pathname;
 }
 
-function enqueueEvent(empId, eventPayload) {
-  if (!state.eventsByEmployee.has(empId)) state.eventsByEmployee.set(empId, []);
-  state.eventsByEmployee.get(empId).push(eventPayload);
+function enqueueEvent(employeeId, eventPayload) {
+  if (!state.eventsByEmployee.has(employeeId)) state.eventsByEmployee.set(employeeId, []);
+  state.eventsByEmployee.get(employeeId).push(eventPayload);
 }
 
-function dequeueEvent(empId) {
-  const queue = state.eventsByEmployee.get(empId);
+function dequeueEvent(employeeId) {
+  const queue = state.eventsByEmployee.get(employeeId);
   if (!queue || !queue.length) return null;
   return queue.shift();
+}
+
+function issueEmployeeToken(employeeId) {
+  const token = crypto.randomBytes(24).toString("hex");
+  state.employeeTokens.set(token, employeeId);
+  return token;
+}
+
+function getEmployeeFromRequest(req) {
+  const header = req.headers.authorization || "";
+  if (!header.startsWith("EmployeeToken ")) return null;
+  const token = header.slice("EmployeeToken ".length).trim();
+  if (!token) return null;
+  const employeeId = state.employeeTokens.get(token);
+  if (!employeeId) return null;
+  if (employeeId !== EMPLOYEE_PROFILE.id) return null;
+  return EMPLOYEE_PROFILE;
+}
+
+function requireEmployeeAuth(req, res) {
+  const employee = getEmployeeFromRequest(req);
+  if (!employee) {
+    sendJson(res, 401, { error: "Authorization header missing or malformed." });
+    return null;
+  }
+  return employee;
+}
+
+function serializeMe(employee) {
+  return {
+    id: employee.id,
+    name: employee.name,
+    email: employee.email,
+    department: employee.department,
+    role: employee.role,
+    seniority: employee.seniority,
+    is_active: true,
+    registered_at: "2026-05-02T10:00:00Z",
+    organization: employee.organization,
+  };
 }
 
 const server = http.createServer(async (req, res) => {
@@ -123,49 +194,149 @@ const server = http.createServer(async (req, res) => {
       return sendHtml(res, 200, html);
     }
 
+    if (req.method === "GET" && path === "/dev/prompt-lab") {
+      const html = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ChatGPT Prompt Lab</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 32px; background: #f8fafc; color: #0f172a; }
+    .card { max-width: 760px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; }
+    .row { margin-bottom: 14px; }
+    textarea { width: 100%; min-height: 160px; padding: 12px; border-radius: 8px; border: 1px solid #cbd5f5; }
+    button { background: #2563eb; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; }
+    pre { background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 12px; min-height: 120px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>AI Prompt Lab</h1>
+    <p>Use this page to test AI prompt interception and warning behavior.</p>
+    <form id="promptForm">
+      <div class="row">
+        <textarea id="promptBox" placeholder="Ask ChatGPT something..."></textarea>
+      </div>
+      <div class="row">
+        <button id="sendBtn" type="submit">Send</button>
+      </div>
+    </form>
+    <p>Event log:</p>
+    <pre id="log"></pre>
+  </div>
+  <script>
+    const log = document.getElementById("log");
+    const promptBox = document.getElementById("promptBox");
+    const form = document.getElementById("promptForm");
+    function write(msg) { log.textContent += msg + "\\n"; }
+    promptBox.addEventListener("input", () => {
+      write("[input] " + promptBox.value.slice(0, 80));
+    });
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      write("[submit] " + promptBox.value.slice(0, 80));
+    });
+  </script>
+</body>
+</html>`;
+      return sendHtml(res, 200, html);
+    }
+
     if (req.method === "POST" && path === "/dev/reset") {
       state.dlpLogs = [];
       state.blacklistLogs = [];
       state.quizSubmissions = [];
       state.eventsByEmployee.clear();
+      state.employeeTokens.clear();
       return sendJson(res, 200, { ok: true, message: "Mock backend state reset." });
     }
 
     if (req.method === "POST" && path === "/dev/trigger") {
       const body = await readJsonBody(req);
-      const employeeId = body.emp_id || body.employee_id || "EMP001";
+      const employeeId = body.emp_id || body.employee_id || EMPLOYEE_PROFILE.id;
       const eventPayload = {
         event_id: body.event_id || `evt_${Date.now()}`,
         type: "QUIZ",
         quiz_id: body.quiz_id || "quiz_demo_001",
-        question: body.question || "What is phishing?",
+        question: body.question || "What should you do before sharing sensitive company data externally?",
         options:
           body.options || {
-            a: "A social engineering attack",
-            b: "A secure authentication method",
-            c: "A network cable protocol",
+            a: "Verify policy and data classification",
+            b: "Share first and classify later",
+            c: "Only check if asked by a colleague",
           },
       };
       enqueueEvent(employeeId, eventPayload);
       return sendJson(res, 200, { ok: true, queued_for: employeeId, event: eventPayload });
     }
 
-    if (req.method === "GET" && path === "/api/extension/poll") {
-      const empId = parsed.searchParams.get("emp_id");
-      if (!empId) return sendJson(res, 400, { error: "emp_id is required." });
+    if (req.method === "POST" && path === "/api/auth/employee/login") {
+      const body = await readJsonBody(req);
+      const email = String(body.email || "").trim().toLowerCase();
+      const password = String(body.password || "");
 
-      const eventPayload = dequeueEvent(empId);
+      if (!email || !password) {
+        return sendJson(res, 400, { error: "email and password are required." });
+      }
+
+      if (email !== EMPLOYEE_EMAIL || password !== EMPLOYEE_PASSWORD) {
+        return sendJson(res, 401, { error: "Invalid credentials." });
+      }
+
+      const token = issueEmployeeToken(EMPLOYEE_PROFILE.id);
+      return sendJson(res, 200, {
+        token,
+        employee: EMPLOYEE_PROFILE,
+      });
+    }
+
+    if (req.method === "POST" && path === "/api/auth/employee/logout") {
+      const header = req.headers.authorization || "";
+      if (!header.startsWith("EmployeeToken ")) {
+        return sendJson(res, 401, { error: "Authorization header missing or malformed." });
+      }
+      const token = header.slice("EmployeeToken ".length).trim();
+      if (!token || !state.employeeTokens.has(token)) {
+        return sendJson(res, 401, { error: "Invalid or already revoked token." });
+      }
+      state.employeeTokens.delete(token);
+      return sendJson(res, 200, {});
+    }
+
+    if (req.method === "GET" && path === "/api/auth/employee/me") {
+      const employee = requireEmployeeAuth(req, res);
+      if (!employee) return;
+      return sendJson(res, 200, serializeMe(employee));
+    }
+
+    if (req.method === "GET" && path === "/api/extension/poll") {
+      const employee = requireEmployeeAuth(req, res);
+      if (!employee) return;
+
+      const eventPayload = dequeueEvent(employee.id);
       if (!eventPayload) return sendJson(res, 200, { hasEvent: false });
       return sendJson(res, 200, { hasEvent: true, eventPayload });
     }
 
     if (req.method === "GET" && path === "/api/extension/blacklist") {
+      const employee = requireEmployeeAuth(req, res);
+      if (!employee) return;
       return sendJson(res, 200, { domains: state.blacklistDomains });
     }
 
+    if (req.method === "GET" && path === "/api/extension/ai-targets") {
+      const employee = requireEmployeeAuth(req, res);
+      if (!employee) return;
+      return sendJson(res, 200, state.aiTargets);
+    }
+
     if (req.method === "POST" && path === "/api/logs/dlp") {
+      const employee = requireEmployeeAuth(req, res);
+      if (!employee) return;
+
       const body = await readJsonBody(req);
-      const required = ["employee_id", "filename", "website", "action_taken"];
+      const required = ["filename", "website", "action_taken"];
       const missing = required.filter((k) => !body[k]);
       if (missing.length) return sendJson(res, 400, { error: `Missing required fields: ${missing.join(", ")}` });
 
@@ -174,29 +345,47 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { error: "action_taken must be allow, cancel, or force." });
       }
 
-      const logEntry = { ...body, logged_at: new Date().toISOString() };
+      const logEntry = {
+        ...body,
+        employee_id: employee.id,
+        logged_at: new Date().toISOString(),
+      };
       state.dlpLogs.push(logEntry);
       return sendJson(res, 200, { ok: true });
     }
 
     if (req.method === "POST" && path === "/api/logs/blacklist") {
+      const employee = requireEmployeeAuth(req, res);
+      if (!employee) return;
+
       const body = await readJsonBody(req);
-      const required = ["employee_id", "attempted_url"];
+      const required = ["attempted_url"];
       const missing = required.filter((k) => !body[k]);
       if (missing.length) return sendJson(res, 400, { error: `Missing required fields: ${missing.join(", ")}` });
 
-      const logEntry = { ...body, logged_at: new Date().toISOString() };
+      const logEntry = {
+        ...body,
+        employee_id: employee.id,
+        logged_at: new Date().toISOString(),
+      };
       state.blacklistLogs.push(logEntry);
       return sendJson(res, 200, { ok: true });
     }
 
     if (req.method === "POST" && path === "/api/gamification/submit-quiz") {
+      const employee = requireEmployeeAuth(req, res);
+      if (!employee) return;
+
       const body = await readJsonBody(req);
-      const required = ["employee_id", "quiz_id", "answer_selected"];
+      const required = ["quiz_id", "answer_selected"];
       const missing = required.filter((k) => !body[k]);
       if (missing.length) return sendJson(res, 400, { error: `Missing required fields: ${missing.join(", ")}` });
 
-      const submission = { ...body, submitted_at: new Date().toISOString() };
+      const submission = {
+        ...body,
+        employee_id: employee.id,
+        submitted_at: new Date().toISOString(),
+      };
       state.quizSubmissions.push(submission);
       return sendJson(res, 200, { ok: true, is_correct: null });
     }
@@ -210,6 +399,8 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, HOST, () => {
   // eslint-disable-next-line no-console
   console.log(`[mock-backend] Listening on http://${HOST}:${PORT}`);
+  // eslint-disable-next-line no-console
+  console.log(`[mock-backend] Employee login: ${EMPLOYEE_EMAIL} / ${EMPLOYEE_PASSWORD}`);
   // eslint-disable-next-line no-console
   console.log("[mock-backend] Endpoints: /api/*, /dev/health, /dev/logs, /dev/trigger, /dev/reset");
 });

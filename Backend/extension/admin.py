@@ -5,8 +5,8 @@ from .models import AdminEvent, BlacklistLog, DLPLog
 
 @admin.register(DLPLog)
 class DLPLogAdmin(admin.ModelAdmin):
-    list_display = ("employee", "filename", "website", "action_taken", "logged_at")
-    list_filter = ("action_taken",)
+    list_display = ("employee", "event_channel", "filename", "website", "action_taken", "logged_at")
+    list_filter = ("event_channel", "action_taken")
     search_fields = ("employee__employee_name", "filename", "website")
     readonly_fields = ("id", "logged_at")
 

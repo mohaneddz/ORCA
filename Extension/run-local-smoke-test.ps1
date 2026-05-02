@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$mockPort = 8010
+$mockPort = 8123
 $mockBaseUrl = "http://127.0.0.1:$mockPort"
 
 Write-Host "Starting mock backend on $mockBaseUrl ..."
@@ -11,6 +11,9 @@ $proc = Start-Process -FilePath powershell -ArgumentList @(
 ) -WorkingDirectory $PSScriptRoot -WindowStyle Hidden -PassThru
 
 Start-Sleep -Seconds 2
+if ($proc.HasExited) {
+  throw "Mock backend failed to start. Process exited with code $($proc.ExitCode)."
+}
 
 try {
   Write-Host "Running API integration checks..."
@@ -20,10 +23,11 @@ try {
   Write-Host ""
   Write-Host "Smoke test complete."
   Write-Host "Manual upload lab URL: $mockBaseUrl/dev/upload-lab"
+  Write-Host "Mock employee login: employee@acme.test / secret123"
   Write-Host ""
   Write-Host "Manual validation checklist:"
   Write-Host "1) Load unpacked extension from the Extension folder."
-  Write-Host "2) Open popup, set emp_id to EMP001."
+  Write-Host "2) Open popup, enter employee@acme.test, click Next, then enter secret123 and login."
   Write-Host "3) Open upload lab URL above."
   Write-Host "4) Upload benign file (e.g. notes.txt) -> no warning expected."
   Write-Host "5) Upload sensitive file (e.g. payroll_confidential.txt) -> warning expected."

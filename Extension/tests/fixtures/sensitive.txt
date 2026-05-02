@@ -1,0 +1,2 @@
+Do not share. The password for the staging system is Hunter2.
+Store the api key in the vault and rotate access tokens weekly.

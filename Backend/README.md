@@ -117,7 +117,7 @@ chrome.alarms.create("checkAdminTriggers", { periodInMinutes: 0.2 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
     if (alarm.name === "checkAdminTriggers") {
-        // Fetch from your backend (Assume route: /api/extension/check-events?emp_id=123)
+        // Fetch from your backend (Assume route: /api/extension/poll with EmployeeToken auth)
         const response = await fetch('https://your-backend.com/api/events?emp=123');
         const data = await response.json();
 
@@ -187,12 +187,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 Your backend developer needs to build these specific endpoints to support the extension:
 
 1.  **`POST /api/logs/dlp`**
-    *   *Input:* `employee_id`, `filename`, `website`, `action_taken (BLOCKED | BYPASSED)`
+    *   *Auth:* `Authorization: EmployeeToken <token>`
+    *   *Input:* `filename`, `website`, `action_taken (allow | cancel | force)` (employee resolved from token)
     *   *Output:* 200 OK. (Updates the Risk-to-DZD metric on the CEO dashboard).
 2.  **`POST /api/logs/blacklist`**
-    *   *Input:* `employee_id`, `attempted_url`
-3.  **`GET /api/extension/poll?emp_id=XYZ`**
+    *   *Auth:* `Authorization: EmployeeToken <token>`
+    *   *Input:* `attempted_url` (employee resolved from token)
+3.  **`GET /api/extension/poll`**
+    *   *Auth:* `Authorization: EmployeeToken <token>`
     *   *Output:* Returns any pending quizzes or fake stakes triggered by the CEO. Example response: `{"hasEvent": true, "eventPayload": {"type": "QUIZ", ...}}`. Once fetched, the backend marks it as "delivered" so it doesn't pop up twice.
 4.  **`POST /api/gamification/submit-quiz`**
-    *   *Input:* `employee_id`, `quiz_id`, `answer_selected`. (Updates leaderboard).
+    *   *Auth:* `Authorization: EmployeeToken <token>`
+    *   *Input:* `quiz_id`, `answer_selected` (employee resolved from token). (Updates leaderboard).
 

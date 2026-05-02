@@ -47,6 +47,9 @@ INSTALLED_APPS = [
     "organizations",
     "extension",
     "gamification",
+    "phishing",
+    "agent",
+    "datawarehouse",
 ]
 
 MIDDLEWARE = [
@@ -57,6 +60,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware"
 ]
 
 ROOT_URLCONF = "core.urls"
@@ -172,4 +176,22 @@ EXTENSION_BLACKLIST_DOMAINS = [
     "malware-test.local",
     "credential-harvest-test.local",
     "eicar.org",
+]
+
+EXTENSION_AI_TARGET_DOMAINS = [
+    "chat.openai.com",
+    "chatgpt.com",
+    "claude.ai",
+    "gemini.google.com",
+    "copilot.microsoft.com",
+]
+
+EXTENSION_AI_TARGET_KEYWORDS = [
+    "chatgpt",
+    "claude",
+    "gemini",
+    "copilot",
+    "ai chat",
+    "assistant",
+    "prompt",
 ]
