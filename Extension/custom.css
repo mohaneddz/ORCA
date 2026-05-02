@@ -273,57 +273,6 @@
   margin: 0;
 }
 
-/* ── Phishing modal ────────────────────────────────────────────────────────── */
-
-.cb-phish-modal {
-  color: #e2e8f0;
-}
-
-.cb-phish-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 24px 12px;
-  border-bottom: 1px solid #742a2a;
-  background: #2d1515;
-}
-
-.cb-phish-icon {
-  font-size: 18px;
-  color: #fc8181;
-}
-
-.cb-phish-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: #fc8181;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-
-.cb-phish-from {
-  font-size: 11px;
-  color: #718096;
-  padding: 12px 24px 0;
-  margin: 0;
-  font-family: monospace;
-}
-
-.cb-phish-body {
-  font-size: 14px;
-  color: #e2e8f0;
-  padding: 10px 24px 6px;
-  margin: 0;
-  line-height: 1.55;
-}
-
-.cb-phish-urgency {
-  font-size: 11px;
-  font-weight: 600;
-  color: #fc8181;
-  padding: 8px 24px 20px;
-  margin: 0;
-}
 
 /* ── Result / reveal modals ────────────────────────────────────────────────── */
 

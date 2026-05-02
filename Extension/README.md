@@ -27,7 +27,9 @@ Manifest V3 Chrome extension for CyberBase (Module C). It enforces navigation se
 1. **Interceptor (content script):** captures file uploads and extracts text from `.txt`, `.csv`, `.json`, `.xml`, `.pdf` (pdf.js), and `.docx` (mammoth.js).
 2. **Tier 1 (Fast Fail):** regex scan for restricted markers.
 3. **Tier 2 (Semantic):** if Tier 1 passes, `background.js` runs Transformers.js embeddings (`Xenova/all-MiniLM-L6-v2`) and cosine similarity against restricted topic vectors.
-4. **Decision:** if similarity `>= 0.85`, show warning and let user `cancel` or `force`.
+4. **AI Prompt Monitoring:** intercepts prompt submissions on known AI tools (plus heuristic AI pages) and applies the same regex + semantic checks.
+5. **Size Thresholds:** flags uploads > `10MB` and AI prompts > `2500` chars.
+6. **Decision:** if risk boundary is met, show warning and let user `cancel` or `force`.
 
 ---
 
@@ -42,11 +44,26 @@ All routes are on the backend server.
   "filename": "string",
   "website": "string",
   "action_taken": "allow | cancel | force",
+  "event_channel": "file_upload | ai_prompt",
   "document_topic": "string",
   "semantic_score": 0.0,
-  "detection_tier": "tier1_regex | tier2_semantic | no_text | pipeline_error",
+  "detection_tier": "tier1_regex | tier2_semantic | size_threshold | pipeline_error",
   "detection_reason": "string",
-  "matched_pattern": "string | null"
+  "matched_pattern": "string | null",
+  "input_size_bytes": 0,
+  "input_size_chars": 0,
+  "threshold_type": "string",
+  "threshold_value": 0,
+  "decision_score": 0.0
+}
+```
+Response: `200 OK`
+
+### `GET /api/extension/ai-targets`
+```json
+{
+  "domains": ["chatgpt.com", "claude.ai"],
+  "keywords": ["chatgpt", "claude", "prompt"]
 }
 ```
 Response: `200 OK`
@@ -89,5 +106,5 @@ To trigger a quiz on the employee's screen:
 ```bash
 curl -X POST http://127.0.0.1:8000/dev/trigger \
   -H "Content-Type: application/json" \
-  -d '{"event_id":"evt_001","type":"QUIZ","quiz_id":"q1","question":"What is phishing?","options":{"a":"A fishing technique","b":"A social engineering attack","c":"An antivirus"}}'
+  -d '{"event_id":"evt_001","type":"QUIZ","quiz_id":"q1","question":"What should you do before sharing sensitive company data externally?","options":{"a":"Verify policy and data classification","b":"Share first and classify later","c":"Only check if asked by a colleague"}}'
 ```

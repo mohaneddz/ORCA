@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$mockPort = 8010
+$mockPort = 8123
 $mockBaseUrl = "http://127.0.0.1:$mockPort"
 
 Write-Host "Starting mock backend on $mockBaseUrl ..."
@@ -11,6 +11,9 @@ $proc = Start-Process -FilePath powershell -ArgumentList @(
 ) -WorkingDirectory $PSScriptRoot -WindowStyle Hidden -PassThru
 
 Start-Sleep -Seconds 2
+if ($proc.HasExited) {
+  throw "Mock backend failed to start. Process exited with code $($proc.ExitCode)."
+}
 
 try {
   Write-Host "Running API integration checks..."

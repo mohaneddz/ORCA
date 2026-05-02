@@ -25,11 +25,11 @@ async function run() {
     {
       emp_id: "EMP001",
       quiz_id: "quiz_demo_1",
-      question: "What is phishing?",
+      question: "What should you do before sharing sensitive company data externally?",
       options: {
-        a: "A social engineering attack",
-        b: "A secure encryption method",
-        c: "An endpoint patch cycle",
+        a: "Verify policy and data classification",
+        b: "Share first and classify later",
+        c: "Only check if asked by a colleague",
       },
     },
     200
@@ -43,6 +43,11 @@ async function run() {
   const blacklist = await assertJson("GET", "/api/extension/blacklist", null, 200);
   if (!Array.isArray(blacklist.domains) || blacklist.domains.length === 0) {
     throw new Error(`Expected non-empty blacklist domains. Got: ${JSON.stringify(blacklist)}`);
+  }
+
+  const aiTargets = await assertJson("GET", "/api/extension/ai-targets", null, 200);
+  if (!Array.isArray(aiTargets.domains) || !Array.isArray(aiTargets.keywords)) {
+    throw new Error(`Expected ai-targets payload with domains and keywords. Got: ${JSON.stringify(aiTargets)}`);
   }
 
   const secondPoll = await assertJson("GET", "/api/extension/poll?emp_id=EMP001", null, 200);
@@ -63,6 +68,12 @@ async function run() {
       detection_tier: "tier2_semantic",
       detection_reason: "ip_strategy",
       matched_pattern: null,
+      event_channel: "file_upload",
+      input_size_bytes: 4321,
+      input_size_chars: 580,
+      threshold_type: "semantic_similarity",
+      threshold_value: 0.85,
+      decision_score: 0.92,
     },
     200
   );

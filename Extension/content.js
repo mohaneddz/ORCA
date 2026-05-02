@@ -20,6 +20,7 @@ function init() {
   showHttpWarning();
   checkBlacklist();
   attachDlpListeners();
+  attachAiPromptListeners();
   listenForAdminTriggers();
 }
 
@@ -90,15 +91,40 @@ function showBlockedPage(attemptedUrl) {
 
 // Smart multi-tier upload guard
 let dlpActive = false;
+let aiPromptGuardActive = false;
 const replayBypassInputs = new WeakSet();
+const replayBypassPromptElements = new WeakSet();
 
 const DLP_PIPELINE_CONFIG = {
   maxExtractChars: 12000,
   maxPdfPages: 8,
+  uploadSizeThresholdBytes: 10 * 1024 * 1024,
+  promptTextThresholdChars: 2500,
+};
+
+const AI_MONITOR_FALLBACK = {
+  domains: [
+    "chat.openai.com",
+    "chatgpt.com",
+    "claude.ai",
+    "gemini.google.com",
+    "copilot.microsoft.com",
+  ],
+  keywords: ["chatgpt", "claude", "gemini", "copilot", "assistant", "ai chat", "prompt"],
 };
 
 const REGEX_PATTERNS_URL = chrome.runtime.getURL("config/regex-patterns.json");
 let tier1PatternsPromise = null;
+let aiMonitorProfilePromise = null;
+
+async function safeRuntimeMessage(payload, fallback = null) {
+  try {
+    return await chrome.runtime.sendMessage(payload);
+  } catch (error) {
+    log("Runtime message failed:", error?.message || error);
+    return fallback;
+  }
+}
 
 function attachDlpListeners() {
   document.addEventListener("input", handleFileChange, true);
@@ -122,6 +148,43 @@ async function handleFileChange(event) {
 
   const file = input.files[0];
   dlpActive = true;
+  const tooLarge = (file?.size || 0) > DLP_PIPELINE_CONFIG.uploadSizeThresholdBytes;
+
+  if (tooLarge) {
+    const analysis = {
+      shouldBlock: true,
+      topic: "File: " + sanitize(file.name, 80),
+      tier: "size_threshold",
+      similarity: 0.9,
+      reason: "File size exceeds upload threshold",
+      matchedPattern: null,
+      thresholdType: "file_size_bytes",
+      thresholdValue: DLP_PIPELINE_CONFIG.uploadSizeThresholdBytes,
+      inputSizeChars: 0,
+    };
+
+    try {
+      const decision = await showDlpWarningModal(file.name, analysis);
+      const actionTaken = decision === "cancel" ? "cancel" : "force";
+      await sendDlpDecisionLog(actionTaken, file.name, analysis, {
+        eventChannel: "file_upload",
+        inputSizeBytes: file.size,
+        inputSizeChars: 0,
+      });
+
+      if (actionTaken === "cancel") {
+        input.value = "";
+        return;
+      }
+
+      replayBypassInputs.add(input);
+      input.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+      return;
+    } finally {
+      dlpActive = false;
+    }
+  }
+
   showCheckingModal(file.name);
 
   try {
@@ -129,7 +192,11 @@ async function handleFileChange(event) {
     closeCheckingModal();
 
     if (!analysis.shouldBlock) {
-      await sendDlpDecisionLog("allow", file.name, analysis);
+      await sendDlpDecisionLog("allow", file.name, analysis, {
+        eventChannel: "file_upload",
+        inputSizeBytes: file.size,
+        inputSizeChars: analysis.inputSizeChars || 0,
+      });
       replayBypassInputs.add(input);
       input.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
       return;
@@ -137,7 +204,11 @@ async function handleFileChange(event) {
 
     const decision = await showDlpWarningModal(file.name, analysis);
     const actionTaken = decision === "cancel" ? "cancel" : "force";
-    await sendDlpDecisionLog(actionTaken, file.name, analysis);
+    await sendDlpDecisionLog(actionTaken, file.name, analysis, {
+      eventChannel: "file_upload",
+      inputSizeBytes: file.size,
+      inputSizeChars: analysis.inputSizeChars || 0,
+    });
 
     if (actionTaken === "cancel") {
       input.value = "";
@@ -156,6 +227,12 @@ async function handleFileChange(event) {
       tier: "pipeline_error",
       reason: error?.message || String(error),
       matchedPattern: null,
+    }, {
+      eventChannel: "file_upload",
+      inputSizeBytes: file.size,
+      inputSizeChars: 0,
+      thresholdType: "pipeline_error",
+      thresholdValue: 1,
     });
   } finally {
     dlpActive = false;
@@ -167,6 +244,21 @@ async function runUploadPipeline(file) {
   const topic = summarizeDocument(extractedText, file.name);
   const semanticInput = buildSemanticInput(file.name, extractedText);
   const tier1Patterns = await getTier1Patterns();
+  const inputSizeChars = extractedText.length;
+
+  if ((file?.size || 0) > DLP_PIPELINE_CONFIG.uploadSizeThresholdBytes) {
+    return {
+      shouldBlock: true,
+      topic,
+      tier: "size_threshold",
+      similarity: 0.9,
+      reason: "File size exceeds upload threshold",
+      matchedPattern: null,
+      thresholdType: "file_size_bytes",
+      thresholdValue: DLP_PIPELINE_CONFIG.uploadSizeThresholdBytes,
+      inputSizeChars,
+    };
+  }
 
   const tier1 = runTier1Regex(extractedText, file.name, tier1Patterns);
   if (tier1.hit) {
@@ -177,12 +269,20 @@ async function runUploadPipeline(file) {
       similarity: computeRegexRiskScore(tier1),
       reason: "Sensitive terms detected",
       matchedPattern: tier1.ids.join(","),
+      thresholdType: "regex_match",
+      thresholdValue: tier1.hitCount,
+      inputSizeChars,
     };
   }
 
-  const semanticResponse = await chrome.runtime.sendMessage({
+  const semanticResponse = await safeRuntimeMessage({
     action: "DLP_SEMANTIC_CHECK",
     text: semanticInput,
+  }, {
+    blocked: true,
+    top_score: 1,
+    top_topic: "semantic_error",
+    threshold: 0.85,
   });
 
   const similarity = typeof semanticResponse?.top_score === "number" ? semanticResponse.top_score : 0;
@@ -200,6 +300,9 @@ async function runUploadPipeline(file) {
       ? "semantic check unavailable (fail-safe block)"
       : "Content appears related to private company domains",
     matchedPattern: null,
+    thresholdType: "semantic_similarity",
+    thresholdValue: threshold,
+    inputSizeChars,
   };
 }
 
@@ -228,6 +331,330 @@ function showCheckingModal(filename) {
 
 function closeCheckingModal() {
   if (Swal.isVisible()) Swal.close();
+}
+
+function attachAiPromptListeners() {
+  document.addEventListener("submit", handlePromptSubmit, true);
+  document.addEventListener("click", handlePromptClick, true);
+  document.addEventListener("keydown", handlePromptKeydown, true);
+}
+
+async function handlePromptSubmit(event) {
+  if (aiPromptGuardActive) return;
+  const form = event.target;
+  if (!(form instanceof HTMLFormElement)) return;
+
+  const promptEl = findPromptElementInNode(form);
+  if (!promptEl) return;
+  await processAiPromptEvent(event, promptEl, "form_submit");
+}
+
+async function handlePromptClick(event) {
+  if (aiPromptGuardActive) return;
+  const clickable = event.target?.closest?.("button, [role='button'], input[type='submit']");
+  if (!clickable) return;
+
+  const label = (clickable.textContent || clickable.value || "").toLowerCase();
+  if (!looksLikeSendAction(label)) return;
+
+  const promptEl =
+    findPromptElementInNode(clickable.closest("form") || clickable.parentElement || document.body) ||
+    findPromptElementInNode(document.body) ||
+    (isPromptLikeElement(document.activeElement) ? document.activeElement : null);
+  if (!promptEl) return;
+  await processAiPromptEvent(event, promptEl, "button_click");
+}
+
+async function handlePromptKeydown(event) {
+  if (aiPromptGuardActive) return;
+  if (event.key !== "Enter" || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return;
+
+  const target = event.target;
+  if (!isPromptLikeElement(target)) return;
+  await processAiPromptEvent(event, target, "enter_submit");
+}
+
+async function processAiPromptEvent(event, promptEl, triggerType) {
+  if (!promptEl || replayBypassPromptElements.has(promptEl)) {
+    replayBypassPromptElements.delete(promptEl);
+    return;
+  }
+
+  const text = getPromptText(promptEl);
+  if (!text || text.length < 20) return;
+
+  const profile = await getAiMonitorProfile();
+  if (!shouldMonitorCurrentPage(profile)) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+
+  aiPromptGuardActive = true;
+  showCheckingModal("AI prompt submission");
+
+  try {
+    const analysis = await runPromptPipeline(text);
+    closeCheckingModal();
+
+    if (!analysis.shouldBlock) {
+      await sendDlpDecisionLog("allow", "AI prompt submission", analysis, {
+        eventChannel: "ai_prompt",
+        inputSizeBytes: approximateTextBytes(text),
+        inputSizeChars: text.length,
+      });
+      replayBypassPromptElements.add(promptEl);
+      replayPromptSubmission(promptEl, triggerType);
+      return;
+    }
+
+    const decision = await showDlpWarningModal("AI prompt submission", analysis);
+    const actionTaken = decision === "cancel" ? "cancel" : "force";
+    await sendDlpDecisionLog(actionTaken, "AI prompt submission", analysis, {
+      eventChannel: "ai_prompt",
+      inputSizeBytes: approximateTextBytes(text),
+      inputSizeChars: text.length,
+    });
+
+    if (actionTaken === "cancel") return;
+
+    replayBypassPromptElements.add(promptEl);
+    replayPromptSubmission(promptEl, triggerType);
+  } catch (error) {
+    closeCheckingModal();
+    await sendDlpDecisionLog("cancel", "AI prompt submission", {
+      topic: sanitize(text.slice(0, 220), 220),
+      similarity: 1,
+      tier: "pipeline_error",
+      reason: error?.message || String(error),
+      matchedPattern: null,
+      thresholdType: "pipeline_error",
+      thresholdValue: 1,
+    }, {
+      eventChannel: "ai_prompt",
+      inputSizeBytes: approximateTextBytes(text),
+      inputSizeChars: text.length,
+      thresholdType: "pipeline_error",
+      thresholdValue: 1,
+    });
+  } finally {
+    aiPromptGuardActive = false;
+  }
+}
+
+function replayPromptSubmission(promptEl, triggerType) {
+  if (triggerType === "form_submit") {
+    const form = promptEl.closest("form");
+    if (form) {
+      form.submit();
+      return;
+    }
+  }
+
+  if (triggerType === "button_click") {
+    const form = promptEl.closest("form");
+    if (form) {
+      form.requestSubmit();
+      return;
+    }
+  }
+
+  const keyEvent = new KeyboardEvent("keydown", {
+    key: "Enter",
+    code: "Enter",
+    bubbles: true,
+    cancelable: true,
+  });
+  promptEl.dispatchEvent(keyEvent);
+}
+
+async function runPromptPipeline(text) {
+  const topic = sanitize(text.slice(0, 220), 220);
+  const tier1Patterns = await getTier1Patterns();
+
+  if (text.length > DLP_PIPELINE_CONFIG.promptTextThresholdChars) {
+    return {
+      shouldBlock: true,
+      topic,
+      tier: "size_threshold",
+      similarity: 0.9,
+      reason: "Prompt size exceeds threshold",
+      matchedPattern: null,
+      thresholdType: "prompt_chars",
+      thresholdValue: DLP_PIPELINE_CONFIG.promptTextThresholdChars,
+      inputSizeChars: text.length,
+    };
+  }
+
+  const tier1 = runTier1Regex(text, "ai_prompt.txt", tier1Patterns);
+  if (tier1.hit) {
+    return {
+      shouldBlock: true,
+      topic,
+      tier: "tier1_regex",
+      similarity: computeRegexRiskScore(tier1),
+      reason: "Sensitive terms detected",
+      matchedPattern: tier1.ids.join(","),
+      thresholdType: "regex_match",
+      thresholdValue: tier1.hitCount,
+      inputSizeChars: text.length,
+    };
+  }
+
+  const semanticResponse = await safeRuntimeMessage({
+    action: "DLP_SEMANTIC_CHECK",
+    text: buildSemanticInput("ai_prompt.txt", text),
+  }, {
+    blocked: true,
+    top_score: 1,
+    top_topic: "semantic_error",
+    threshold: 0.85,
+  });
+
+  const similarity = typeof semanticResponse?.top_score === "number" ? semanticResponse.top_score : 0;
+  const threshold = typeof semanticResponse?.threshold === "number" ? semanticResponse.threshold : 0.85;
+  const semanticError = !semanticResponse || semanticResponse?.top_topic === "semantic_error";
+  const blocked = semanticError ? true : similarity >= threshold;
+  const semanticRisk = semanticError ? 0.92 : computeDecisionScore(similarity, threshold);
+
+  return {
+    shouldBlock: blocked,
+    topic,
+    tier: "tier2_semantic",
+    similarity: semanticRisk,
+    reason: semanticError
+      ? "semantic check unavailable (fail-safe block)"
+      : "Prompt appears related to private company domains",
+    matchedPattern: null,
+    thresholdType: "semantic_similarity",
+    thresholdValue: threshold,
+    inputSizeChars: text.length,
+  };
+}
+
+async function getAiMonitorProfile() {
+  if (!aiMonitorProfilePromise) {
+    aiMonitorProfilePromise = safeRuntimeMessage({
+        action: "GET_AI_MONITOR_PROFILE",
+        hostname: window.location.hostname,
+      }, null)
+      .then((profile) => {
+        const domains = Array.isArray(profile?.domains) && profile.domains.length
+          ? profile.domains
+          : AI_MONITOR_FALLBACK.domains;
+        const keywords = Array.isArray(profile?.keywords) && profile.keywords.length
+          ? profile.keywords
+          : AI_MONITOR_FALLBACK.keywords;
+        const host = (window.location.hostname || "").toLowerCase();
+        const known = domains.some((d) => host === d || host.endsWith("." + d));
+        return {
+          domains,
+          keywords,
+          is_known_domain: Boolean(profile?.is_known_domain || known),
+        };
+      })
+      .catch(() => {
+        const host = (window.location.hostname || "").toLowerCase();
+        const known = AI_MONITOR_FALLBACK.domains.some((d) => host === d || host.endsWith("." + d));
+        return {
+          domains: AI_MONITOR_FALLBACK.domains,
+          keywords: AI_MONITOR_FALLBACK.keywords,
+          is_known_domain: known,
+        };
+      });
+  }
+
+  return aiMonitorProfilePromise;
+}
+
+function shouldMonitorCurrentPage(profile) {
+  if (!profile) return false;
+  if (profile.is_known_domain) return true;
+
+  const keywordMatch = hasAiKeywordMatch(profile.keywords || []);
+  return keywordMatch && !!findPromptElementInNode(document.body);
+}
+
+function hasAiKeywordMatch(keywords) {
+  const source = (window.location.href + " " + document.title).toLowerCase();
+  return keywords.some((keyword) => keyword && source.includes(String(keyword).toLowerCase()));
+}
+
+function findPromptElementInNode(node) {
+  if (!node) return null;
+  const candidates = node.querySelectorAll(
+    "textarea, #prompt-textarea, [data-testid*='composer'], [contenteditable='true'], [contenteditable='plaintext-only'], div[role='textbox']"
+  );
+  for (const candidate of candidates) {
+    if (!isPromptLikeElement(candidate)) continue;
+    if (getPromptText(candidate).length > 0) return candidate;
+  }
+  return null;
+}
+
+function isPromptLikeElement(el) {
+  if (!(el instanceof HTMLElement)) return false;
+
+  const tag = el.tagName.toLowerCase();
+  const isTextArea = tag === "textarea";
+  const isContentEditable = el.isContentEditable || el.getAttribute("contenteditable") === "plaintext-only";
+  const roleTextbox = (el.getAttribute("role") || "").toLowerCase() === "textbox";
+  if (!isTextArea && !isContentEditable && !roleTextbox) return false;
+
+  const id = (el.id || "").toLowerCase();
+  const dataTestId = (el.getAttribute("data-testid") || "").toLowerCase();
+  const placeholder = (
+    el.getAttribute("placeholder") ||
+    (el instanceof HTMLTextAreaElement ? el.placeholder : "")
+  ).toLowerCase();
+  const className = (el.className || "").toString().toLowerCase();
+
+  if (
+    id.includes("prompt-textarea") ||
+    dataTestId.includes("composer") ||
+    placeholder.includes("message") ||
+    placeholder.includes("ask") ||
+    className.includes("composer")
+  ) {
+    return true;
+  }
+
+  const rect = el.getBoundingClientRect();
+  const sizeable = rect.width >= 180 && rect.height >= 28;
+  return sizeable || isContentEditable;
+}
+
+function getPromptText(el) {
+  if (!(el instanceof HTMLElement)) return "";
+
+  if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
+    return (el.value || "").trim();
+  }
+
+  return (el.innerText || el.textContent || "").trim();
+}
+
+function looksLikeSendAction(label) {
+  const normalized = (label || "").trim().toLowerCase();
+  if (!normalized) return false;
+
+  return [
+    "send",
+    "submit",
+    "ask",
+    "run",
+    "enter",
+    "prompt",
+    "generate",
+  ].some((token) => normalized.includes(token));
+}
+
+function approximateTextBytes(text) {
+  try {
+    return new Blob([text || ""]).size;
+  } catch (_) {
+    return (text || "").length;
+  }
 }
 
 async function getTier1Patterns() {
@@ -375,14 +802,14 @@ async function showDlpWarningModal(filename, analysis) {
       '<div class="cb-dlp-modal">' +
       '<div class="cb-dlp-header">' +
       '<span class="cb-dlp-icon">&#9888;</span>' +
-      '<span class="cb-dlp-title">Sensitive Upload Detected</span>' +
+      '<span class="cb-dlp-title">Sensitive Content Detected</span>' +
       '<span class="cb-dlp-badge">CyberBase</span>' +
       "</div>" +
       '<div class="cb-dlp-body-wrap">' +
-      '<p class="cb-dlp-body">Selected file:</p>' +
+      '<p class="cb-dlp-body">Selected item:</p>' +
       '<div class="cb-dlp-filename">' + sanitize(filename, 80) + "</div>" +
       '<p class="cb-dlp-question"><strong>Risk score:</strong> ' + similarityPct + "%</p>" +
-      '<p class="cb-dlp-question">This file may contain private company information and should not be shared externally.</p>' +
+      '<p class="cb-dlp-question">This content may include private company information and should not be shared externally.</p>' +
       "</div>" +
       "</div>",
     showCancelButton: true,
@@ -401,18 +828,27 @@ async function showDlpWarningModal(filename, analysis) {
   return "cancel";
 }
 
-async function sendDlpDecisionLog(actionTaken, filename, analysis) {
-  chrome.runtime.sendMessage({
+async function sendDlpDecisionLog(actionTaken, filename, analysis, context = {}) {
+  const safeScore = Number((analysis.similarity || 0).toFixed(4));
+  await safeRuntimeMessage({
     action: "DLP_LOG",
     filename,
     website: window.location.hostname,
     action_taken: actionTaken,
+    event_channel: context.eventChannel || "file_upload",
     document_topic: analysis.topic,
-    semantic_score: Number((analysis.similarity || 0).toFixed(4)),
+    semantic_score: safeScore,
     detection_tier: analysis.tier,
     detection_reason: analysis.reason,
     matched_pattern: analysis.matchedPattern,
-  });
+    input_size_bytes: Number.isFinite(context.inputSizeBytes) ? context.inputSizeBytes : null,
+    input_size_chars: Number.isFinite(context.inputSizeChars) ? context.inputSizeChars : null,
+    threshold_type: context.thresholdType || analysis.thresholdType || "",
+    threshold_value: Number.isFinite(context.thresholdValue)
+      ? context.thresholdValue
+      : (Number.isFinite(analysis.thresholdValue) ? analysis.thresholdValue : null),
+    decision_score: safeScore,
+  }, { ok: false });
 }
 
 // Admin quiz trigger

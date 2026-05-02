@@ -3,11 +3,28 @@ const DEBUG_MODE = true;
 const POLL_INTERVAL_MINUTES = 0.2; // 12 seconds
 const OFFLINE_QUEUE_MAX = 20;
 const BLACKLIST_CACHE_TTL_MS = 5 * 60 * 1000;
+const AI_TARGETS_CACHE_TTL_MS = 5 * 60 * 1000;
 
 const DEFAULT_BLACKLIST = [
   "malware-test.local",
   "credential-harvest-test.local",
   "eicar.org",
+];
+const DEFAULT_AI_TARGET_DOMAINS = [
+  "chat.openai.com",
+  "chatgpt.com",
+  "claude.ai",
+  "gemini.google.com",
+  "copilot.microsoft.com",
+];
+const DEFAULT_AI_TARGET_KEYWORDS = [
+  "chatgpt",
+  "claude",
+  "gemini",
+  "copilot",
+  "assistant",
+  "ai chat",
+  "prompt",
 ];
 const SENSITIVE_TOPICS_URL = chrome.runtime.getURL("config/sensitive-topics.json");
 
@@ -173,7 +190,61 @@ async function getBlacklistDomains(forceRefresh = false) {
   return cachedDomains.length ? cachedDomains : DEFAULT_BLACKLIST;
 }
 
+async function getAiTargets(forceRefresh = false) {
+  const now = Date.now();
+  const cached = await chrome.storage.local.get(["aiTargetDomains", "aiTargetKeywords", "aiTargetsFetchedAt"]);
+  const cachedDomains = Array.isArray(cached.aiTargetDomains) ? cached.aiTargetDomains : [];
+  const cachedKeywords = Array.isArray(cached.aiTargetKeywords) ? cached.aiTargetKeywords : [];
+  const fetchedAt = Number(cached.aiTargetsFetchedAt || 0);
+
+  const cacheValid =
+    !forceRefresh &&
+    (cachedDomains.length > 0 || cachedKeywords.length > 0) &&
+    now - fetchedAt < AI_TARGETS_CACHE_TTL_MS;
+
+  if (cacheValid) {
+    return { domains: cachedDomains, keywords: cachedKeywords };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/extension/ai-targets/`, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error(`AI targets endpoint returned ${res.status}`);
+
+    const data = await res.json();
+    const domains = Array.isArray(data?.domains)
+      ? data.domains.map((d) => String(d || "").toLowerCase().trim()).filter(Boolean)
+      : [];
+    const keywords = Array.isArray(data?.keywords)
+      ? data.keywords.map((k) => String(k || "").toLowerCase().trim()).filter(Boolean)
+      : [];
+
+    await chrome.storage.local.set({
+      aiTargetDomains: domains,
+      aiTargetKeywords: keywords,
+      aiTargetsFetchedAt: now,
+    });
+
+    return { domains, keywords };
+  } catch (error) {
+    clearTimeout(timeout);
+    log("AI targets fetch failed:", error.message || error);
+  }
+
+  return {
+    domains: cachedDomains.length ? cachedDomains : DEFAULT_AI_TARGET_DOMAINS,
+    keywords: cachedKeywords.length ? cachedKeywords : DEFAULT_AI_TARGET_KEYWORDS,
+  };
+}
+
 function isHostnameBlacklisted(hostname, domains) {
+  const host = String(hostname || "").toLowerCase().trim();
+  return domains.some((entry) => host === entry || host.endsWith("." + entry));
+}
+
+function isHostnameInDomains(hostname, domains) {
   const host = String(hostname || "").toLowerCase().trim();
   return domains.some((entry) => host === entry || host.endsWith("." + entry));
 }
@@ -231,6 +302,14 @@ async function warmSemanticModel() {
   }
 }
 
+async function warmAiTargets() {
+  try {
+    await getAiTargets();
+  } catch (error) {
+    log("AI target warm-up failed:", error.message || error);
+  }
+}
+
 chrome.alarms.get("poll", (alarm) => {
   if (!alarm) {
     chrome.alarms.create("poll", { periodInMinutes: POLL_INTERVAL_MINUTES });
@@ -241,11 +320,13 @@ chrome.alarms.get("poll", (alarm) => {
 chrome.runtime.onInstalled.addListener(() => {
   chrome.alarms.create("poll", { periodInMinutes: POLL_INTERVAL_MINUTES });
   warmSemanticModel();
+  warmAiTargets();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   chrome.alarms.create("poll", { periodInMinutes: POLL_INTERVAL_MINUTES });
   warmSemanticModel();
+  warmAiTargets();
 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
@@ -389,6 +470,16 @@ async function handleMessage(message) {
       return { blocked };
     }
 
+    case "GET_AI_MONITOR_PROFILE": {
+      const targets = await getAiTargets();
+      const isKnownDomain = isHostnameInDomains(message.hostname, targets.domains);
+      return {
+        domains: targets.domains,
+        keywords: targets.keywords,
+        is_known_domain: isKnownDomain,
+      };
+    }
+
     case "DLP_SEMANTIC_CHECK": {
       try {
         return await runSemanticDlp(message.text || "");
@@ -409,11 +500,17 @@ async function handleMessage(message) {
         filename: message.filename,
         website: message.website,
         action_taken: message.action_taken,
+        event_channel: message.event_channel,
         document_topic: message.document_topic,
         semantic_score: message.semantic_score,
         detection_tier: message.detection_tier,
         detection_reason: message.detection_reason,
         matched_pattern: message.matched_pattern,
+        input_size_bytes: message.input_size_bytes,
+        input_size_chars: message.input_size_chars,
+        threshold_type: message.threshold_type,
+        threshold_value: message.threshold_value,
+        decision_score: message.decision_score,
       };
       const ok = await postLog("/api/logs/dlp/", dlpPayload);
       if (!ok) await queueLog("/api/logs/dlp/", dlpPayload);

@@ -29,14 +29,14 @@ class Migration(migrations.Migration):
                 (
                     "event_type",
                     models.CharField(
-                        choices=[("QUIZ", "Quiz"), ("FAKE_PHISHING", "Fake Phishing")],
+                        choices=[("QUIZ", "Quiz")],
                         max_length=20,
                     ),
                 ),
                 (
                     "payload",
                     models.JSONField(
-                        help_text="For QUIZ: {question, options}. For FAKE_PHISHING: leave empty ({})."
+                        help_text="For QUIZ: {question, options}."
                     ),
                 ),
                 ("is_delivered", models.BooleanField(default=False)),
