@@ -4,3 +4,5 @@ dj-database-url
 requests
 scikit-learn
 numpy
+gunicorn
+whitenoise
