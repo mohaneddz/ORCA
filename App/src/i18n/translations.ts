@@ -1,0 +1,75 @@
+import type { AppLanguage } from "@/types/settings";
+
+type TranslationMap = Record<string, string>;
+
+const en: TranslationMap = {
+  "app.name": "Innov",
+  "app.console": "CyberBase Console",
+  "sidebar.section.overview": "Overview",
+  "sidebar.section.functionalities": "Functionalities",
+  "sidebar.section.misc": "Miscellaneous",
+  "sidebar.item.home": "Home",
+  "sidebar.item.control-center": "Control Center",
+  "sidebar.item.registered-devices": "Registered Devices",
+  "sidebar.item.network": "Network",
+  "sidebar.item.accounts": "Accounts",
+  "sidebar.item.employee-playground": "Employee Playground",
+  "sidebar.item.settings": "Settings",
+  "sidebar.item.account": "Account",
+  "action.signout": "Sign out",
+  "settings.title": "Settings",
+  "settings.description": "Configure app behavior, startup, language, and operator controls.",
+  "settings.desktop.title": "Desktop App Controls",
+  "settings.desktop.description": "System integration for startup, tray behavior, language, and global shortcut.",
+  "settings.language": "Language",
+  "settings.language.helper": "Choose the interface language.",
+  "settings.launchAtStartup": "Launch At Startup",
+  "settings.launchAtStartup.helper": "Run Innov automatically when you sign in.",
+  "settings.startMinimized": "Start Minimized",
+  "settings.startMinimized.helper": "When launched at startup, start minimized instead of focused.",
+  "settings.hideToTray": "Hide To Tray On Close",
+  "settings.hideToTray.helper": "Closing the titlebar will hide the app to tray instead of exiting.",
+  "settings.globalShortcut": "Global Shortcut",
+  "settings.globalShortcut.helper": "Toggle show/hide main window.",
+  "settings.english": "English",
+  "settings.french": "French",
+};
+
+const fr: TranslationMap = {
+  "app.name": "Innov",
+  "app.console": "Console CyberBase",
+  "sidebar.section.overview": "Vue d'ensemble",
+  "sidebar.section.functionalities": "Fonctionnalites",
+  "sidebar.section.misc": "Divers",
+  "sidebar.item.home": "Accueil",
+  "sidebar.item.control-center": "Centre de controle",
+  "sidebar.item.registered-devices": "Appareils enregistres",
+  "sidebar.item.network": "Reseau",
+  "sidebar.item.accounts": "Comptes",
+  "sidebar.item.employee-playground": "Simulation employes",
+  "sidebar.item.settings": "Parametres",
+  "sidebar.item.account": "Compte",
+  "action.signout": "Se deconnecter",
+  "settings.title": "Parametres",
+  "settings.description": "Configurez le comportement de l'application, le demarrage, la langue et les controles operateur.",
+  "settings.desktop.title": "Controles Application Desktop",
+  "settings.desktop.description": "Integration systeme pour le demarrage, le tray, la langue et le raccourci global.",
+  "settings.language": "Langue",
+  "settings.language.helper": "Choisissez la langue de l'interface.",
+  "settings.launchAtStartup": "Lancer au Demarrage",
+  "settings.launchAtStartup.helper": "Demarrer Innov automatiquement a l'ouverture de session.",
+  "settings.startMinimized": "Demarrer Reduit",
+  "settings.startMinimized.helper": "Au demarrage automatique, ouvrir reduit au lieu de premier plan.",
+  "settings.hideToTray": "Masquer vers le Tray a la Fermeture",
+  "settings.hideToTray.helper": "Fermer la barre de titre masque l'application dans le tray au lieu de quitter.",
+  "settings.globalShortcut": "Raccourci Global",
+  "settings.globalShortcut.helper": "Afficher/masquer la fenetre principale.",
+  "settings.english": "Anglais",
+  "settings.french": "Francais",
+};
+
+const translationsByLanguage: Record<AppLanguage, TranslationMap> = { en, fr };
+
+export function translate(language: AppLanguage, key: string): string {
+  return translationsByLanguage[language][key] ?? translationsByLanguage.en[key] ?? key;
+}

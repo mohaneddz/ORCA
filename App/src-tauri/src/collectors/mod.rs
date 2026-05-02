@@ -1,0 +1,10 @@
+pub mod browser_collector;
+pub mod device_collector;
+pub mod event_log_collector;
+pub mod filesystem_collector;
+pub mod network_collector;
+pub mod process_collector;
+pub mod security_collector;
+pub mod software_collector;
+pub mod usb_collector;
+pub mod user_collector;

@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+
+  --color-obsidian: #080b18;
+  --color-night: #0d1224;
+  --color-graphite: rgba(15, 23, 42, 0.68);
+  --color-slate: rgba(148, 163, 184, 0.2);
+  --color-slate-light: rgba(148, 163, 184, 0.35);
+
+  --color-mist: #e4e8ef;
+  --color-dim: #9ca8be;
+  --color-dim-dark: #64748b;
+
+  --color-cyan: #22d3ee;
+  --color-cyan-dim: rgba(34, 211, 238, 0.16);
+  --color-blue: #60a5fa;
+  --color-blue-dim: rgba(96, 165, 250, 0.16);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  --font-sans: "Segoe UI", "Inter", system-ui, -apple-system, sans-serif;
+  --page-max: 1200px;
+  --page-gap: 2rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background:
+    radial-gradient(circle at 8% 8%, rgba(34, 211, 238, 0.12), transparent 32%),
+    radial-gradient(circle at 92% 10%, rgba(96, 165, 250, 0.11), transparent 38%),
+    var(--color-obsidian);
+  color: var(--color-mist);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-slate);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-dim-dark);
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.page-content {
+  width: 100%;
+  max-width: var(--page-max);
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--page-gap);
+}
+
+.page-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.card {
+  background: var(--color-graphite);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 14px 32px rgba(5, 8, 22, 0.35);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  padding: 0.2rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: var(--color-slate);
+  color: var(--color-dim);
+}
+
+.pill-blue {
+  background: var(--color-blue-dim);
+  color: var(--color-blue);
+}
