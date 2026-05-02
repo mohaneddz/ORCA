@@ -50,20 +50,6 @@ export default function AccountPage() {
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        email,
-        data: {
-          name,
-          organizationName,
-          phone,
-        }
-      });
-      
-      if (error) {
-        setStatus(error.message);
-        return;
-      }
-
       const result = await updateProfile({
         name,
         email,
@@ -108,10 +94,6 @@ export default function AccountPage() {
       const nextAvatarUrl = `${data.publicUrl}?v=${Date.now()}`;
       setAvatarUrl(nextAvatarUrl);
       setAvatarLoadFailed(false);
-
-      await supabase.auth.updateUser({
-        data: { avatarUrl: nextAvatarUrl }
-      });
 
       const result = await updateProfile({
         name,
@@ -189,17 +171,17 @@ export default function AccountPage() {
 
       <section className="grid gap-3 xl:grid-cols-2">
         <form className="card p-4" onSubmit={onSaveProfile}>
-          <p className="m-0 text-sm font-semibold text-black dark:text-white">Profile Information</p>
+          <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">Profile Information</p>
           <div className="mt-3 flex items-center gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3">
             {avatarUrl && !avatarLoadFailed ? (
               <img
                 src={avatarUrl}
                 alt={`${name || user.name} profile`}
-                className="h-14 w-14 rounded-full object-cover"
+                className="h-14 w-14 shrink-0 rounded-full object-cover object-center aspect-square"
                 onError={() => setAvatarLoadFailed(true)}
               />
             ) : (
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-surface-hover)] text-sm font-semibold text-[var(--color-primary-strong)]">
+              <div className="flex h-14 w-14 shrink-0 aspect-square items-center justify-center rounded-full bg-[var(--color-surface-hover)] text-sm font-semibold text-[var(--color-primary-strong)]">
                 {getInitials(name || user.name)}
               </div>
             )}
@@ -268,7 +250,7 @@ export default function AccountPage() {
         </form>
 
         <form className="card p-4" onSubmit={onSavePassword}>
-          <p className="m-0 text-sm font-semibold text-black dark:text-white">Password Update</p>
+          <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">Password Update</p>
           <div className="mt-3 grid gap-3">
             <label className="grid gap-1 text-sm text-slate-200">
               New password
@@ -305,7 +287,7 @@ export default function AccountPage() {
       )}
 
       <section className="card p-4">
-        <p className="m-0 text-sm font-semibold text-black dark:text-white">Danger Zone</p>
+        <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">Danger Zone</p>
         <p className="m-0 mt-2 text-sm text-[var(--color-neutral-500)]">
           Delete this account permanently and sign out immediately.
         </p>

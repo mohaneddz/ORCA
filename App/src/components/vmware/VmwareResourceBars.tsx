@@ -27,7 +27,7 @@ export function VmwareResourceBars({ bars, title, subtitle, footer }: VmwareReso
       {(title || subtitle) && (
         <div className="flex items-center justify-between mb-5">
           <div>
-            {title && <p className="m-0 text-sm font-semibold text-black dark:text-white">{title}</p>}
+            {title && <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">{title}</p>}
             {subtitle && <p className="m-0 text-xs mt-0.5" style={{ color: "var(--color-neutral-500)" }}>{subtitle}</p>}
           </div>
           <Activity size={16} style={{ color: "var(--color-primary)" }} />

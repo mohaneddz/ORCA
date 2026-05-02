@@ -131,7 +131,7 @@ export function VmwareDashboard() {
       {error && <ErrorBanner message={error} onRetry={() => void refresh()} />}
 
       {/* ── Top KPI row (8 cards) ────────────────────────────────────────────── */}
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <VmwareMetricCard
           icon={<Monitor size={15} />}
           label="Total VMs"
@@ -244,7 +244,7 @@ export function VmwareDashboard() {
       </section>
 
       {/* ── Second row (4 panel cards) ───────────────────────────────────────── */}
-      <section className="grid gap-4 xl:grid-cols-4">
+      <section className="grid gap-4 lg:grid-cols-2">
         {/* Resource Allocation */}
         <VmwareResourceBars
           title="Resource Allocation"
@@ -268,11 +268,11 @@ export function VmwareDashboard() {
       </section>
 
       {/* ── VM Health + Snapshot + Tools mini-row ───────────────────────────── */}
-      <section className="grid gap-3 sm:grid-cols-3">
+      <section className="grid gap-4 lg:grid-cols-3">
         {/* VM Health Summary */}
         <div className="card p-5">
           <div className="flex items-center justify-between mb-4">
-            <p className="m-0 text-sm font-semibold text-black dark:text-white">VM Health Summary</p>
+            <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">VM Health Summary</p>
             <Shield size={15} style={{ color: "var(--color-primary)" }} />
           </div>
           <div className="flex items-center gap-2 mb-3">
@@ -309,7 +309,7 @@ export function VmwareDashboard() {
         {/* Snapshot Risk */}
         <div className="card p-5">
           <div className="flex items-center justify-between mb-4">
-            <p className="m-0 text-sm font-semibold text-black dark:text-white">Snapshot Risk</p>
+            <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">Snapshot Risk</p>
             <Camera size={15} style={{ color: "var(--color-primary)" }} />
           </div>
           <div className="space-y-3">
@@ -338,7 +338,7 @@ export function VmwareDashboard() {
         {/* VMware Tools */}
         <div className="card p-5">
           <div className="flex items-center justify-between mb-4">
-            <p className="m-0 text-sm font-semibold text-black dark:text-white">VMware Tools / Guest</p>
+            <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">VMware Tools / Guest</p>
             <Wrench size={15} style={{ color: "var(--color-primary)" }} />
           </div>
           <div className="space-y-3">
@@ -378,7 +378,7 @@ export function VmwareDashboard() {
 
       {/* ── Background Bubbles ─────────────────────────────────────────────── */}
       <svg
-        className="pointer-events-none absolute bottom-0 right-0"
+        className="pointer-events-none fixed bottom-0 right-0 z-0"
         width="280"
         height="200"
         viewBox="0 0 280 200"

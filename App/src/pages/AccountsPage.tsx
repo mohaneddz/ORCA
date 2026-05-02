@@ -1,5 +1,4 @@
 import { DataTable, PageHeader, StatGrid } from "@/components/cards/BaseCards";
-import { ShieldUser, UserCog, Users, UserX, AlertTriangle } from "lucide-react";
 
 export default function AccountsPage() {
   return (

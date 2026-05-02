@@ -169,9 +169,10 @@ export function GroupedBarChart({
   title = "Comparison",
   primaryLabel = "Primary",
   secondaryLabel = "Secondary",
-}: GroupedBarChartProps) {
+  className = "",
+}: GroupedBarChartProps & { className?: string }) {
   return (
-    <div className="card p-5 h-full flex flex-col">
+    <div className={`card p-5 flex flex-col ${className}`}>
       <div className="mb-4 flex items-center justify-between">
         <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">{title}</p>
         <div className="flex items-center gap-4 text-xs text-[var(--color-neutral-500)]">
@@ -190,7 +191,7 @@ export function GroupedBarChart({
           <CartesianGrid stroke="var(--color-border-subtle)" vertical={false} />
           <XAxis dataKey="name" tick={AXIS_STYLE} tickLine={false} axisLine={false} />
           <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={36} />
-          <Tooltip content={<DarkTooltip />} />
+          <Tooltip cursor={{ fill: "var(--color-surface-hover, rgba(255,255,255,0.05))" }} content={<DarkTooltip />} />
           <Bar dataKey="primary" name={primaryLabel} fill={CHART_PRIMARY} radius={[4, 4, 0, 0]} maxBarSize={20} />
           <Bar dataKey="secondary" name={secondaryLabel} fill={CHART_SECONDARY} radius={[4, 4, 0, 0]} maxBarSize={20} />
         </BarChart>

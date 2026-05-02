@@ -37,24 +37,24 @@ export function VmwareDatastoreHealth({ datastores }: VmwareDatastoreHealthProps
     <div className="card p-5 flex flex-col gap-4 h-full">
       <div className="flex items-center justify-between">
         <div>
-          <p className="m-0 text-sm font-semibold text-black dark:text-white">Datastore Health</p>
+          <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">Datastore Health</p>
           <p className="m-0 text-xs mt-0.5" style={{ color: "var(--color-neutral-500)" }}>{datastores.length} datastores monitored</p>
         </div>
         <Database size={16} style={{ color: "var(--color-primary)" }} />
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-lg p-2.5 text-center" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
-          <p className="m-0 text-xl font-bold" style={{ color: "#34d399" }}>{healthy}</p>
-          <p className="m-0 text-[10px] mt-0.5" style={{ color: "var(--color-neutral-500)" }}>Healthy</p>
+      <div className="flex items-center gap-3">
+        <div className="flex-1 rounded-lg p-3 text-center" style={{ background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.1)" }}>
+          <p className="m-0 text-xl font-bold font-mono" style={{ color: "#34d399" }}>{healthy}</p>
+          <p className="m-0 text-[10px] uppercase tracking-widest mt-1" style={{ color: "var(--color-neutral-500)" }}>Healthy</p>
         </div>
-        <div className="rounded-lg p-2.5 text-center" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
-          <p className="m-0 text-xl font-bold" style={{ color: "#fbbf24" }}>{warning}</p>
-          <p className="m-0 text-[10px] mt-0.5" style={{ color: "var(--color-neutral-500)" }}>Warning</p>
+        <div className="flex-1 rounded-lg p-3 text-center" style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.1)" }}>
+          <p className="m-0 text-xl font-bold font-mono" style={{ color: "#fbbf24" }}>{warning}</p>
+          <p className="m-0 text-[10px] uppercase tracking-widest mt-1" style={{ color: "var(--color-neutral-500)" }}>Warning</p>
         </div>
-        <div className="rounded-lg p-2.5 text-center" style={{ background: "rgba(244,63,94,0.08)", border: "1px solid rgba(244,63,94,0.2)" }}>
-          <p className="m-0 text-xl font-bold" style={{ color: "#fb7185" }}>{critical}</p>
-          <p className="m-0 text-[10px] mt-0.5" style={{ color: "var(--color-neutral-500)" }}>Critical</p>
+        <div className="flex-1 rounded-lg p-3 text-center" style={{ background: "rgba(244,63,94,0.05)", border: "1px solid rgba(244,63,94,0.1)" }}>
+          <p className="m-0 text-xl font-bold font-mono" style={{ color: "#fb7185" }}>{critical}</p>
+          <p className="m-0 text-[10px] uppercase tracking-widest mt-1" style={{ color: "var(--color-neutral-500)" }}>Critical</p>
         </div>
       </div>
 
