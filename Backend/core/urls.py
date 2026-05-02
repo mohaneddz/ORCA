@@ -23,4 +23,5 @@ urlpatterns = [
     path("api/", include("organizations.urls")),
     path("api/", include("extension.urls")),
     path("api/", include("gamification.urls")),
+    path("api/", include("phishing.urls")),
 ]

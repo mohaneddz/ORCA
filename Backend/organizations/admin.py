@@ -11,6 +11,6 @@ class OrganizationAdmin(admin.ModelAdmin):
 
 @admin.register(Employee)
 class EmployeeAdmin(admin.ModelAdmin):
-    list_display = ("email", "organization", "is_active", "registered_at")
-    list_filter = ("organization", "is_active")
-    search_fields = ("email",)
+    list_display = ("email", "name", "department", "role", "seniority", "organization", "is_active", "registered_at")
+    list_filter = ("organization", "is_active", "department", "seniority")
+    search_fields = ("email", "name", "department", "role")

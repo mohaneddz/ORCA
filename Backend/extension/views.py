@@ -6,7 +6,7 @@ from django.conf import settings
 
 from organizations.models import Employee
 
-from .models import AdminEvent, BlacklistLog, DLPLog
+from .models import AdminEvent, BlacklistLog, DLPLog, PhishingLog
 
 import json
 
@@ -105,6 +105,11 @@ class BlacklistDomainsView(View):
             settings,
             "EXTENSION_BLACKLIST_DOMAINS",
             ["malware-test.local", "credential-harvest-test.local", "eicar.org"],
+        )
+        safe_domains = [str(domain).strip().lower() for domain in domains if str(domain).strip()]
+        return JsonResponse({"domains": safe_domains})
+
+
 @method_decorator(csrf_exempt, name="dispatch")
 class PhishingLogView(View):
     def post(self, request):
@@ -130,6 +135,4 @@ class PhishingLogView(View):
             clicked=clicked,
             website=website,
         )
-
-        safe_domains = [str(domain).strip().lower() for domain in domains if str(domain).strip()]
-        return JsonResponse({"domains": safe_domains})
+        return JsonResponse({}, status=200)

@@ -5,7 +5,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
-from organizations.models import Device
+from organizations.models import Employee
 
 from .models import Quiz, QuizSubmission
 
@@ -62,9 +62,9 @@ class SubmitQuizView(View):
             return JsonResponse({"error": "Missing required fields."}, status=400)
 
         try:
-            device = Device.objects.get(id=employee_id)
-        except (Device.DoesNotExist, Exception):
-            return JsonResponse({"error": "Device not found."}, status=404)
+            device = Employee.objects.get(id=employee_id)
+        except (Employee.DoesNotExist, Exception):
+            return JsonResponse({"error": "Employee not found."}, status=404)
 
         try:
             quiz = Quiz.objects.get(id=quiz_id)
