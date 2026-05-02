@@ -22,6 +22,23 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 
+def _env_bool(name, default=False):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_int(name, default):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    try:
+        return int(value.strip())
+    except (TypeError, ValueError):
+        return default
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
@@ -194,3 +211,40 @@ EXTENSION_AI_TARGET_KEYWORDS = [
     "assistant",
     "prompt",
 ]
+
+REPUTATION_GOOGLE_SAFE_BROWSING_ENABLED = _env_bool(
+    "REPUTATION_GOOGLE_SAFE_BROWSING_ENABLED",
+    default=False,
+)
+GOOGLE_SAFE_BROWSING_API_KEY = os.environ.get("GOOGLE_SAFE_BROWSING_API_KEY", "")
+REPUTATION_CHECK_TIMEOUT_MS = _env_int("REPUTATION_CHECK_TIMEOUT_MS", 2000)
+
+REPUTATION_PHISHTANK_ENABLED = _env_bool("REPUTATION_PHISHTANK_ENABLED", default=True)
+REPUTATION_OPENPHISH_ENABLED = _env_bool("REPUTATION_OPENPHISH_ENABLED", default=True)
+REPUTATION_URLHAUS_ENABLED = _env_bool("REPUTATION_URLHAUS_ENABLED", default=True)
+
+REPUTATION_PHISHTANK_FEED_URL = os.environ.get(
+    "REPUTATION_PHISHTANK_FEED_URL",
+    "https://data.phishtank.com/data/online-valid.csv",
+)
+REPUTATION_OPENPHISH_FEED_URL = os.environ.get(
+    "REPUTATION_OPENPHISH_FEED_URL",
+    "https://openphish.com/feed.txt",
+)
+REPUTATION_URLHAUS_FEED_URL = os.environ.get(
+    "REPUTATION_URLHAUS_FEED_URL",
+    "https://urlhaus.abuse.ch/downloads/csv_online/",
+)
+
+REPUTATION_PHISHTANK_REFRESH_SECONDS = _env_int(
+    "REPUTATION_PHISHTANK_REFRESH_SECONDS",
+    3600,
+)
+REPUTATION_OPENPHISH_REFRESH_SECONDS = _env_int(
+    "REPUTATION_OPENPHISH_REFRESH_SECONDS",
+    1800,
+)
+REPUTATION_URLHAUS_REFRESH_SECONDS = _env_int(
+    "REPUTATION_URLHAUS_REFRESH_SECONDS",
+    1800,
+)

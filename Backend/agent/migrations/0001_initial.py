@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ("organizations", "0010_employee_profile_fields"),
+        ("organizations", "0007_organization_is_staff_organization_is_superuser"),
     ]
 
     operations = [

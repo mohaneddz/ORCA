@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ("organizations", "0009_employee_delete_device"),
+        ("organizations", "0007_organization_is_staff_organization_is_superuser"),
     ]
 
     operations = [
