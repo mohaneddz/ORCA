@@ -114,7 +114,7 @@ export function VmwareInventoryTable({ vms, onSelectVm }: VmwareInventoryTablePr
         className="flex items-center justify-between px-5 py-3.5 gap-3 flex-wrap"
         style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
       >
-        <p className="m-0 text-sm font-semibold text-white">
+        <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">
           VM Inventory
           <span className="ml-2 text-xs font-normal" style={{ color: "var(--color-neutral-500)" }}>
             {sorted.length} of {vms.length}

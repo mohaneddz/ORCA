@@ -28,9 +28,17 @@ export function ChartTooltipContent({ active, payload }: ChartTooltipContentProp
   const first = payload[0];
 
   return (
-    <div className="rounded-md border border-white/20 bg-slate-950/95 px-3 py-2 text-xs text-slate-200 shadow-lg">
+    <div
+      className="rounded-md border px-3 py-2 text-xs shadow-lg"
+      style={{
+        background: "color-mix(in srgb, var(--color-surface-1) 78%, transparent)",
+        borderColor: "var(--color-border-subtle)",
+        color: "var(--color-neutral-200)",
+        backdropFilter: "blur(10px)",
+      }}
+    >
       <p className="m-0 font-medium">{first.name}</p>
-      <p className="m-0 mt-1 text-cyan-200">Value: {first.value}</p>
+      <p className="m-0 mt-1" style={{ color: "var(--color-primary)" }}>Value: {first.value}</p>
     </div>
   );
 }
