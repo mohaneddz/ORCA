@@ -2,18 +2,19 @@ import uuid
 
 from django.db import models
 
-from organizations.models import Device
+from organizations.models import Employee
 
 
 class DLPLog(models.Model):
     ACTION_CHOICES = [
-        ("BLOCKED", "Blocked"),
-        ("BYPASSED", "Bypassed"),
+        ("allow", "Allow"),
+        ("cancel", "Cancel"),
+        ("force", "Force"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     employee = models.ForeignKey(
-        Device, on_delete=models.CASCADE, related_name="dlp_logs"
+        Employee, on_delete=models.CASCADE, related_name="dlp_logs"
     )
     filename = models.CharField(max_length=512)
     website = models.URLField(max_length=2048)
@@ -27,7 +28,7 @@ class DLPLog(models.Model):
 class BlacklistLog(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     employee = models.ForeignKey(
-        Device, on_delete=models.CASCADE, related_name="blacklist_logs"
+        Employee, on_delete=models.CASCADE, related_name="blacklist_logs"
     )
     attempted_url = models.URLField(max_length=2048)
     logged_at = models.DateTimeField(auto_now_add=True)
@@ -39,16 +40,15 @@ class BlacklistLog(models.Model):
 class AdminEvent(models.Model):
     EVENT_TYPE_CHOICES = [
         ("QUIZ", "Quiz"),
-        ("FAKE_PHISHING", "Fake Phishing"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     employee = models.ForeignKey(
-        Device, on_delete=models.CASCADE, related_name="admin_events"
+        Employee, on_delete=models.CASCADE, related_name="admin_events"
     )
     event_type = models.CharField(max_length=20, choices=EVENT_TYPE_CHOICES)
     payload = models.JSONField(
-        help_text="For QUIZ: {question, options}. For FAKE_PHISHING: leave empty ({})."
+        help_text="For QUIZ: {question, options}."
     )
     is_delivered = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -60,7 +60,7 @@ class AdminEvent(models.Model):
 class PhishingLog(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     employee = models.ForeignKey(
-        Device, on_delete=models.CASCADE, related_name="phishing_logs"
+        Employee, on_delete=models.CASCADE, related_name="phishing_logs"
     )
     clicked = models.BooleanField()
     website = models.URLField(max_length=2048)

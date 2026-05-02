@@ -2,10 +2,11 @@ from django.http import JsonResponse
 from django.views import View
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
 
-from organizations.models import Device
+from organizations.models import Employee
 
-from .models import AdminEvent, BlacklistLog, DLPLog, PhishingLog
+from .models import AdminEvent, BlacklistLog, DLPLog
 
 import json
 
@@ -26,15 +27,15 @@ class DLPLogView(View):
         if not all([employee_id, filename, website, action_taken]):
             return JsonResponse({"error": "Missing required fields."}, status=400)
 
-        if action_taken not in ("BLOCKED", "BYPASSED"):
+        if action_taken not in ("allow", "cancel", "force"):
             return JsonResponse(
-                {"error": "action_taken must be BLOCKED or BYPASSED."}, status=400
+                {"error": "action_taken must be allow, cancel, or force."}, status=400
             )
 
         try:
-            device = Device.objects.get(id=employee_id)
-        except (Device.DoesNotExist, Exception):
-            return JsonResponse({"error": "Device not found."}, status=404)
+            device = Employee.objects.get(id=employee_id)
+        except (Employee.DoesNotExist, Exception):
+            return JsonResponse({"error": "Employee not found."}, status=404)
 
         DLPLog.objects.create(
             employee=device,
@@ -60,9 +61,9 @@ class BlacklistLogView(View):
             return JsonResponse({"error": "Missing required fields."}, status=400)
 
         try:
-            device = Device.objects.get(id=employee_id)
-        except (Device.DoesNotExist, Exception):
-            return JsonResponse({"error": "Device not found."}, status=404)
+            device = Employee.objects.get(id=employee_id)
+        except (Employee.DoesNotExist, Exception):
+            return JsonResponse({"error": "Employee not found."}, status=404)
 
         BlacklistLog.objects.create(employee=device, attempted_url=attempted_url)
         return JsonResponse({}, status=200)
@@ -76,9 +77,9 @@ class PollView(View):
             return JsonResponse({"error": "emp_id is required."}, status=400)
 
         try:
-            device = Device.objects.get(id=emp_id)
-        except (Device.DoesNotExist, Exception):
-            return JsonResponse({"error": "Device not found."}, status=404)
+            device = Employee.objects.get(id=emp_id)
+        except (Employee.DoesNotExist, Exception):
+            return JsonResponse({"error": "Employee not found."}, status=404)
 
         event = (
             AdminEvent.objects.filter(employee=device, is_delivered=False)
@@ -98,6 +99,12 @@ class PollView(View):
         return JsonResponse({"hasEvent": True, "eventPayload": payload})
 
 
+class BlacklistDomainsView(View):
+    def get(self, request):
+        domains = getattr(
+            settings,
+            "EXTENSION_BLACKLIST_DOMAINS",
+            ["malware-test.local", "credential-harvest-test.local", "eicar.org"],
 @method_decorator(csrf_exempt, name="dispatch")
 class PhishingLogView(View):
     def post(self, request):
@@ -114,13 +121,15 @@ class PhishingLogView(View):
             return JsonResponse({"error": "Missing required fields."}, status=400)
 
         try:
-            device = Device.objects.get(id=employee_id)
-        except (Device.DoesNotExist, Exception):
-            return JsonResponse({"error": "Device not found."}, status=404)
+            device = Employee.objects.get(id=employee_id)
+        except (Employee.DoesNotExist, Exception):
+            return JsonResponse({"error": "Employee not found."}, status=404)
 
         PhishingLog.objects.create(
             employee=device,
             clicked=clicked,
             website=website,
         )
-        return JsonResponse({}, status=200)
+
+        safe_domains = [str(domain).strip().lower() for domain in domains if str(domain).strip()]
+        return JsonResponse({"domains": safe_domains})

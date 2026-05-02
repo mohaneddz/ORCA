@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Device, Organization
+from .models import Employee, Organization
 
 
 @admin.register(Organization)
@@ -9,8 +9,8 @@ class OrganizationAdmin(admin.ModelAdmin):
     search_fields = ("email", "name")
 
 
-@admin.register(Device)
-class DeviceAdmin(admin.ModelAdmin):
-    list_display = ("device_identifier", "employee_name", "employee_email", "organization", "is_active", "registered_at")
+@admin.register(Employee)
+class EmployeeAdmin(admin.ModelAdmin):
+    list_display = ("email", "organization", "is_active", "registered_at")
     list_filter = ("organization", "is_active")
-    search_fields = ("device_identifier", "employee_name", "employee_email")
+    search_fields = ("email",)
