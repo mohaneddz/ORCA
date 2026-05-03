@@ -69,6 +69,10 @@ class Employee(models.Model):
     role = models.CharField(max_length=255, blank=True, default="")
     seniority = models.CharField(max_length=20, choices=SENIORITY_CHOICES, default="mid")
     is_active = models.BooleanField(default=True)
+    must_change_password = models.BooleanField(default=False)
+    password_risk_level = models.CharField(max_length=20, blank=True, default="")
+    password_risk_reason = models.TextField(blank=True, default="")
+    password_last_audited_at = models.DateTimeField(null=True, blank=True)
     registered_at = models.DateTimeField(auto_now_add=True)
 
     def set_password(self, raw_password):

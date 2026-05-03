@@ -102,13 +102,54 @@ export default function AccountPage() {
     setStatus(null);
 
     if (!file) return;
-    
+
     setIsUploadingAvatar(true);
-    setStatus("Uploading avatar...");
+    setStatus("Processing avatar...");
 
     try {
+      const webpBlob = await new Promise<Blob>((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          const canvas = document.createElement("canvas");
+          let { width, height } = img;
+          const maxDim = 512;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return reject(new Error("Canvas not supported"));
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob) resolve(blob);
+              else reject(new Error("Failed to convert to WebP"));
+            },
+            "image/webp",
+            0.8
+          );
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error("Failed to load image"));
+        };
+        img.src = url;
+      });
+
+      setStatus("Uploading avatar...");
+
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", webpBlob, "avatar.webp");
 
       const raw = localStorage.getItem("orca.auth.session");
       const session = raw ? JSON.parse(raw) : null;
@@ -191,7 +232,7 @@ export default function AccountPage() {
 
       <section className="grid gap-3 xl:grid-cols-2">
         <form className="card p-4" onSubmit={onSaveProfile}>
-          <p className="m-0 text-sm font-semibold text-white">{t("account.profile.title")}</p>
+          <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">{t("account.profile.title")}</p>
           <div className="mt-3 flex items-center gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3">
             {avatarUrl && !avatarLoadFailed ? (
               <img
@@ -206,7 +247,7 @@ export default function AccountPage() {
               </div>
             )}
             <div className="min-w-0">
-              <p className="m-0 text-sm font-medium text-white">Profile picture</p>
+              <p className="m-0 text-sm font-medium text-[var(--color-neutral-100)]">Profile picture</p>
               <label className="mt-2 inline-flex cursor-pointer items-center rounded-md border border-[var(--color-border-glow)] bg-[var(--color-surface-hover)] px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-primary-strong)] hover:opacity-80 transition-opacity">
                 {isUploadingAvatar ? t("account.profile.uploading") : t("account.profile.upload")}
                 <input
@@ -223,40 +264,40 @@ export default function AccountPage() {
           </div>
 
           <div className="mt-3 grid gap-3">
-            <label className="grid gap-1 text-sm text-slate-200">
+            <label className="grid gap-1 text-sm text-[var(--color-neutral-200)]">
               {t("account.profile.fullName")}
               <input
                 type="text"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-white outline-none ring-cyan-300/40 focus:ring"
+                className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[var(--color-neutral-100)] outline-none ring-cyan-300/40 focus:ring"
               />
             </label>
-            <label className="grid gap-1 text-sm text-slate-200">
+            <label className="grid gap-1 text-sm text-[var(--color-neutral-200)]">
               {t("account.profile.email")}
               <input
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-white outline-none ring-cyan-300/40 focus:ring"
+                className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[var(--color-neutral-100)] outline-none ring-cyan-300/40 focus:ring"
               />
             </label>
-            <label className="grid gap-1 text-sm text-slate-200">
+            <label className="grid gap-1 text-sm text-[var(--color-neutral-200)]">
               {t("account.profile.orgName")}
               <input
                 type="text"
                 value={organizationName}
                 onChange={(event) => setOrganizationName(event.target.value)}
-                className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-white outline-none ring-cyan-300/40 focus:ring"
+                className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[var(--color-neutral-100)] outline-none ring-cyan-300/40 focus:ring"
               />
             </label>
-            <label className="grid gap-1 text-sm text-slate-200">
+            <label className="grid gap-1 text-sm text-[var(--color-neutral-200)]">
               {t("account.profile.phone")}
               <input
                 type="tel"
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
-                className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-white outline-none ring-cyan-300/40 focus:ring"
+                className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[var(--color-neutral-100)] outline-none ring-cyan-300/40 focus:ring"
               />
             </label>
           </div>
@@ -269,24 +310,24 @@ export default function AccountPage() {
         </form>
 
         <form className="card p-4" onSubmit={onSavePassword}>
-          <p className="m-0 text-sm font-semibold text-white">{t("account.password.title")}</p>
+          <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">{t("account.password.title")}</p>
           <div className="mt-3 grid gap-3">
-            <label className="grid gap-1 text-sm text-slate-200">
+            <label className="grid gap-1 text-sm text-[var(--color-neutral-200)]">
               {t("account.password.new")}
               <input
                 type="password"
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
-                className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-white outline-none ring-cyan-300/40 focus:ring"
+                className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[var(--color-neutral-100)] outline-none ring-cyan-300/40 focus:ring"
               />
             </label>
-            <label className="grid gap-1 text-sm text-slate-200">
+            <label className="grid gap-1 text-sm text-[var(--color-neutral-200)]">
               {t("account.password.confirm")}
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
-                className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-white outline-none ring-cyan-300/40 focus:ring"
+                className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[var(--color-neutral-100)] outline-none ring-cyan-300/40 focus:ring"
               />
             </label>
           </div>
@@ -301,12 +342,12 @@ export default function AccountPage() {
 
       {status && (
         <section className="card px-4 py-3">
-          <p className="m-0 text-sm text-slate-200">{status}</p>
+          <p className="m-0 text-sm text-[var(--color-neutral-100)]">{status}</p>
         </section>
       )}
 
       <section className="card p-4">
-        <p className="m-0 text-sm font-semibold text-white">{t("account.danger.title")}</p>
+        <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">{t("account.danger.title")}</p>
         <p className="m-0 mt-2 text-sm text-[var(--color-neutral-500)]">
           {t("account.danger.desc")}
         </p>

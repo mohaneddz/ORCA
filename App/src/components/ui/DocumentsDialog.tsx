@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { Folder, X, Trash2, Plus, FileText, Loader2 } from "lucide-react";
 import { listDocuments, deleteDocument, upsertDocumentChunks } from "@/lib/ragClient";
 import { logger } from "@/lib/logger";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 type DocumentItem = {
   name: string;
@@ -9,6 +11,7 @@ type DocumentItem = {
 };
 
 export default function DocumentsDialog({ onClose }: { onClose: () => void }) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
@@ -43,14 +46,37 @@ export default function DocumentsDialog({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const extractPdfText = async (file: File): Promise<string> => {
+    const buffer = await file.arrayBuffer();
+    const loadingTask = pdfjsLib.getDocument({ data: buffer });
+    const pdf = await loadingTask.promise;
+    const pages: string[] = [];
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const content = await page.getTextContent();
+      const text = content.items
+        .map((item: any) => ("str" in item ? item.str : ""))
+        .join(" ")
+        .trim();
+      if (text) {
+        pages.push(text);
+      }
+    }
+    return pages.join("\n\n");
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsUploading(true);
     try {
-      // Read text content
-      const text = await file.text();
+      const fileNameLower = file.name.toLowerCase();
+      const isPdf = file.type === "application/pdf" || fileNameLower.endsWith(".pdf");
+      const text = isPdf ? await extractPdfText(file) : await file.text();
+      if (!text.trim()) {
+        throw new Error("No readable text found in file.");
+      }
       
       // Chunking logic (~1000 chars)
       const chunkSize = 1000;
@@ -78,7 +104,7 @@ export default function DocumentsDialog({ onClose }: { onClose: () => void }) {
       await fetchDocuments();
     } catch (error) {
       logger.error("documents.upload.error", { message: String(error) });
-      alert("Failed to upload document. Please ensure it's a text-based file.");
+      alert("Failed to upload document. For PDF files, ensure the PDF contains selectable text.");
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -146,7 +172,7 @@ export default function DocumentsDialog({ onClose }: { onClose: () => void }) {
             ref={fileInputRef} 
             onChange={handleFileUpload}
             className="hidden" 
-            accept=".txt,.md,.csv,.json"
+            accept=".txt,.md,.csv,.json,.pdf,application/pdf"
           />
           <button 
             className="w-full btn-primary py-2.5 flex items-center justify-center gap-2"

@@ -1,41 +1,65 @@
-# ORCA Demo Credentials
+# ORCA Credentials (Active)
 
-Created on: 2026-05-02
+Created on: 2026-05-03
 Backend: http://127.0.0.1:8000
 Database: Supabase Postgres (via Backend `DATABASE_URL`)
 
 ## Organization Account (Auth API login)
-- Name: ORCA Demo Organization
-- Email: admin@orca-demo.local
-- Password: OrcaOrg#2026!
-- Organization ID: 73e46a04-64d9-4170-9941-fc3b5e3951e1
-
-## Organization Token
-- Token (Authorization header `Token <key>`):
-`813ca27ff7fb76d7bae82b510c68037f135fcd093e26dbe756ceed709d3321d5`
+- Name: Innov Organization
+- Email: admin@innov.local
+- Password: InnovOrg#2026!
 
 ## Staff Users (Employee records under this organization)
-1. Amina Staff
-- Email: amina.staff@orca-demo.local
-- Password: OrcaStaff#2026!A
+1. Amina Boudiaf
+- Email: amina@innov.local
+- Password: InnovStaff#2026!1
 - Department: Security
-- Role: Staff Analyst
+- Role: Analyst
 - Seniority: mid
 
-2. Yacine Staff
-- Email: yacine.staff@orca-demo.local
-- Password: OrcaStaff#2026!Y
+2. Yacine Khelifi
+- Email: yacine@innov.local
+- Password: InnovStaff#2026!2
 - Department: IT
-- Role: Staff Engineer
+- Role: Engineer
 - Seniority: mid
 
-3. Lina Staff
-- Email: lina.staff@orca-demo.local
-- Password: OrcaStaff#2026!L
+3. Lina Rahmoun
+- Email: lina@innov.local
+- Password: InnovStaff#2026!3
 - Department: Compliance
-- Role: Staff Reviewer
+- Role: Reviewer
 - Seniority: junior
 
+4. Karim Belaid
+- Email: karim@innov.local
+- Password: InnovStaff#2026!4
+- Department: Operations
+- Role: Operator
+- Seniority: senior
+
+5. Sofia Merabet
+- Email: sofia@innov.local
+- Password: InnovStaff#2026!5
+- Department: Finance
+- Role: Controller
+- Seniority: mid
+
+6. Nour Hamdi
+- Email: nour@innov.local
+- Password: InnovStaff#2026!6
+- Department: HR
+- Role: Specialist
+- Seniority: mid
+
+7. Riad Ziani
+- Email: riad@innov.local
+- Password: InnovStaff#2026!7
+- Department: Network
+- Role: Administrator
+- Seniority: senior
+
 ## Notes
-- Organization account authenticates via `/api/auth/login`.
-- Staff users were created in the `organizations_employee` table and are tied to the organization.
+- Organization login endpoint: `/api/auth/login`
+- Staff login endpoint: `/api/auth/employee/login`
+- Device snapshots are auto-ingested on login/signup via `/api/auth/session-device`.

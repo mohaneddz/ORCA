@@ -1,4 +1,5 @@
 import json
+import threading
 from pathlib import Path
 
 from django.contrib.auth import authenticate
@@ -8,9 +9,12 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 import requests
+from django.utils import timezone
 
 from .auth import get_employee_from_request
 from .models import AuthToken, Employee, EmployeeAuthToken, Organization, AuditLog
+from .password_audit import evaluate_authorized_password_candidate
+from agent.models import DeviceSnapshot
 
 
 # ---------------------------------------------------------------------------
@@ -31,6 +35,61 @@ def get_org_from_request(request):
         return token.organization, None
     except AuthToken.DoesNotExist:
         return None, JsonResponse({"error": "Invalid token."}, status=401)
+
+
+def get_org_or_employee_from_request(request):
+    header = request.headers.get("Authorization", "")
+    if header.startswith("Token "):
+        key = header[6:]
+        try:
+            token = AuthToken.objects.select_related("organization").get(key=key)
+            return token.organization, None, None
+        except AuthToken.DoesNotExist:
+            return None, None, JsonResponse({"error": "Invalid organization token."}, status=401)
+
+    if header.startswith("EmployeeToken "):
+        key = header[len("EmployeeToken "):]
+        try:
+            token = EmployeeAuthToken.objects.select_related("employee", "employee__organization").get(key=key)
+            return token.employee.organization, token.employee, None
+        except EmployeeAuthToken.DoesNotExist:
+            return None, None, JsonResponse({"error": "Invalid employee token."}, status=401)
+
+    return None, None, JsonResponse({"error": "Authorization header missing or malformed."}, status=401)
+
+
+def _run_employee_password_audit(employee_id: str, candidate_passwords: list[str]):
+    try:
+        employee = Employee.objects.select_related("organization").get(id=employee_id)
+    except Employee.DoesNotExist:
+        return
+
+    result = evaluate_authorized_password_candidate(
+        stored_hash=employee.password,
+        candidate_passwords=candidate_passwords,
+        user_inputs=[employee.name or "", employee.email or "", employee.organization.name or ""],
+    )
+
+    employee.must_change_password = result.weak
+    employee.password_risk_level = result.risk_level
+    employee.password_risk_reason = result.reason
+    employee.password_last_audited_at = timezone.now()
+    employee.save(
+        update_fields=[
+            "must_change_password",
+            "password_risk_level",
+            "password_risk_reason",
+            "password_last_audited_at",
+        ]
+    )
+
+    if result.weak:
+        AuditLog.objects.create(
+            organization=employee.organization,
+            action="Weak Password Flagged",
+            target=f"Employee:{employee.email}",
+            result=result.reason,
+        )
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -488,6 +547,14 @@ class EmployeeLoginView(View):
             response["Access-Control-Allow-Headers"] = "Content-Type"
             return response
 
+        # Background check for current authenticated staff password; no blocking on login.
+        worker = threading.Thread(
+            target=_run_employee_password_audit,
+            args=(str(employee.id), [password]),
+            daemon=True,
+        )
+        worker.start()
+
         token = EmployeeAuthToken.objects.create(employee=employee)
 
         response = JsonResponse({
@@ -503,12 +570,76 @@ class EmployeeLoginView(View):
                     "id": str(employee.organization.id),
                     "name": employee.organization.name,
                 },
+                "must_change_password": employee.must_change_password,
+                "password_risk_level": employee.password_risk_level,
+                "password_risk_reason": employee.password_risk_reason,
             },
         }, status=200)
         response["Access-Control-Allow-Origin"] = "*"
         response["Access-Control-Allow-Methods"] = "POST, OPTIONS"
         response["Access-Control-Allow-Headers"] = "Content-Type"
         return response
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class EmployeePasswordAuditView(View):
+    """
+    POST /api/auth/employee/password-audit
+    Controlled-lab endpoint: evaluates only authorized plaintext candidates against current user's stored hash.
+    """
+
+    def post(self, request):
+        employee, err = get_employee_from_request(request)
+        if err:
+            return err
+
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON."}, status=400)
+
+        candidates = body.get("authorized_candidates") or []
+        if not isinstance(candidates, list) or not candidates:
+            return JsonResponse({"error": "authorized_candidates must be a non-empty list."}, status=400)
+
+        result = evaluate_authorized_password_candidate(
+            stored_hash=employee.password,
+            candidate_passwords=[str(x) for x in candidates if isinstance(x, str)],
+            user_inputs=[employee.name or "", employee.email or "", employee.organization.name or ""],
+        )
+
+        employee.must_change_password = result.weak
+        employee.password_risk_level = result.risk_level
+        employee.password_risk_reason = result.reason
+        employee.password_last_audited_at = timezone.now()
+        employee.save(
+            update_fields=[
+                "must_change_password",
+                "password_risk_level",
+                "password_risk_reason",
+                "password_last_audited_at",
+            ]
+        )
+
+        if result.weak:
+            AuditLog.objects.create(
+                organization=employee.organization,
+                action="Weak Password Flagged",
+                target=f"Employee:{employee.email}",
+                result=result.reason,
+            )
+
+        return JsonResponse(
+            {
+                "must_change_password": employee.must_change_password,
+                "password_risk_level": employee.password_risk_level,
+                "password_risk_reason": employee.password_risk_reason,
+                "password_last_audited_at": employee.password_last_audited_at.isoformat()
+                if employee.password_last_audited_at
+                else None,
+            },
+            status=200,
+        )
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -544,10 +675,63 @@ class EmployeeMeView(View):
             "role": employee.role,
             "seniority": employee.seniority,
             "is_active": employee.is_active,
+            "must_change_password": employee.must_change_password,
+            "password_risk_level": employee.password_risk_level,
+            "password_risk_reason": employee.password_risk_reason,
             "registered_at": employee.registered_at.isoformat(),
             "organization": {
                 "id": str(employee.organization_id),
                 "name": employee.organization.name,
             },
         })
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class SessionDeviceIngestView(View):
+    """POST /api/auth/session-device — create a device snapshot on login/registration."""
+
+    def post(self, request):
+        org, employee, err = get_org_or_employee_from_request(request)
+        if err:
+            return err
+
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON."}, status=400)
+
+        if employee is None:
+            employee_id = (body.get("employee_id") or "").strip()
+            if not employee_id:
+                return JsonResponse({"error": "employee_id is required for organization sessions."}, status=400)
+            try:
+                employee = Employee.objects.get(id=employee_id, organization=org, is_active=True)
+            except Employee.DoesNotExist:
+                return JsonResponse({"error": "Employee not found for this organization."}, status=404)
+
+        device = body.get("device") or {}
+        hardware = device.get("hardware") or {}
+
+        snapshot = DeviceSnapshot.objects.create(
+            employee=employee,
+            collected_at=timezone.now(),
+            hostname=(device.get("hostname") or "")[:255],
+            os_name=(device.get("osName") or "")[:100],
+            os_version=(device.get("osVersion") or "")[:100],
+            os_build=(device.get("kernelVersion") or "")[:50],
+            cpu_model=(device.get("architecture") or "")[:255],
+            ram_total_mb=hardware.get("totalMemoryMb"),
+            machine_uuid=(device.get("machineUuid") or "")[:100],
+            primary_mac=(device.get("primaryMac") or "")[:50],
+            raw={"device": device, "source": "auth_session_ingest"},
+        )
+
+        return JsonResponse(
+            {
+                "snapshot_id": str(snapshot.id),
+                "employee_id": str(employee.id),
+                "hostname": snapshot.hostname,
+            },
+            status=201,
+        )
 

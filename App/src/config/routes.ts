@@ -1,6 +1,10 @@
 export const ROUTES = {
   root: "/",
   login: "/login",
+  loginOrganization: "/auth/organization/login",
+  registerOrganization: "/auth/organization/register",
+  loginStaff: "/auth/staff/login",
+  registerStaff: "/auth/staff/register",
   summary: "/summary",
   home: "/home",
   controlCenter: "/control-center",

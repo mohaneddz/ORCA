@@ -3,26 +3,36 @@ import { logger } from "@/lib/logger";
 
 const AUTH_STORAGE_KEY = "orca.auth.session";
 
-function getStoredToken(): string | null {
+function getStoredSession(): { token: string | null; role: "admin" | "staff" | null } {
   try {
     const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (!raw) return null;
+    if (!raw) return { token: null, role: null };
     const session = JSON.parse(raw);
-    return session?.token || null;
+    return {
+      token: session?.token || null,
+      role: session?.user?.role === "staff" ? "staff" : session?.user?.role === "admin" ? "admin" : null,
+    };
   } catch {
-    return null;
+    return { token: null, role: null };
   }
 }
 
 export async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = getStoredToken();
+  const { token, role } = getStoredSession();
   const headers: HeadersInit = {
     "Content-Type": "application/json",
     ...(options?.headers ?? {}),
   };
 
   if (token) {
-    headers["Authorization"] = `Token ${token}`;
+    const authValue = role === "staff" ? `EmployeeToken ${token}` : `Token ${token}`;
+    if (headers instanceof Headers) {
+      headers.set("Authorization", authValue);
+    } else if (Array.isArray(headers)) {
+      headers.push(["Authorization", authValue]);
+    } else {
+      (headers as Record<string, string>)["Authorization"] = authValue;
+    }
   }
 
   const response = await fetch(`${APP_URLS.api.backendBase}${path}`, {

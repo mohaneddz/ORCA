@@ -2,6 +2,7 @@ import csv
 import io
 from collections import defaultdict
 from datetime import timedelta
+import json
 
 from django.db.models import Avg, Count
 from django.http import HttpResponse, JsonResponse
@@ -19,10 +20,113 @@ from phishing.models import (
     PhishingSimulationTarget,
     TrainingEnrollment,
 )
+from organizations.models import AuditLog
+from gamification.models import Quiz
+from agent.models import DeviceSnapshot
 
 
 def _get_org(request):
     return get_org_from_request(request)
+
+
+PLAN_LIMITS = {
+    "free": {
+        "members": 3,
+        "projects": 3,
+        "devices": 5,
+        "api_requests_per_month": 1_000,
+        "storage_gb": 1,
+        "support_tickets_per_month": 0,
+        "data_retention_days": 30,
+    },
+    "pro": {
+        "members": 10,
+        "projects": 20,
+        "devices": 25,
+        "api_requests_per_month": 50_000,
+        "storage_gb": 50,
+        "support_tickets_per_month": 10,
+        "data_retention_days": 90,
+    },
+    "business": {
+        "members": 50,
+        "projects": 999_999,  # "Unlimited"
+        "devices": 100,
+        "api_requests_per_month": 500_000,
+        "storage_gb": 500,
+        "support_tickets_per_month": 999_999,  # "Priority/unlimited"
+        "data_retention_days": 365,
+    },
+}
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class BillingUsageView(View):
+    def get(self, request):
+        org, err = _get_org(request)
+        if err:
+            return err
+
+        plan = (request.GET.get("plan") or "free").strip().lower()
+        if plan not in PLAN_LIMITS:
+            plan = "free"
+
+        now = timezone.now()
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        cycle_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(seconds=1)
+
+        members = Employee.objects.filter(organization=org, is_active=True).count()
+        projects = (
+            PhishingCampaign.objects.filter(organization=org).count()
+            + Quiz.objects.filter(organization=org).count()
+        )
+
+        latest_snap_ids = []
+        emp_ids = Employee.objects.filter(organization=org, is_active=True).values_list("id", flat=True)
+        for eid in emp_ids:
+            sid = (
+                DeviceSnapshot.objects.filter(employee_id=eid)
+                .order_by("-collected_at")
+                .values_list("id", flat=True)
+                .first()
+            )
+            if sid:
+                latest_snap_ids.append(sid)
+        devices = len(latest_snap_ids)
+
+        api_requests = AuditLog.objects.filter(organization=org, created_at__gte=month_start).count()
+
+        snapshots = DeviceSnapshot.objects.filter(employee__organization=org).values(
+            "risk_signals", "hostname", "os_name", "os_version", "cpu_model"
+        )
+        est_bytes = 0
+        for s in snapshots:
+            est_bytes += len(json.dumps(s, default=str))
+        storage_gb = round(est_bytes / (1024 ** 3), 6)
+
+        support_tickets = 0
+
+        limits = PLAN_LIMITS[plan]
+        usage = {
+            "members": members,
+            "projects": projects,
+            "devices": devices,
+            "api_requests_per_month": api_requests,
+            "storage_gb": storage_gb,
+            "support_tickets_per_month": support_tickets,
+            "data_retention_days": limits["data_retention_days"],
+        }
+
+        return JsonResponse(
+            {
+                "organization": org.name,
+                "plan": plan,
+                "cycle_start": month_start.isoformat(),
+                "cycle_end": cycle_end.isoformat(),
+                "limits": limits,
+                "usage": usage,
+            }
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -362,6 +466,121 @@ class TrendView(View):
         )
 
 
+@method_decorator(csrf_exempt, name="dispatch")
+class DailyInsightsView(View):
+    """GET /api/dw/daily-insights/ — compare today vs yesterday KPI deltas."""
+
+    @staticmethod
+    def _pct_delta(today_value, yesterday_value):
+        if yesterday_value == 0:
+            return 0.0 if today_value == 0 else 100.0
+        return round(((today_value - yesterday_value) / abs(yesterday_value)) * 100, 1)
+
+    def get(self, request):
+        org, err = _get_org(request)
+        if err:
+            return err
+
+        now = timezone.now()
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        yesterday_start = today_start - timedelta(days=1)
+
+        active_employee_ids = list(
+            Employee.objects.filter(organization=org, is_active=True).values_list("id", flat=True)
+        )
+
+        # Risk score delta using snapshots received in each day window.
+        today_risk = DeviceSnapshot.objects.filter(
+            employee__organization=org, received_at__gte=today_start
+        ).aggregate(v=Avg("risk_score"))["v"]
+        yesterday_risk = DeviceSnapshot.objects.filter(
+            employee__organization=org, received_at__gte=yesterday_start, received_at__lt=today_start
+        ).aggregate(v=Avg("risk_score"))["v"]
+        today_risk = float(today_risk or 0.0)
+        yesterday_risk = float(yesterday_risk or 0.0)
+
+        # Incident-like count = high/critical snapshots received during each day.
+        today_incidents = DeviceSnapshot.objects.filter(
+            employee__organization=org,
+            received_at__gte=today_start,
+            risk_level__in=["high", "critical"],
+        ).count()
+        yesterday_incidents = DeviceSnapshot.objects.filter(
+            employee__organization=org,
+            received_at__gte=yesterday_start,
+            received_at__lt=today_start,
+            risk_level__in=["high", "critical"],
+        ).count()
+
+        # Managed devices reporting today vs yesterday (unique employees with snapshots in day).
+        today_devices = (
+            DeviceSnapshot.objects.filter(employee_id__in=active_employee_ids, received_at__gte=today_start)
+            .values("employee_id")
+            .distinct()
+            .count()
+        )
+        yesterday_devices = (
+            DeviceSnapshot.objects.filter(
+                employee_id__in=active_employee_ids,
+                received_at__gte=yesterday_start,
+                received_at__lt=today_start,
+            )
+            .values("employee_id")
+            .distinct()
+            .count()
+        )
+
+        # Policy coverage proxy = quiz correct rate today vs yesterday by submission date.
+        today_submitted = QuizSubmission.objects.filter(
+            employee__organization=org,
+            quiz__organization=org,
+            submitted_at__gte=today_start,
+        )
+        yesterday_submitted = QuizSubmission.objects.filter(
+            employee__organization=org,
+            quiz__organization=org,
+            submitted_at__gte=yesterday_start,
+            submitted_at__lt=today_start,
+        )
+        today_total = today_submitted.count()
+        yesterday_total = yesterday_submitted.count()
+        today_correct_rate = round(
+            (today_submitted.filter(is_correct=True).count() / today_total) * 100, 1
+        ) if today_total else 0.0
+        yesterday_correct_rate = round(
+            (yesterday_submitted.filter(is_correct=True).count() / yesterday_total) * 100, 1
+        ) if yesterday_total else 0.0
+
+        return JsonResponse(
+            {
+                "today_start": today_start.isoformat(),
+                "yesterday_start": yesterday_start.isoformat(),
+                "kpis": {
+                    "risk_score": {
+                        "today": round(today_risk, 1),
+                        "yesterday": round(yesterday_risk, 1),
+                        "delta_pct": self._pct_delta(today_risk, yesterday_risk),
+                    },
+                    "open_incidents": {
+                        "today": today_incidents,
+                        "yesterday": yesterday_incidents,
+                        "delta_pct": self._pct_delta(today_incidents, yesterday_incidents),
+                    },
+                    "managed_devices": {
+                        "today": today_devices,
+                        "yesterday": yesterday_devices,
+                        "delta_pct": self._pct_delta(today_devices, yesterday_devices),
+                    },
+                    "policy_coverage": {
+                        "today": today_correct_rate,
+                        "yesterday": yesterday_correct_rate,
+                        "delta_pct": self._pct_delta(today_correct_rate, yesterday_correct_rate),
+                    },
+                },
+            }
+        )
+
+
 # ---------------------------------------------------------------------------
 # Bulk Export
 # GET /api/dw/export/<resource>/?format=json|csv
@@ -462,40 +681,78 @@ class ExportView(View):
             "risk_score", "risk_level", "risk_signals_count",
             "collected_at", "received_at",
         ]
-        rows = [
-            {
-                "snapshot_id": str(s.id),
-                "employee_id": str(s.employee_id),
-                "employee_name": s.employee.name,
-                "hostname": s.hostname,
-                "os_name": s.os_name,
-                "os_version": s.os_version,
-                "os_build": s.os_build,
-                "cpu_model": s.cpu_model,
-                "ram_total_mb": s.ram_total_mb,
-                "disk_total_gb": s.disk_total_gb,
-                "disk_free_gb": s.disk_free_gb,
-                "patch_is_current": s.patch_is_current,
-                "patch_days_since_update": s.patch_days_since_update,
-                "antivirus_detected": s.antivirus_detected,
-                "antivirus_name": s.antivirus_name,
-                "antivirus_enabled": s.antivirus_enabled,
-                "antivirus_up_to_date": s.antivirus_up_to_date,
-                "disk_encrypted": s.disk_encrypted,
-                "usb_enabled": s.usb_enabled,
-                "lan_device_count": s.lan_device_count,
-                "local_port_count": s.local_port_count,
-                "wifi_open_network_count": s.wifi_open_network_count,
-                "risk_score": s.risk_score,
-                "risk_level": s.risk_level,
-                "risk_signals_count": len(s.risk_signals or []),
-                "collected_at": s.collected_at.isoformat(),
-                "received_at": s.received_at.isoformat(),
-            }
-            for s in DeviceSnapshot.objects.filter(employee__organization=org)
+        rows = []
+        picked_by_identity = {}
+        snapshots = (
+            DeviceSnapshot.objects.filter(employee__organization=org)
             .select_related("employee")
-            .order_by("-collected_at")
-        ]
+            .order_by("-collected_at", "-received_at")
+        )
+
+        def _has_full_telemetry(s):
+            raw = s.raw or {}
+            if raw.get("source") == "auth_session_ingest":
+                return False
+            return any(
+                [
+                    bool(raw.get("processes")),
+                    bool((raw.get("software") or {}).get("software") if isinstance(raw.get("software"), dict) else raw.get("software")),
+                    bool((raw.get("localPorts") or {}).get("ports") if isinstance(raw.get("localPorts"), dict) else raw.get("localPorts")),
+                    bool((raw.get("network") or {}).get("listeningPorts") if isinstance(raw.get("network"), dict) else raw.get("network")),
+                    bool(raw.get("wifi")),
+                    bool(raw.get("lan")),
+                ]
+            )
+
+        for s in snapshots:
+            # Keep only the latest snapshot per employee/device to avoid duplicate rows on re-login.
+            # Hostname-first key keeps UI row selection stable (table routes by hostname),
+            # while still falling back when hostname is missing.
+            device_key = (s.hostname or s.machine_uuid or s.primary_mac or "").strip().lower()
+            identity = (str(s.employee_id), device_key)
+            current = picked_by_identity.get(identity)
+            if current is None:
+                picked_by_identity[identity] = s
+                continue
+
+            # Prefer full telemetry snapshots over auth session snapshots.
+            if not _has_full_telemetry(current) and _has_full_telemetry(s):
+                picked_by_identity[identity] = s
+
+        for s in picked_by_identity.values():
+            rows.append(
+                {
+                    "snapshot_id": str(s.id),
+                    "employee_id": str(s.employee_id),
+                    "employee_name": s.employee.name,
+                    "hostname": s.hostname,
+                    "os_name": s.os_name,
+                    "os_version": s.os_version,
+                    "os_build": s.os_build,
+                    "cpu_model": s.cpu_model,
+                    "ram_total_mb": s.ram_total_mb,
+                    "disk_total_gb": s.disk_total_gb,
+                    "disk_free_gb": s.disk_free_gb,
+                    "patch_is_current": s.patch_is_current,
+                    "patch_days_since_update": s.patch_days_since_update,
+                    "antivirus_detected": s.antivirus_detected,
+                    "antivirus_name": s.antivirus_name,
+                    "antivirus_enabled": s.antivirus_enabled,
+                    "antivirus_up_to_date": s.antivirus_up_to_date,
+                    "disk_encrypted": s.disk_encrypted,
+                    "usb_enabled": s.usb_enabled,
+                    "lan_device_count": s.lan_device_count,
+                    "local_port_count": s.local_port_count,
+                    "wifi_open_network_count": s.wifi_open_network_count,
+                    "risk_score": s.risk_score,
+                    "risk_level": s.risk_level,
+                    "risk_signals_count": len(s.risk_signals or []),
+                    "collected_at": s.collected_at.isoformat(),
+                    "received_at": s.received_at.isoformat(),
+                }
+            )
+
+        rows.sort(key=lambda r: r["collected_at"], reverse=True)
         return rows, cols
 
     # ── quizzes ───────────────────────────────────────────────────────────
@@ -538,6 +795,64 @@ class ExportView(View):
             f'attachment; filename="{resource}_export.csv"'
         )
         return response
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class DeviceSnapshotDetailView(View):
+    """GET /api/dw/device/<snapshot_id>/detail/ — full snapshot detail including raw payload."""
+
+    def get(self, request, snapshot_id):
+        org, err = _get_org(request)
+        if err:
+            return err
+
+        try:
+            snap = DeviceSnapshot.objects.select_related("employee").get(
+                id=snapshot_id, employee__organization=org
+            )
+        except DeviceSnapshot.DoesNotExist:
+            return JsonResponse({"error": "Device snapshot not found."}, status=404)
+
+        return JsonResponse(
+            {
+                "snapshot_id": str(snap.id),
+                "employee": {
+                    "id": str(snap.employee_id),
+                    "name": snap.employee.name,
+                    "email": snap.employee.email,
+                    "department": snap.employee.department,
+                    "role": snap.employee.role,
+                },
+                "collected_at": snap.collected_at.isoformat(),
+                "received_at": snap.received_at.isoformat(),
+                "hostname": snap.hostname,
+                "os_name": snap.os_name,
+                "os_version": snap.os_version,
+                "os_build": snap.os_build,
+                "cpu_model": snap.cpu_model,
+                "ram_total_mb": snap.ram_total_mb,
+                "disk_total_gb": snap.disk_total_gb,
+                "disk_free_gb": snap.disk_free_gb,
+                "machine_uuid": snap.machine_uuid,
+                "primary_mac": snap.primary_mac,
+                "patch_is_current": snap.patch_is_current,
+                "patch_last_updated": snap.patch_last_updated.isoformat() if snap.patch_last_updated else None,
+                "patch_days_since_update": snap.patch_days_since_update,
+                "antivirus_detected": snap.antivirus_detected,
+                "antivirus_name": snap.antivirus_name,
+                "antivirus_enabled": snap.antivirus_enabled,
+                "antivirus_up_to_date": snap.antivirus_up_to_date,
+                "disk_encrypted": snap.disk_encrypted,
+                "usb_enabled": snap.usb_enabled,
+                "lan_device_count": snap.lan_device_count,
+                "local_port_count": snap.local_port_count,
+                "wifi_open_network_count": snap.wifi_open_network_count,
+                "risk_score": snap.risk_score,
+                "risk_level": snap.risk_level,
+                "risk_signals": snap.risk_signals or [],
+                "raw": snap.raw or {},
+            }
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -830,6 +1145,115 @@ class RiskPredictionView(View):
                     cls: round(float(p) * 100, 1) for cls, p in zip(classes, proba)
                 },
                 "feature_importances": importances[:8],  # top 8
+            }
+        )
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class EmployeeScoreView(View):
+    """GET /api/dw/employee-score/<employee_id>/ — compact consolidated employee score summary."""
+
+    def get(self, request, employee_id):
+        org, err = _get_org(request)
+        if err:
+            return err
+
+        try:
+            employee = Employee.objects.get(id=employee_id, organization=org)
+        except Employee.DoesNotExist:
+            return JsonResponse({"error": "Employee not found."}, status=404)
+
+        # Device score snapshot summary (no raw payload).
+        latest_two = list(
+            DeviceSnapshot.objects.filter(employee=employee)
+            .order_by("-collected_at")
+            .values("id", "collected_at", "risk_score", "risk_level")[:2]
+        )
+        latest = latest_two[0] if latest_two else None
+        previous = latest_two[1] if len(latest_two) > 1 else None
+        risk_delta = None
+        if latest and previous and latest["risk_score"] is not None and previous["risk_score"] is not None:
+            risk_delta = latest["risk_score"] - previous["risk_score"]
+
+        # Quiz/performance aggregates.
+        quiz_subs = QuizSubmission.objects.filter(employee=employee, quiz__organization=org)
+        quiz_submitted = quiz_subs.count()
+        quiz_correct = quiz_subs.filter(is_correct=True).count()
+        quiz_correct_rate = round((quiz_correct / quiz_submitted) * 100, 1) if quiz_submitted else 0.0
+
+        # Phishing behavior aggregates.
+        targets = PhishingSimulationTarget.objects.filter(employee=employee, campaign__organization=org)
+        phishing_sent = targets.exclude(sent_at=None).count()
+        phishing_clicked = targets.filter(clicked_at__isnull=False).count()
+        phishing_click_rate = round((phishing_clicked / phishing_sent) * 100, 1) if phishing_sent else 0.0
+
+        # Existing leaderboard formula used elsewhere.
+        leaderboard_score = quiz_correct - (phishing_clicked * 5)
+        active_employees = list(Employee.objects.filter(organization=org, is_active=True))
+        score_rows = []
+        for emp in active_employees:
+            emp_quiz_correct = QuizSubmission.objects.filter(
+                employee=emp, quiz__organization=org, is_correct=True
+            ).count()
+            emp_phishing_clicked = PhishingSimulationTarget.objects.filter(
+                employee=emp, campaign__organization=org, clicked_at__isnull=False
+            ).count()
+            score_rows.append((str(emp.id), emp_quiz_correct - (emp_phishing_clicked * 5)))
+        score_rows.sort(key=lambda x: -x[1])
+        rank = next((idx + 1 for idx, row in enumerate(score_rows) if row[0] == str(employee.id)), None)
+
+        # Optional compact ML prediction (no feature payload).
+        ml_prediction = None
+        try:
+            # Reuse same readiness threshold as RiskPredictionView.
+            labelled_count = DeviceSnapshot.objects.filter(
+                employee__organization=org,
+                risk_level__isnull=False,
+            ).count()
+            if labelled_count >= 20 and latest:
+                # Lightweight approximation from latest known risk level when model call is omitted.
+                ml_prediction = {
+                    "status": "available",
+                    "predicted_risk_level": latest.get("risk_level"),
+                    "confidence_pct": None,
+                    "note": "Use /api/dw/ml/predict/<employee_id>/ for full model probabilities.",
+                }
+            else:
+                ml_prediction = {"status": "insufficient_data"}
+        except Exception:
+            ml_prediction = {"status": "unavailable"}
+
+        return JsonResponse(
+            {
+                "employee": {
+                    "id": str(employee.id),
+                    "name": employee.name,
+                    "email": employee.email,
+                    "department": employee.department,
+                    "role": employee.role,
+                    "seniority": employee.seniority,
+                },
+                "device_score": {
+                    "latest_snapshot_id": str(latest["id"]) if latest else None,
+                    "latest_collected_at": latest["collected_at"].isoformat() if latest else None,
+                    "risk_score": latest["risk_score"] if latest else None,
+                    "risk_level": latest["risk_level"] if latest else None,
+                    "risk_delta_from_previous": risk_delta,
+                },
+                "behavior_score": {
+                    "quiz_submitted": quiz_submitted,
+                    "quiz_correct": quiz_correct,
+                    "quiz_correct_rate": quiz_correct_rate,
+                    "phishing_sent": phishing_sent,
+                    "phishing_clicked": phishing_clicked,
+                    "phishing_click_rate": phishing_click_rate,
+                },
+                "leaderboard": {
+                    "score": leaderboard_score,
+                    "rank": rank,
+                    "participants": len(score_rows),
+                },
+                "ml_prediction": ml_prediction,
             }
         )
 

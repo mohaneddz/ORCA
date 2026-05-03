@@ -17,16 +17,38 @@ export default function HomePage() {
     queryKey: ["home-trend"],
     queryFn: () => fetchApi<any>("/api/dw/trend/?months=7"),
   });
+  const { data: dailyInsights } = useQuery({
+    queryKey: ["home-daily-insights"],
+    queryFn: () => fetchApi<any>("/api/dw/daily-insights/"),
+  });
 
   if (isSummaryLoading || !summaryData) {
     return <PageSkeleton />;
   }
 
   const kpis = [
-    { label: t("home.stats.risk"), value: `${Math.round(summaryData?.device?.avg_risk_score || 0)} / 100`, trend: -2.1 },
-    { label: t("home.stats.incidents"), value: String(summaryData?.device?.risk_level_distribution?.high || 0), tone: "danger", trend: 12.5 },
-    { label: t("home.stats.devices"), value: String(summaryData?.device?.devices_reporting || 0), tone: "ok", trend: 4.8 },
-    { label: t("home.stats.policy"), value: `${summaryData?.quiz?.correct_rate || 0}%`, trend: 1.4 },
+    {
+      label: t("home.stats.risk"),
+      value: `${Math.round(summaryData?.device?.avg_risk_score || 0)} / 100`,
+      trend: Number(dailyInsights?.kpis?.risk_score?.delta_pct || 0),
+    },
+    {
+      label: t("home.stats.incidents"),
+      value: String(summaryData?.device?.risk_level_distribution?.high || 0),
+      tone: "danger",
+      trend: Number(dailyInsights?.kpis?.open_incidents?.delta_pct || 0),
+    },
+    {
+      label: t("home.stats.devices"),
+      value: String(summaryData?.device?.devices_reporting || 0),
+      tone: "ok",
+      trend: Number(dailyInsights?.kpis?.managed_devices?.delta_pct || 0),
+    },
+    {
+      label: t("home.stats.policy"),
+      value: `${summaryData?.quiz?.correct_rate || 0}%`,
+      trend: Number(dailyInsights?.kpis?.policy_coverage?.delta_pct || 0),
+    },
   ];
 
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -85,12 +107,14 @@ export default function HomePage() {
       <section className="grid gap-3 xl:grid-cols-2">
         <DataTable
           title={t("home.table.incidentQueue")}
+          className="min-h-[350px]"
           columns={[t("table.signal"), t("table.entity"), t("table.priority"), t("table.status")]}
           rows={incidentsRows}
           minWidth={500}
         />
         <DataTable
           title={t("home.table.recentAutomations")}
+          className="min-h-[350px]"
           columns={[t("table.automation"), t("table.target"), t("table.result"), t("table.time")]}
           rows={[]}
           minWidth={500}

@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { APP_URLS } from "@/config/urls";
 import { logger } from "@/lib/logger";
 
@@ -18,6 +19,7 @@ export type SessionUser = {
 type LoginInput = {
   email: string;
   password: string;
+  role: UserRole;
 };
 
 type SignupInput = {
@@ -88,6 +90,21 @@ type EmployeeAuthApiResponse = {
     };
   };
 };
+
+type TauriDeviceInfo = {
+  hostname?: string | null;
+  osName?: string | null;
+  osVersion?: string | null;
+  kernelVersion?: string | null;
+  architecture: string;
+  hardware: {
+    architecture: string;
+    cpuCores: number;
+    totalMemoryMb: number;
+  };
+};
+
+type TauriPosturePayload = Record<string, unknown>;
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 const AUTH_STORAGE_KEY = "orca.auth.session";
@@ -170,6 +187,95 @@ function withAuthHeaders(token: string): HeadersInit {
   };
 }
 
+function withEmployeeAuthHeaders(token: string): HeadersInit {
+  return {
+    Authorization: `EmployeeToken ${token}`,
+  };
+}
+
+async function sendSessionDeviceSnapshot(token: string, role: UserRole) {
+  if (role !== "staff") {
+    return;
+  }
+
+  const headers = withEmployeeAuthHeaders(token);
+
+  try {
+    const device = await invoke<TauriDeviceInfo>("collect_device_info");
+    await authRequest("/api/auth/session-device", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        device: {
+          hostname: device.hostname ?? "",
+          osName: device.osName ?? "",
+          osVersion: device.osVersion ?? "",
+          kernelVersion: device.kernelVersion ?? "",
+          architecture: device.architecture,
+          hardware: {
+            cpuCores: device.hardware.cpuCores,
+            totalMemoryMb: device.hardware.totalMemoryMb,
+          },
+        },
+      }),
+    });
+  } catch (error) {
+    logger.warn("auth.session_device.snapshot_failed", { error });
+  }
+
+  try {
+    const [baselineResult, wave3Result] = await Promise.allSettled([
+      invoke<TauriPosturePayload>("collect_full_posture", { config: null }),
+      invoke<TauriPosturePayload>("collect_wave3_posture", { config: null }),
+    ]);
+
+    const baseline = baselineResult.status === "fulfilled" ? baselineResult.value : null;
+    const wave3 = wave3Result.status === "fulfilled" ? wave3Result.value : null;
+    if (!baseline && !wave3) {
+      logger.warn("auth.full_snapshot.collect_failed");
+      return;
+    }
+
+    const payload: TauriPosturePayload = {
+      ...(baseline || {}),
+      ...(wave3 || {}),
+      collectedAtUtc:
+        (wave3?.collectedAtUtc as string | undefined) ??
+        (baseline?.collectedAtUtc as string | undefined) ??
+        new Date().toISOString(),
+      // Preserve richer baseline blocks where available.
+      processes: baseline?.processes ?? wave3?.processes,
+      user: baseline?.user ?? wave3?.user,
+      security: baseline?.security ?? wave3?.security,
+      network: baseline?.network ?? wave3?.network,
+      software: wave3?.software ?? baseline?.software,
+      usb: wave3?.usb ?? baseline?.usb,
+      wifi: wave3?.wifi ?? baseline?.wifi,
+      lan: wave3?.lan ?? baseline?.lan,
+      localPorts: wave3?.localPorts ?? baseline?.localPorts,
+      antivirus: wave3?.antivirus ?? baseline?.antivirus,
+      patchStatus: wave3?.patchStatus ?? baseline?.patchStatus,
+      diskEncryption: wave3?.diskEncryption ?? baseline?.diskEncryption,
+      hardware: wave3?.hardware ?? baseline?.hardware,
+    };
+
+    const ingestPath =
+      "/api/agent/snapshot/";
+
+    const ingest = await authRequest(ingestPath, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (!ingest.ok) {
+      logger.warn("auth.full_snapshot.ingest_failed", { message: ingest.message });
+    }
+  } catch (error) {
+    logger.warn("auth.full_snapshot.error", { error });
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -181,6 +287,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(session.token);
       setUser(session.user);
       logger.info("auth.session.restored", { userId: session.user.id });
+      void sendSessionDeviceSnapshot(session.token, session.user.role);
     }
     setIsInitializing(false);
   }, []);
@@ -189,15 +296,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       user,
       isInitializing,
-      login: async ({ email, password }) => {
+      login: async ({ email, password, role }) => {
         if (!email.trim()) return { ok: false, message: "Email is required." };
         if (!password.trim()) return { ok: false, message: "Password is required." };
 
         logger.info("auth.login.attempt", { email: email.trim().toLowerCase() });
 
         const trimmedEmail = email.trim().toLowerCase();
-        const isStaffLogin = !trimmedEmail.includes("admin");
-        const loginPath = isStaffLogin ? "/api/auth/employee/login" : "/api/auth/login";
+        const loginPath = role === "staff" ? "/api/auth/employee/login" : "/api/auth/login";
 
         const result = await authRequest<AuthApiResponse | EmployeeAuthApiResponse>(loginPath, {
           method: "POST",
@@ -243,6 +349,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(result.data.token);
         setUser(nextUser);
         saveStoredSession(session);
+        await sendSessionDeviceSnapshot(result.data.token, nextUser.role);
         logger.info("auth.login.success", { userId: nextUser.id, role: nextUser.role });
 
         return { ok: true };
@@ -292,6 +399,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setToken(loginResult.data.token);
           setUser(nextUser);
           saveStoredSession(session);
+          await sendSessionDeviceSnapshot(loginResult.data.token, nextUser.role);
           logger.info("auth.staff.login.success", { userId: nextUser.id });
 
           return { ok: true };
@@ -322,11 +430,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(result.data.token);
         setUser(nextUser);
         saveStoredSession(session);
+        await sendSessionDeviceSnapshot(result.data.token, nextUser.role);
         logger.info("auth.signup.success", { userId: nextUser.id, role: nextUser.role });
 
         return { ok: true };
       },
-      updateProfile: async ({ name, email, organizationName, phone, avatarUrl }) => {
+      updateProfile: async ({ name, email, phone, avatarUrl }) => {
         if (!user || !token) return { ok: false, message: "No active user session." };
 
         const result = await authRequest<any>("/api/auth/profile", {

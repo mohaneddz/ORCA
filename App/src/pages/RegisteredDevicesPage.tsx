@@ -5,7 +5,6 @@ import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/apiClient";
 import PageSkeleton from "@/components/ui/PageSkeleton";
-import { COMPLIANCE_TREND, EXPOSURE_BY_TYPE } from "@/data/mockData";
 import {
   Bar,
   BarChart,
@@ -17,7 +16,25 @@ import {
   YAxis,
 } from "recharts";
 
-const totalOpenExposures = EXPOSURE_BY_TYPE.reduce((acc, item) => acc + item.count, 0);
+type DeviceRow = {
+  snapshot_id: string;
+  hostname: string;
+  os_name: string;
+  employee_name: string;
+  risk_score: number | null;
+  risk_level: string;
+  patch_is_current: boolean | null;
+  antivirus_enabled: boolean | null;
+  disk_encrypted: boolean | null;
+  collected_at: string;
+};
+
+type CompliancePoint = {
+  week: string;
+  encryption: number;
+  edr: number;
+  patching: number;
+};
 
 export default function DevicesPage() {
   const navigate = useNavigate();
@@ -30,19 +47,53 @@ export default function DevicesPage() {
 
   const { data: devicesList, isLoading } = useQuery({
     queryKey: ["devices-list"],
-    queryFn: () => fetchApi<any[]>("/api/dw/export/devices/?format=json"),
+    queryFn: () => fetchApi<any>("/api/dw/export/devices/?format=json"),
   });
 
   if (isLoading) {
     return <PageSkeleton />;
   }
 
-  const tableRows = (devicesList?.data || []).map((d: any) => [
+  const devices = (devicesList?.data || []) as DeviceRow[];
+
+  const tableRows = devices.map((d) => [
     d.hostname || d.snapshot_id,
     d.os_name || "Unknown",
     d.employee_name || "N/A",
     (d.risk_score ?? 0) > 70 ? "At Risk" : "Healthy"
   ]);
+
+  const sortedByDate = [...devices].sort(
+    (a, b) => new Date(a.collected_at).getTime() - new Date(b.collected_at).getTime(),
+  );
+  const bucketSize = Math.max(1, Math.ceil(sortedByDate.length / 6));
+  const complianceTrend: CompliancePoint[] = Array.from({ length: 6 }, (_, i) => {
+    const slice = sortedByDate.slice(i * bucketSize, (i + 1) * bucketSize);
+    const denom = slice.length || 1;
+    const pct = (count: number) => Math.round((count / denom) * 100);
+    const encryption = pct(slice.filter((d) => d.disk_encrypted === true).length);
+    const edr = pct(slice.filter((d) => d.antivirus_enabled === true).length);
+    const patching = pct(slice.filter((d) => d.patch_is_current === true).length);
+    return { week: `W${i + 1}`, encryption, edr, patching };
+  });
+
+  const complianceLatest = complianceTrend[complianceTrend.length - 1] || {
+    encryption: 0,
+    edr: 0,
+    patching: 0,
+  };
+
+  const signalRows = (summaryData?.device?.top_signals || []) as Array<{ signal: string; affected_devices: number }>;
+  const chartPalette = ["#f59e0b", "#fb7185", "#a78bfa", "#22d3ee", "#34d399", "#60a5fa"];
+  const exposureByType = (signalRows.length > 0
+    ? signalRows.slice(0, 6).map((s, idx) => ({
+        name: s.signal.length > 32 ? `${s.signal.slice(0, 32)}...` : s.signal,
+        count: s.affected_devices,
+        color: chartPalette[idx % chartPalette.length],
+      }))
+    : [{ name: "No open exposure signals", count: 0, color: "#334155" }]
+  );
+  const totalOpenExposures = exposureByType.reduce((acc, item) => acc + item.count, 0);
 
   return (
     <div className="page-section">
@@ -67,10 +118,10 @@ export default function DevicesPage() {
           <p className="m-0 mt-1 text-xs text-slate-400">{t("devices.compliance.subtitle")}</p>
           <div className="mt-4 h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={COMPLIANCE_TREND} barCategoryGap="22%">
+              <BarChart data={complianceTrend} barCategoryGap="22%">
                 <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
                 <XAxis dataKey="week" tick={{ fill: "#64748b", fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis domain={[80, 100]} tick={{ fill: "#64748b", fontSize: 11 }} tickLine={false} axisLine={false} width={32} />
+                <YAxis domain={[0, 100]} tick={{ fill: "#64748b", fontSize: 11 }} tickLine={false} axisLine={false} width={32} />
                 <Tooltip
                   cursor={{ fill: "rgba(255,255,255,0.03)" }}
                   contentStyle={{
@@ -90,15 +141,15 @@ export default function DevicesPage() {
           <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
             <div className="rounded-md border border-slate-800 bg-slate-950/40 p-2">
               <p className="m-0 text-slate-400">{t("devices.compliance.encryption")}</p>
-              <p className="m-0 mt-1 font-semibold text-cyan-300">96%</p>
+              <p className="m-0 mt-1 font-semibold text-cyan-300">{complianceLatest.encryption}%</p>
             </div>
             <div className="rounded-md border border-slate-800 bg-slate-950/40 p-2">
               <p className="m-0 text-slate-400">{t("devices.compliance.edr")}</p>
-              <p className="m-0 mt-1 font-semibold text-emerald-300">98%</p>
+              <p className="m-0 mt-1 font-semibold text-emerald-300">{complianceLatest.edr}%</p>
             </div>
             <div className="rounded-md border border-slate-800 bg-slate-950/40 p-2">
               <p className="m-0 text-slate-400">{t("devices.compliance.patching")}</p>
-              <p className="m-0 mt-1 font-semibold text-violet-300">91%</p>
+              <p className="m-0 mt-1 font-semibold text-violet-300">{complianceLatest.patching}%</p>
             </div>
           </div>
         </section>
@@ -107,7 +158,7 @@ export default function DevicesPage() {
           <p className="m-0 mt-1 text-xs text-slate-400">{t("devices.exposure.subtitle")}</p>
           <div className="mt-4 h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={EXPOSURE_BY_TYPE} layout="vertical" margin={{ left: 12, right: 8 }}>
+              <BarChart data={exposureByType} layout="vertical" margin={{ left: 12, right: 8 }}>
                 <CartesianGrid stroke="rgba(255,255,255,0.05)" horizontal={false} />
                 <XAxis type="number" tick={{ fill: "#64748b", fontSize: 11 }} tickLine={false} axisLine={false} />
                 <YAxis
@@ -129,7 +180,7 @@ export default function DevicesPage() {
                   }}
                 />
                 <Bar dataKey="count" radius={[0, 6, 6, 0]} maxBarSize={18}>
-                  {EXPOSURE_BY_TYPE.map((item) => (
+                  {exposureByType.map((item) => (
                     <Cell key={item.name} fill={item.color} />
                   ))}
                 </Bar>
@@ -152,7 +203,11 @@ export default function DevicesPage() {
           minWidth={500}
           filterColumn="Status"
           searchPlaceholder={t("devices.search")}
-          onRowClick={(row) => navigate(ROUTES.deviceDetails.replace(":deviceId", row[0]))}
+          onRowClick={(row) => {
+            const selected = devices.find((d) => d.hostname === row[0] && d.employee_name === row[2]);
+            const target = selected?.snapshot_id || row[0];
+            navigate(ROUTES.deviceDetails.replace(":deviceId", target));
+          }}
         />
       </section>
     </div>

@@ -8,7 +8,7 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 from organizations.models import Employee
-from organizations.views import get_org_from_request
+from organizations.views import get_org_from_request, get_org_or_employee_from_request
 
 from .models import ApprovedSoftware, DeviceSnapshot, DiskHealthSnapshot, NetworkDeviceSnapshot, PortRemediationRequest, SystemMetricsSnapshot
 from .risk import _RISKY_PORTS, compute_disk_risk, compute_network_risk, compute_risk, compute_system_risk
@@ -17,7 +17,7 @@ from .risk import _RISKY_PORTS, compute_disk_risk, compute_network_risk, compute
 @method_decorator(csrf_exempt, name="dispatch")
 class SnapshotIngestView(View):
     def post(self, request):
-        org, err = get_org_from_request(request)
+        org, token_employee, err = get_org_or_employee_from_request(request)
         if err:
             return err
 
@@ -27,17 +27,18 @@ class SnapshotIngestView(View):
             return JsonResponse({"error": "Invalid JSON."}, status=400)
 
         # ── Resolve employee ──────────────────────────────────────────────
-        employee_id = (
-            request.GET.get("employee_id")
-            or payload.get("employee_id")
-        )
-        if not employee_id:
-            return JsonResponse({"error": "employee_id is required."}, status=400)
-
-        try:
-            employee = Employee.objects.get(id=employee_id, organization=org)
-        except Employee.DoesNotExist:
-            return JsonResponse({"error": "Employee not found."}, status=404)
+        employee_id = request.GET.get("employee_id") or payload.get("employee_id")
+        if token_employee is not None:
+            employee = token_employee
+            if employee_id and str(employee.id) != str(employee_id):
+                return JsonResponse({"error": "employee_id does not match authenticated employee."}, status=403)
+        else:
+            if not employee_id:
+                return JsonResponse({"error": "employee_id is required."}, status=400)
+            try:
+                employee = Employee.objects.get(id=employee_id, organization=org)
+            except Employee.DoesNotExist:
+                return JsonResponse({"error": "Employee not found."}, status=404)
 
         # ── Parse collected_at ────────────────────────────────────────────
         collected_at_raw = payload.get("collectedAtUtc")

@@ -71,6 +71,10 @@ export default function App() {
       <Routes>
         <Route path={ROUTES.root} element={<RootRoute />} />
         <Route path={ROUTES.login} element={<LoginRoute />} />
+        <Route path={ROUTES.loginOrganization} element={<LoginRoute />} />
+        <Route path={ROUTES.registerOrganization} element={<LoginRoute />} />
+        <Route path={ROUTES.loginStaff} element={<LoginRoute />} />
+        <Route path={ROUTES.registerStaff} element={<LoginRoute />} />
 
         <Route element={<RequireAuth />}>
           <Route element={<AppLayout />}>

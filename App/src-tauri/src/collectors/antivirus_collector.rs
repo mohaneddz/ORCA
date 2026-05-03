@@ -43,6 +43,18 @@ if ($av) { $av.displayName } else { '' }
     .ok();
 
     let enabled = defender.as_deref().and_then(parse_bool_from_powershell);
+    let signature_outdated = run_command(
+        "powershell",
+        &[
+            "-NoProfile",
+            "-Command",
+            "(Get-MpComputerStatus).AntivirusSignatureOutOfDate",
+        ],
+    )
+    .ok()
+    .as_deref()
+    .and_then(parse_bool_from_powershell);
+    let signature_up_to_date = signature_outdated.map(|is_outdated| !is_outdated);
 
     Ok(AntivirusStatus {
         av_detected: !name.trim().is_empty(),
@@ -52,7 +64,7 @@ if ($av) { $av.displayName } else { '' }
             Some(name.trim().to_string())
         },
         enabled_status: enabled,
-        signature_up_to_date: None,
+        signature_up_to_date,
         supported: true,
         status_text: "securitycenter2/defender detection".to_string(),
     })

@@ -140,6 +140,7 @@ export function DataTable({
   minWidth = 720,
   sortable = true,
   fillHeight = false,
+  maxBodyHeight,
   onRowClick,
   renderCell,
 }: {
@@ -154,6 +155,7 @@ export function DataTable({
   minWidth?: number;
   sortable?: boolean;
   fillHeight?: boolean;
+  maxBodyHeight?: number;
   onRowClick?: (row: string[], rowIndex: number) => void;
   renderCell?: (cell: string, row: string[], rowIndex: number, cellIndex: number) => ReactNode;
 }) {
@@ -254,7 +256,10 @@ export function DataTable({
           </select>
         )}
       </div>
-      <div className={fillHeight ? "min-h-0 flex-1 overflow-auto" : "overflow-x-auto"}>
+      <div
+        className={fillHeight ? "min-h-0 flex-1 overflow-auto" : maxBodyHeight ? "overflow-auto" : "overflow-x-auto"}
+        style={maxBodyHeight ? { maxHeight: `${maxBodyHeight}px` } : undefined}
+      >
         <table className="data-table" style={{ minWidth }}>
           <thead>
             <tr>
