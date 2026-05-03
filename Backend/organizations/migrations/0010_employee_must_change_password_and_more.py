@@ -13,82 +13,99 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # Use RunSQL with IF NOT EXISTS so re-deploying against a DB that already
-        # has these columns (applied manually / outside migrations) doesn't fail.
-        migrations.RunSQL(
-            sql=[
-                "ALTER TABLE organizations_employee ADD COLUMN IF NOT EXISTS must_change_password boolean NOT NULL DEFAULT false;",
-                "ALTER TABLE organizations_employee ADD COLUMN IF NOT EXISTS password_last_audited_at timestamp with time zone NULL;",
-                "ALTER TABLE organizations_employee ADD COLUMN IF NOT EXISTS password_risk_level varchar(20) NOT NULL DEFAULT '';",
-                "ALTER TABLE organizations_employee ADD COLUMN IF NOT EXISTS password_risk_reason text NOT NULL DEFAULT '';",
-                "ALTER TABLE organizations_organization ADD COLUMN IF NOT EXISTS avatar_url varchar(1024) NOT NULL DEFAULT '';",
-                "ALTER TABLE organizations_organization ADD COLUMN IF NOT EXISTS phone varchar(20) NOT NULL DEFAULT '';",
-            ],
-            reverse_sql=[
-                "ALTER TABLE organizations_employee DROP COLUMN IF EXISTS must_change_password;",
-                "ALTER TABLE organizations_employee DROP COLUMN IF EXISTS password_last_audited_at;",
-                "ALTER TABLE organizations_employee DROP COLUMN IF EXISTS password_risk_level;",
-                "ALTER TABLE organizations_employee DROP COLUMN IF EXISTS password_risk_reason;",
-                "ALTER TABLE organizations_organization DROP COLUMN IF EXISTS avatar_url;",
-                "ALTER TABLE organizations_organization DROP COLUMN IF EXISTS phone;",
-            ],
-        ),
-        migrations.CreateModel(
-            name="AuditLog",
-            fields=[
-                (
-                    "id",
-                    models.UUIDField(
-                        default=uuid.uuid4,
-                        editable=False,
-                        primary_key=True,
-                        serialize=False,
-                    ),
-                ),
-                ("action", models.CharField(max_length=255)),
-                ("target", models.CharField(max_length=255)),
-                ("result", models.CharField(max_length=50)),
-                ("created_at", models.DateTimeField(auto_now_add=True)),
-                (
-                    "organization",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="audit_logs",
-                        to=settings.AUTH_USER_MODEL,
-                    ),
+        migrations.SeparateDatabaseAndState(
+            # database_operations: raw SQL with IF NOT EXISTS so this is idempotent
+            # when the columns/table were already created outside of migrations.
+            database_operations=[
+                migrations.RunSQL(
+                    sql=[
+                        "ALTER TABLE organizations_employee ADD COLUMN IF NOT EXISTS must_change_password boolean NOT NULL DEFAULT false;",
+                        "ALTER TABLE organizations_employee ADD COLUMN IF NOT EXISTS password_last_audited_at timestamp with time zone NULL;",
+                        "ALTER TABLE organizations_employee ADD COLUMN IF NOT EXISTS password_risk_level varchar(20) NOT NULL DEFAULT '';",
+                        "ALTER TABLE organizations_employee ADD COLUMN IF NOT EXISTS password_risk_reason text NOT NULL DEFAULT '';",
+                        "ALTER TABLE organizations_organization ADD COLUMN IF NOT EXISTS avatar_url varchar(1024) NOT NULL DEFAULT '';",
+                        "ALTER TABLE organizations_organization ADD COLUMN IF NOT EXISTS phone varchar(20) NOT NULL DEFAULT '';",
+                        """CREATE TABLE IF NOT EXISTS organizations_auditlog (
+                            id uuid NOT NULL PRIMARY KEY,
+                            action varchar(255) NOT NULL,
+                            target varchar(255) NOT NULL,
+                            result varchar(50) NOT NULL,
+                            created_at timestamp with time zone NOT NULL,
+                            organization_id uuid NOT NULL REFERENCES organizations_organization(id) ON DELETE CASCADE
+                        );""",
+                    ],
+                    reverse_sql=[
+                        "ALTER TABLE organizations_employee DROP COLUMN IF EXISTS must_change_password;",
+                        "ALTER TABLE organizations_employee DROP COLUMN IF EXISTS password_last_audited_at;",
+                        "ALTER TABLE organizations_employee DROP COLUMN IF EXISTS password_risk_level;",
+                        "ALTER TABLE organizations_employee DROP COLUMN IF EXISTS password_risk_reason;",
+                        "ALTER TABLE organizations_organization DROP COLUMN IF EXISTS avatar_url;",
+                        "ALTER TABLE organizations_organization DROP COLUMN IF EXISTS phone;",
+                        "DROP TABLE IF EXISTS organizations_auditlog;",
+                    ],
                 ),
             ],
-            options={
-                "ordering": ["-created_at"],
-            },
-        ),
-    ]
-
-            fields=[
-                (
-                    "id",
-                    models.UUIDField(
-                        default=uuid.uuid4,
-                        editable=False,
-                        primary_key=True,
-                        serialize=False,
-                    ),
+            # state_operations: tell Django's ORM about the new fields/models
+            state_operations=[
+                migrations.AddField(
+                    model_name="employee",
+                    name="must_change_password",
+                    field=models.BooleanField(default=False),
                 ),
-                ("action", models.CharField(max_length=255)),
-                ("target", models.CharField(max_length=255)),
-                ("result", models.CharField(max_length=50)),
-                ("created_at", models.DateTimeField(auto_now_add=True)),
-                (
-                    "organization",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="audit_logs",
-                        to=settings.AUTH_USER_MODEL,
-                    ),
+                migrations.AddField(
+                    model_name="employee",
+                    name="password_last_audited_at",
+                    field=models.DateTimeField(blank=True, null=True),
+                ),
+                migrations.AddField(
+                    model_name="employee",
+                    name="password_risk_level",
+                    field=models.CharField(blank=True, default="", max_length=20),
+                ),
+                migrations.AddField(
+                    model_name="employee",
+                    name="password_risk_reason",
+                    field=models.TextField(blank=True, default=""),
+                ),
+                migrations.AddField(
+                    model_name="organization",
+                    name="avatar_url",
+                    field=models.URLField(blank=True, default="", max_length=1024),
+                ),
+                migrations.AddField(
+                    model_name="organization",
+                    name="phone",
+                    field=models.CharField(blank=True, default="", max_length=20),
+                ),
+                migrations.CreateModel(
+                    name="AuditLog",
+                    fields=[
+                        (
+                            "id",
+                            models.UUIDField(
+                                default=uuid.uuid4,
+                                editable=False,
+                                primary_key=True,
+                                serialize=False,
+                            ),
+                        ),
+                        ("action", models.CharField(max_length=255)),
+                        ("target", models.CharField(max_length=255)),
+                        ("result", models.CharField(max_length=50)),
+                        ("created_at", models.DateTimeField(auto_now_add=True)),
+                        (
+                            "organization",
+                            models.ForeignKey(
+                                on_delete=django.db.models.deletion.CASCADE,
+                                related_name="audit_logs",
+                                to=settings.AUTH_USER_MODEL,
+                            ),
+                        ),
+                    ],
+                    options={
+                        "ordering": ["-created_at"],
+                    },
                 ),
             ],
-            options={
-                "ordering": ["-created_at"],
-            },
         ),
     ]
