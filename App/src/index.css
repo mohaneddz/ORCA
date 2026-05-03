@@ -79,10 +79,10 @@
   --color-neutral-800: #f8fafc;
   --color-neutral-700: #e2e8f0;
   --color-neutral-600: #cbd5e1;
-  --color-neutral-500: #94a3b8;
-  --color-neutral-400: #64748b;
-  --color-neutral-300: #475569;
-  --color-neutral-200: #334155;
+  --color-neutral-500: #64748b;
+  --color-neutral-400: #475569;
+  --color-neutral-300: #334155;
+  --color-neutral-200: #1e293b;
   --color-neutral-100: #0f172a;
 
   /* Semantic Overrides */
@@ -424,6 +424,34 @@ body {
   color: var(--color-neutral-500) !important;
 }
 
+:root[data-theme="light"] .text-neutral-100 {
+  color: var(--color-neutral-100) !important;
+}
+
+:root[data-theme="light"] .text-neutral-200 {
+  color: var(--color-neutral-200) !important;
+}
+
+:root[data-theme="light"] .text-neutral-300 {
+  color: var(--color-neutral-300) !important;
+}
+
+:root[data-theme="light"] .text-neutral-400 {
+  color: var(--color-neutral-400) !important;
+}
+
+:root[data-theme="light"] .text-neutral-500 {
+  color: var(--color-neutral-500) !important;
+}
+
+:root[data-theme="light"] .bg-neutral-100 {
+  background-color: var(--color-surface-2) !important;
+}
+
+:root[data-theme="light"] .border-black\/5 {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
 :root[data-theme="light"] .bg-slate-950\/30,
 :root[data-theme="light"] .bg-slate-950\/40 {
   background: rgba(248, 250, 252, 0.5) !important;
@@ -530,7 +558,31 @@ body {
 }
 
 :root[data-theme="light"] .bg-black\/50 {
-  background: rgba(15, 23, 42, 0.35) !important;
+  background: rgba(15, 23, 42, 0.22) !important;
+}
+
+:root[data-theme="light"] .bg-black\/30 {
+  background: rgba(15, 23, 42, 0.1) !important;
+}
+
+:root[data-theme="light"] .status-ok {
+  background: rgba(4, 120, 87, 0.14) !important;
+  color: #047857 !important;
+}
+
+:root[data-theme="light"] .status-warn {
+  background: rgba(180, 83, 9, 0.14) !important;
+  color: #b45309 !important;
+}
+
+:root[data-theme="light"] .status-danger {
+  background: rgba(190, 24, 93, 0.14) !important;
+  color: #be185d !important;
+}
+
+:root[data-theme="light"] .status-neutral {
+  background: rgba(51, 65, 85, 0.12) !important;
+  color: #334155 !important;
 }
 
 :root[data-theme="light"] .border-slate-700 {
@@ -554,6 +606,15 @@ body {
 
 .animate-fade-up {
   animation: fade-up 0.4s ease both;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease both;
 }
 
 /* Staggered animation helpers */

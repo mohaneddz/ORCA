@@ -140,6 +140,12 @@ class OrgSummaryView(View):
         if err:
             return err
 
+        from django.core.cache import cache
+        cache_key = f"org_summary_{org.id}"
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return JsonResponse(cached_data)
+
         employees = Employee.objects.filter(organization=org)
         active_employees = employees.filter(is_active=True)
         emp_ids = list(active_employees.values_list("id", flat=True))
@@ -168,18 +174,31 @@ class OrgSummaryView(View):
         correct_count = correct_subs.count()
 
         # ── Device — latest snapshot per employee ─────────────────────────
-        latest_snap_ids = []
-        for eid in emp_ids:
-            snap = (
-                DeviceSnapshot.objects.filter(employee_id=eid)
-                .order_by("-collected_at")
-                .values_list("id", flat=True)
-                .first()
-            )
-            if snap:
-                latest_snap_ids.append(snap)
+        from django.db.models import OuterRef, Subquery
+        
+        latest_snapshot_subquery = DeviceSnapshot.objects.filter(
+            employee_id=OuterRef('id')
+        ).order_by('-collected_at').values('id')[:1]
 
-        latest_snaps = DeviceSnapshot.objects.filter(id__in=latest_snap_ids)
+        latest_snaps = DeviceSnapshot.objects.filter(
+            id__in=Subquery(active_employees.values('id').annotate(
+                latest_id=Subquery(latest_snapshot_subquery)
+            ).values('latest_id'))
+        )
+        
+        # Fallback for older databases that might struggle with the above subquery
+        if not latest_snaps.exists() and active_employees.exists():
+            latest_snap_ids = []
+            for eid in emp_ids:
+                snap = (
+                    DeviceSnapshot.objects.filter(employee_id=eid)
+                    .order_by("-collected_at")
+                    .values_list("id", flat=True)
+                    .first()
+                )
+                if snap:
+                    latest_snap_ids.append(snap)
+            latest_snaps = DeviceSnapshot.objects.filter(id__in=latest_snap_ids)
         avg_risk = latest_snaps.aggregate(avg=Avg("risk_score"))["avg"]
 
         risk_dist = defaultdict(int)
@@ -207,8 +226,7 @@ class OrgSummaryView(View):
             lb_rows.append({"name": emp.name, "department": emp.department, "score": score})
         lb_rows.sort(key=lambda x: -x["score"])
 
-        return JsonResponse(
-            {
+        data = {
                 "organization": org.name,
                 "employees": {
                     "total": employees.count(),
@@ -245,7 +263,7 @@ class OrgSummaryView(View):
                     "snapshots_total": DeviceSnapshot.objects.filter(
                         employee__organization=org
                     ).count(),
-                    "devices_reporting": len(latest_snap_ids),
+                    "devices_reporting": latest_snaps.count(),
                     "avg_risk_score": round(avg_risk, 1) if avg_risk is not None else None,
                     "risk_level_distribution": dict(risk_dist),
                     "top_signals": [
@@ -254,7 +272,8 @@ class OrgSummaryView(View):
                 },
                 "leaderboard_top3": lb_rows[:3],
             }
-        )
+        cache.set(cache_key, data, 300)  # Cache for 5 mins
+        return JsonResponse(data)
 
 
 # ---------------------------------------------------------------------------
@@ -389,6 +408,12 @@ class TrendView(View):
         except ValueError:
             months = 6
 
+        from django.core.cache import cache
+        cache_key = f"org_trend_{org.id}_{months}"
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return JsonResponse(cached_data)
+
         since = timezone.now() - timedelta(days=months * 30)
 
         # Phishing by month
@@ -461,9 +486,9 @@ class TrendView(View):
                 }
             )
 
-        return JsonResponse(
-            {"months_requested": months, "data_points": len(trend), "trend": trend}
-        )
+        response_data = {"months_requested": months, "data_points": len(trend), "trend": trend}
+        cache.set(cache_key, response_data, 3600)  # Cache for 1 hour
+        return JsonResponse(response_data)
 
 
 @method_decorator(csrf_exempt, name="dispatch")

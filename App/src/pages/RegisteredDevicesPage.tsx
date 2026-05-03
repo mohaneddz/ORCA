@@ -28,6 +28,7 @@ type DeviceRow = {
   patch_is_current: boolean | null;
   antivirus_enabled: boolean | null;
   disk_encrypted: boolean | null;
+  local_port_count: number | null;
   collected_at: string;
 };
 
@@ -62,6 +63,7 @@ export default function DevicesPage() {
     d.hostname || d.snapshot_id,
     d.os_name || "Unknown",
     d.employee_name || "N/A",
+    String(d.local_port_count ?? 0),
     (d.risk_score ?? 0) > 70 ? "At Risk" : "Healthy"
   ]);
 
@@ -124,6 +126,7 @@ export default function DevicesPage() {
       />
 
       <StatGrid
+        cols={4}
         stats={[
           { label: t("devices.stats.total"), value: String(totalDevs), trend: 0 },
           { label: t("devices.stats.healthy"), value: String(healthyDevs), tone: "ok", trend: 0 },
@@ -199,7 +202,7 @@ export default function DevicesPage() {
         <DataTable
           title={t("devices.table.title")}
           actions={<span className="text-xs text-slate-400">{t("devices.table.hint")}</span>}
-          columns={["Hostname", "OS", "Employee", "Status"]}
+          columns={["Hostname", "OS", "Employee", "Open Ports", "Status"]}
           rows={tableRows}
           minWidth={500}
           filterColumn="Status"

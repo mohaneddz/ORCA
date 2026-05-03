@@ -5,6 +5,9 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
   RadialBar,
   RadialBarChart,
   ResponsiveContainer,
@@ -217,7 +220,13 @@ export function DonutGauge({
   label = "Score",
   breakdown,
 }: DonutGaugeProps) {
-  const pct = Math.round((value / max) * 100);
+  const safeMax = Math.max(max, 1);
+  const pct = Math.max(0, Math.min(100, Math.round((value / safeMax) * 100)));
+  const normalizedBreakdown = (breakdown || []).map((item) => ({
+    ...item,
+    value: Math.max(0, item.value || 0),
+  }));
+  const breakdownTotal = normalizedBreakdown.reduce((sum, item) => sum + item.value, 0);
 
   // Build radial bar data: background arc + filled arc
   const radialData = [
@@ -230,24 +239,46 @@ export function DonutGauge({
       <div className="flex flex-col items-center">
         <div className="relative w-[180px] h-[180px]">
           <ResponsiveContainer width="100%" height="100%">
-            <RadialBarChart
-              cx="50%"
-              cy="50%"
-              innerRadius="65%"
-              outerRadius="100%"
-              startAngle={210}
-              endAngle={-30}
-              data={[{ value: 100, fill: "var(--color-border-subtle)" }, ...radialData]}
-              barSize={16}
-            >
-              <defs>
-                <linearGradient id="radialGrad" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor="#00a6d6" />
-                  <stop offset="100%" stopColor="#00c6c1" />
-                </linearGradient>
-              </defs>
-              <RadialBar background={false} dataKey="value" cornerRadius={8} />
-            </RadialBarChart>
+            {normalizedBreakdown.length > 0 && breakdownTotal > 0 ? (
+              <PieChart>
+                <Pie
+                  data={normalizedBreakdown}
+                  dataKey="value"
+                  nameKey="label"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius="65%"
+                  outerRadius="100%"
+                  startAngle={210}
+                  endAngle={-30}
+                  stroke="none"
+                  paddingAngle={2}
+                >
+                  {normalizedBreakdown.map((item) => (
+                    <Cell key={item.label} fill={item.color} />
+                  ))}
+                </Pie>
+              </PieChart>
+            ) : (
+              <RadialBarChart
+                cx="50%"
+                cy="50%"
+                innerRadius="65%"
+                outerRadius="100%"
+                startAngle={210}
+                endAngle={-30}
+                data={[{ value: 100, fill: "var(--color-border-subtle)" }, ...radialData]}
+                barSize={16}
+              >
+                <defs>
+                  <linearGradient id="radialGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#00a6d6" />
+                    <stop offset="100%" stopColor="#00c6c1" />
+                  </linearGradient>
+                </defs>
+                <RadialBar background={false} dataKey="value" cornerRadius={8} />
+              </RadialBarChart>
+            )}
           </ResponsiveContainer>
           {/* Center label */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center mt-1.5">

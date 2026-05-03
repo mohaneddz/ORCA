@@ -212,7 +212,7 @@ export default function DashboardPage({ title, description }: DashboardPageProps
         ]}
       />
 
-      <StatGrid stats={kpis} />
+      <StatGrid stats={kpis} cols={4} />
 
       {/* Charts row */}
       <section className="grid gap-3 xl:grid-cols-[1.4fr_1fr]">

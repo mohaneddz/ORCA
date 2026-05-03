@@ -20,14 +20,14 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [organizationName, setOrganizationName] = useState("ORCA Organization");
   const [phone, setPhone] = useState("");
-  const [mode, setMode] = useState<"signin" | "signup">(isRegisterRoute ? "signup" : "signin");
+  const [mode, setMode] = useState<"signin" | "signup">(isStaffRoute ? "signin" : isRegisterRoute ? "signup" : "signin");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const redirect = searchParams.get("redirect") || ROUTES.home;
 
   useEffect(() => {
     setRole(isStaffRoute ? "staff" : "admin");
-    setMode(isRegisterRoute ? "signup" : "signin");
+    setMode(isStaffRoute ? "signin" : isRegisterRoute ? "signup" : "signin");
     setError(null);
   }, [isStaffRoute, isRegisterRoute]);
 
@@ -86,7 +86,7 @@ export default function LoginPage() {
           </button>
           <button
             type="button"
-            onClick={() => navigate(mode === "signin" ? ROUTES.loginStaff : ROUTES.registerStaff, { replace: true })}
+            onClick={() => navigate(ROUTES.loginStaff, { replace: true })}
             className={[
               "rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors",
               role === "staff" ? "bg-cyan-500/20 text-cyan-100" : "text-slate-300 hover:bg-white/10 hover:text-white",
@@ -165,29 +165,23 @@ export default function LoginPage() {
             {isSubmitting ? t("login.submitting") : mode === "signin" ? t("login.signin") : t("login.signup")}
           </button>
 
-          <button
-            type="button"
-            onClick={() =>
-              navigate(
-                role === "admin"
-                  ? mode === "signin"
-                    ? ROUTES.registerOrganization
-                    : ROUTES.loginOrganization
-                  : mode === "signin"
-                  ? ROUTES.registerStaff
-                  : ROUTES.loginStaff,
-                { replace: true },
-              )
-            }
-            className="text-sm text-cyan-200 hover:text-cyan-100"
-          >
-            {mode === "signin" ? "Create account" : "Already have an account? Sign in"}
-          </button>
+          {role === "admin" && (
+            <button
+              type="button"
+              onClick={() =>
+                navigate(mode === "signin" ? ROUTES.registerOrganization : ROUTES.loginOrganization, {
+                  replace: true,
+                })
+              }
+              className="text-sm text-cyan-200 hover:text-cyan-100"
+            >
+              {mode === "signin" ? "Create account" : "Already have an account? Sign in"}
+            </button>
+          )}
         </form>
       </div>
     </div>
     </div>
   );
 }
-
 

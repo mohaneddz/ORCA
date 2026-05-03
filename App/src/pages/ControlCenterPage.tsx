@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { PageHeader, StatGrid } from "@/components/cards/BaseCards";
+import { PageHeader, StatGrid, SummaryBanner } from "@/components/cards/BaseCards";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/apiClient";
 import PageSkeleton from "@/components/ui/PageSkeleton";
 import { toast } from "sonner";
 import {
-  ShieldCheck, ShieldOff, Eye, EyeOff, Lock, Unlock,
-  UserX, UserCheck, Search, ChevronDown, AlertTriangle,
+  ShieldCheck, Eye, EyeOff, Lock,
+  UserX, Search, AlertTriangle,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -27,6 +27,26 @@ type Employee = {
   last_login?: string;
   device?: { latest_risk_score?: number };
 };
+
+type EmployeePolicyOverride = {
+  tracking_enabled?: boolean;
+  tracking_level?: "standard" | "high";
+  password_audit_enabled?: boolean;
+};
+
+const POLICY_OVERRIDES_KEY = "cc-policy-overrides-v1";
+
+function loadPolicyOverrides(): Record<string, EmployeePolicyOverride> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(POLICY_OVERRIDES_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
 
 // ─── Toggle Switch ────────────────────────────────────────────────────────────
 
@@ -108,7 +128,18 @@ export default function ControlCenterPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "suspended">("all");
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [policyOverrides, setPolicyOverrides] = useState<Record<string, EmployeePolicyOverride>>(() => loadPolicyOverrides());
+
+  const updatePolicyOverride = (id: string, patch: EmployeePolicyOverride) => {
+    setPolicyOverrides((prev) => {
+      const next = { ...prev, [id]: { ...(prev[id] || {}), ...patch } };
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(POLICY_OVERRIDES_KEY, JSON.stringify(next));
+      }
+      return next;
+    });
+  };
+
 
   // ── Data ──────────────────────────────────────────────────────────────────
 
@@ -117,12 +148,15 @@ export default function ControlCenterPage() {
     queryFn: () => fetchApi<any>("/api/dw/employees/"),
   });
 
-  const employees: Employee[] = (data?.employees || []).map((e: any) => ({
-    ...e,
-    tracking_enabled: e.tracking_enabled ?? true,
-    tracking_level: e.tracking_level ?? "standard",
-    password_audit_enabled: e.password_audit_enabled ?? false,
-  }));
+  const employees: Employee[] = (data?.employees || []).map((e: any) => {
+    const override = policyOverrides[e.id] || {};
+    return {
+      ...e,
+      tracking_enabled: override.tracking_enabled ?? (e.tracking_enabled ?? true),
+      tracking_level: override.tracking_level ?? (e.tracking_level ?? "standard"),
+      password_audit_enabled: override.password_audit_enabled ?? (e.password_audit_enabled ?? false),
+    };
+  });
 
   // ── Mutations (optimistic – backend may not support all yet) ──────────────
 
@@ -204,7 +238,18 @@ export default function ControlCenterPage() {
         description="Administrative command surface — manage all company accounts, tracking policies, suspension, and password audit controls."
       />
 
+      <SummaryBanner
+        headline="Control Center lets you manage all employee accounts from one place."
+        subtext="You can see who is active, enable security tracking, and suspend accounts if needed."
+        bullets={[
+          "Tracking: Keep an eye on device security",
+          "Password Audit: Ensure employees use strong passwords",
+          "Suspension: Temporarily block access for at-risk accounts"
+        ]}
+      />
+
       <StatGrid
+        cols={4}
         stats={[
           { label: "Total Accounts", value: String(totalAccounts) },
           { label: "Active", value: String(activeAccounts), tone: "ok" },
@@ -221,7 +266,10 @@ export default function ControlCenterPage() {
           desc={`${totalAccounts - trackingEnabled} accounts with tracking off`}
           onClick={() => {
             employees.filter(e => !e.tracking_enabled).forEach(e =>
-              trackingMutation.mutate({ id: e.id, enabled: true })
+              (() => {
+                updatePolicyOverride(e.id, { tracking_enabled: true });
+                trackingMutation.mutate({ id: e.id, enabled: true });
+              })()
             );
           }}
         />
@@ -232,7 +280,10 @@ export default function ControlCenterPage() {
           variant="warn"
           onClick={() => {
             employees.filter(e => e.tracking_level !== "high").forEach(e =>
-              trackingMutation.mutate({ id: e.id, level: "high" })
+              (() => {
+                updatePolicyOverride(e.id, { tracking_level: "high" });
+                trackingMutation.mutate({ id: e.id, level: "high" });
+              })()
             );
           }}
         />
@@ -242,7 +293,10 @@ export default function ControlCenterPage() {
           desc={`${totalAccounts - auditEnabled} without audit`}
           onClick={() => {
             employees.filter(e => !e.password_audit_enabled).forEach(e =>
-              auditMutation.mutate({ id: e.id, enabled: true })
+              (() => {
+                updatePolicyOverride(e.id, { password_audit_enabled: true });
+                auditMutation.mutate({ id: e.id, enabled: true });
+              })()
             );
           }}
         />
@@ -340,18 +394,21 @@ export default function ControlCenterPage() {
                     <td>
                       <Toggle
                         on={!!emp.tracking_enabled}
-                        onToggle={() => trackingMutation.mutate({ id: emp.id, enabled: !emp.tracking_enabled })}
+                        onToggle={() => {
+                          const next = !emp.tracking_enabled;
+                          updatePolicyOverride(emp.id, { tracking_enabled: next });
+                          trackingMutation.mutate({ id: emp.id, enabled: next });
+                        }}
                       />
                     </td>
                     <td>
                       <button
                         type="button"
-                        onClick={() =>
-                          trackingMutation.mutate({
-                            id: emp.id,
-                            level: emp.tracking_level === "high" ? "standard" : "high",
-                          })
-                        }
+                        onClick={() => {
+                          const next = emp.tracking_level === "high" ? "standard" : "high";
+                          updatePolicyOverride(emp.id, { tracking_level: next });
+                          trackingMutation.mutate({ id: emp.id, level: next });
+                        }}
                         className={[
                           "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold transition-colors",
                           emp.tracking_level === "high"
@@ -369,7 +426,11 @@ export default function ControlCenterPage() {
                     <td>
                       <Toggle
                         on={!!emp.password_audit_enabled}
-                        onToggle={() => auditMutation.mutate({ id: emp.id, enabled: !emp.password_audit_enabled })}
+                        onToggle={() => {
+                          const next = !emp.password_audit_enabled;
+                          updatePolicyOverride(emp.id, { password_audit_enabled: next });
+                          auditMutation.mutate({ id: emp.id, enabled: next });
+                        }}
                         colorOn="bg-cyan-500"
                       />
                     </td>

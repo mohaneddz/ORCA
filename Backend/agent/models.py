@@ -68,6 +68,7 @@ class DeviceSnapshot(models.Model):
     class Meta:
         ordering = ["-collected_at"]
         indexes = [
+            models.Index(fields=["received_at"]),
             models.Index(fields=["employee", "-collected_at"]),
             models.Index(fields=["hostname"]),
             models.Index(fields=["risk_level"]),

@@ -25,41 +25,40 @@ export function VmwareResourceBars({ bars, title, subtitle, footer }: VmwareReso
   return (
     <div className="card p-5 h-full flex flex-col">
       {(title || subtitle) && (
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-4">
           <div>
             {title && <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">{title}</p>}
             {subtitle && <p className="m-0 text-xs mt-0.5" style={{ color: "var(--color-neutral-500)" }}>{subtitle}</p>}
           </div>
-          <Activity size={16} style={{ color: "var(--color-primary)" }} />
+          <Activity size={14} className="opacity-40" style={{ color: "var(--color-neutral-400)" }} />
         </div>
       )}
 
-      <div className="flex-1 space-y-5">
+      <div className="flex-1 space-y-4">
         {bars.map(bar => {
           const color = barColor(bar.usedPct, bar.color);
           return (
             <div key={bar.label}>
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-medium" style={{ color: "var(--color-neutral-300)" }}>{bar.label}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs tabular-nums" style={{ color: "var(--color-neutral-400)" }}>{bar.usedLabel} / {bar.totalLabel}</span>
-                  <span
-                    className="text-xs font-bold tabular-nums"
-                    style={{ color }}
-                  >
-                    {bar.usedPct.toFixed(1)}%
-                  </span>
-                </div>
+                <span className="text-[10px] font-semibold tabular-nums" style={{ color }}>
+                  {bar.usedPct.toFixed(0)}%
+                </span>
               </div>
-              <div className="h-2 w-full rounded-full overflow-hidden" style={{ background: "var(--color-surface-3)" }}>
+              <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: "var(--color-surface-3)" }}>
                 <div
                   className="h-full rounded-full transition-all duration-700"
                   style={{
                     width: `${Math.min(bar.usedPct, 100)}%`,
                     background: color,
-                    boxShadow: `0 0 8px ${color}55`,
+                    opacity: 0.85,
                   }}
                 />
+              </div>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-[10px] tabular-nums" style={{ color: "var(--color-neutral-500)" }}>
+                  {bar.usedLabel} / {bar.totalLabel}
+                </span>
               </div>
             </div>
           );
@@ -68,7 +67,7 @@ export function VmwareResourceBars({ bars, title, subtitle, footer }: VmwareReso
 
       {footer && footer.length > 0 && (
         <div
-          className="grid gap-3 mt-5 pt-4"
+          className="grid gap-4 mt-4 pt-3"
           style={{
             borderTop: "1px solid var(--color-border-subtle)",
             gridTemplateColumns: `repeat(${footer.length}, 1fr)`,
@@ -77,7 +76,7 @@ export function VmwareResourceBars({ bars, title, subtitle, footer }: VmwareReso
           {footer.map(f => (
             <div key={f.label} className="text-center">
               <p className="m-0 text-[10px] uppercase tracking-wider" style={{ color: "var(--color-neutral-500)" }}>{f.label}</p>
-              <p className="m-0 mt-1 text-base font-bold text-white">{f.value}</p>
+              <p className="m-0 mt-0.5 text-sm font-semibold text-[var(--color-neutral-100)]">{f.value}</p>
             </div>
           ))}
         </div>

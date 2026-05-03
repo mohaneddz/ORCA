@@ -1,4 +1,4 @@
-﻿import { RefreshCw, Server, Cpu, Database, Shield, Camera, Wrench, Monitor } from "lucide-react";
+import { RefreshCw, Server, Cpu, Database, Shield, Monitor } from "lucide-react";
 import { useVmwareDashboard } from "@/hooks/useVmwareDashboard";
 import { VmwareMetricCard } from "./VmwareMetricCard";
 import { VmwareResourceBars } from "./VmwareResourceBars";
@@ -195,89 +195,56 @@ export function VmwareDashboard() {
         />
       </section>
 
-      {/* â”€â”€ 2-column panels â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <section className="grid gap-4 xl:grid-cols-2">
-        {/* Left: Resource bars + Host load */}
-        <div className="grid gap-4">
-          <VmwareResourceBars
-            title={t("vmware.resource.title")}
-            subtitle={t("vmware.resource.subtitle")}
-            bars={storageBars}
-            footer={[
-              { label: "vCPUs", value: String(s?.totalAllocatedVcpu ?? 0) },
-              { label: "RAM",   value: s ? `${s.totalAllocatedMemoryGiB} GiB` : "â€”" },
-              { label: t("vmware.stats.clusters"), value: String(s?.totalClusters ?? 0) },
-            ]}
-          />
-          <VmwareHostUsageList hosts={hosts} />
-        </div>
-
-        {/* Right: Datastore health + Alerts */}
-        <div className="grid gap-4">
-          <VmwareDatastoreHealth datastores={datastores} />
-          <VmwareAlertsPanel alerts={alerts} />
-        </div>
+      {/* â”€â”€ Resource + Datastore â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      <section className="grid gap-3 xl:grid-cols-[3fr_2fr]">
+        <VmwareResourceBars
+          title={t("vmware.resource.title")}
+          subtitle={t("vmware.resource.subtitle")}
+          bars={storageBars}
+          footer={[
+            { label: "vCPUs", value: String(s?.totalAllocatedVcpu ?? 0) },
+            { label: "RAM",   value: s ? `${s.totalAllocatedMemoryGiB} GiB` : "â€”" },
+            { label: t("vmware.stats.clusters"), value: String(s?.totalClusters ?? 0) },
+          ]}
+        />
+        <VmwareDatastoreHealth datastores={datastores} />
       </section>
 
-      {/* â”€â”€ Quick-stats strip (Health Â· Snapshots Â· Tools) â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* â”€â”€ Hosts + Alerts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      <section className="grid gap-3 xl:grid-cols-2">
+        <VmwareHostUsageList hosts={hosts} />
+        <VmwareAlertsPanel alerts={alerts} />
+      </section>
+
+      {/* â”€â”€ Quick-stats strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {s && (
-        <div
-          className="card px-5 py-4 grid gap-x-8 gap-y-3 sm:grid-cols-3 text-xs"
-          style={{ borderColor: "var(--color-border-subtle)" }}
-        >
-          {/* VM Health */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Shield size={12} style={{ color: "var(--color-primary)" }} />
-              <span className="font-semibold text-white text-xs">{t("vmware.health.title")}</span>
-            </div>
-            <div className="flex items-center gap-2 h-1.5 rounded-full overflow-hidden">
-              <div style={{ width: `${(s.healthyVMs / Math.max(s.runningVMs, 1)) * 100}%`, background: "#34d399", height: "100%" }} />
-              <div style={{ width: `${(s.warningVMs / Math.max(s.runningVMs, 1)) * 100}%`, background: "#fbbf24", height: "100%" }} />
-              <div style={{ width: `${(s.criticalVMs / Math.max(s.runningVMs, 1)) * 100}%`, background: "#fb7185", height: "100%" }} />
-            </div>
-            <div className="flex gap-3 text-[11px]">
-              <span style={{ color: "#34d399" }}>âœ“ {s.healthyVMs}</span>
-              <span style={{ color: "#fbbf24" }}>âš  {s.warningVMs}</span>
-              <span style={{ color: "#fb7185" }}>âœ— {s.criticalVMs}</span>
-            </div>
-          </div>
-
-          {/* Snapshot Risk */}
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Camera size={12} style={{ color: "var(--color-primary)" }} />
-              <span className="font-semibold text-white text-xs">{t("vmware.snapshot.title")}</span>
-            </div>
-            {[
-              { label: t("vmware.snapshot.vms"), value: String(s.vmsWithSnapshots) },
-              { label: t("vmware.snapshot.oldest"), value: s.oldestSnapshotDays !== null ? `${s.oldestSnapshotDays}d` : "â€”" },
-              { label: t("vmware.snapshot.crit"), value: String(s.criticalSnapshotCount), danger: s.criticalSnapshotCount > 0 },
-            ].map(row => (
-              <div key={row.label} className="flex items-center justify-between">
-                <span style={{ color: "var(--color-neutral-400)" }}>{row.label}</span>
-                <span className={row.danger ? "status-danger" : "font-semibold text-white tabular-nums"}>{row.value}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* VMware Tools */}
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Wrench size={12} style={{ color: "var(--color-primary)" }} />
-              <span className="font-semibold text-white text-xs">{t("vmware.tools.title")}</span>
-            </div>
-            {[
-              { label: t("vmware.tools.running"),    value: String(s.toolsRunning),    ok: true },
-              { label: t("vmware.tools.notRunning"), value: String(s.toolsNotRunning), warn: s.toolsNotRunning > 0 },
-              { label: t("vmware.tools.ips"),        value: String(s.guestIpsAvailable) },
-            ].map(row => (
-              <div key={row.label} className="flex items-center justify-between">
-                <span style={{ color: "var(--color-neutral-400)" }}>{row.label}</span>
-                <span className={row.ok ? "status-ok" : row.warn ? "status-warn" : "font-semibold text-white tabular-nums"}>{row.value}</span>
-              </div>
-            ))}
-          </div>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px]" style={{ color: "var(--color-neutral-500)" }}>
+          <span className="inline-flex items-center gap-1.5">
+            <span>VM Health:</span>
+            <span className="tabular-nums font-medium" style={{ color: "#7dd3fc" }}>{s.healthyVMs} ok</span>
+            <span className="tabular-nums font-medium" style={{ color: "#fcd34d" }}>{s.warningVMs} warn</span>
+            <span className="tabular-nums font-medium" style={{ color: "#fda4af" }}>{s.criticalVMs} crit</span>
+          </span>
+          <span className="w-px h-3 opacity-20" style={{ background: "var(--color-neutral-500)" }} />
+          <span className="inline-flex items-center gap-1.5">
+            <span>Snapshots:</span>
+            <span className="tabular-nums font-medium text-neutral-200">{s.vmsWithSnapshots} VMs</span>
+            {s.oldestSnapshotDays !== null && (
+              <span className="tabular-nums">(oldest {s.oldestSnapshotDays}d)</span>
+            )}
+            {s.criticalSnapshotCount > 0 && (
+              <span className="tabular-nums font-medium" style={{ color: "#fda4af" }}>{s.criticalSnapshotCount} crit</span>
+            )}
+          </span>
+          <span className="w-px h-3 opacity-20" style={{ background: "var(--color-neutral-500)" }} />
+          <span className="inline-flex items-center gap-1.5">
+            <span>Tools:</span>
+            <span className="tabular-nums font-medium text-neutral-200">{s.toolsRunning} running</span>
+            {s.toolsNotRunning > 0 && (
+              <span className="tabular-nums font-medium" style={{ color: "#fcd34d" }}>{s.toolsNotRunning} stopped</span>
+            )}
+            <span className="tabular-nums">{s.guestIpsAvailable} IPs</span>
+          </span>
         </div>
       )}
 

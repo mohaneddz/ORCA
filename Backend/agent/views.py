@@ -11,6 +11,7 @@ from organizations.models import Employee
 from organizations.views import get_org_from_request, get_org_or_employee_from_request
 
 from .models import ApprovedSoftware, DeviceSnapshot, DiskHealthSnapshot, NetworkDeviceSnapshot, PortRemediationRequest, SystemMetricsSnapshot
+from .ml_process import predict_process
 from .risk import _RISKY_PORTS, compute_disk_risk, compute_network_risk, compute_risk, compute_system_risk
 
 
@@ -140,6 +141,9 @@ class SnapshotIngestView(View):
 
         # ── Strip agent-supplied risk from stored raw payload ─────────────
         raw = {k: v for k, v in payload.items() if k not in ("risk", "employee_id")}
+
+        # Erase previous timestamp instances for the same user and device
+        DeviceSnapshot.objects.filter(employee=employee, hostname=hardware.get("hostname", "")).delete()
 
         # ── Persist ───────────────────────────────────────────────────────
         snapshot = DeviceSnapshot.objects.create(
@@ -878,4 +882,47 @@ class DiskHealthView(View):
         return JsonResponse(
             {"id": str(snapshot.id), "received_at": snapshot.received_at.isoformat(), "risk": risk},
             status=201,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Process malware prediction
+# POST /api/agent/predict-process/
+# ---------------------------------------------------------------------------
+@method_decorator(csrf_exempt, name="dispatch")
+class PredictProcessView(View):
+    def post(self, request):
+        try:
+            payload = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON."}, status=400)
+
+        cpu_percent = payload.get("cpu_percent")
+        memory_mb = payload.get("memory_mb")
+        thread_count = payload.get("thread_count")
+        is_signed = payload.get("is_signed")
+
+        missing = [
+            key
+            for key, value in {
+                "cpu_percent": cpu_percent,
+                "memory_mb": memory_mb,
+                "thread_count": thread_count,
+                "is_signed": is_signed,
+            }.items()
+            if value is None
+        ]
+        if missing:
+            return JsonResponse({"error": f"Missing required fields: {', '.join(missing)}"}, status=400)
+
+        try:
+            prediction = predict_process(cpu_percent, memory_mb, thread_count, is_signed)
+        except (TypeError, ValueError):
+            return JsonResponse({"error": "Invalid field types."}, status=400)
+
+        return JsonResponse(
+            {
+                "is_malicious": bool(prediction),
+                "risk_level": "high" if prediction else "low",
+            }
         )

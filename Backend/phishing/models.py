@@ -106,6 +106,10 @@ class PhishingSimulationTarget(models.Model):
 
     class Meta:
         unique_together = [("campaign", "employee")]
+        indexes = [
+            models.Index(fields=["sent_at"]),
+            models.Index(fields=["clicked_at"]),
+        ]
 
     def __str__(self):
         clicked = "clicked" if self.clicked_at else "pending"
@@ -162,6 +166,9 @@ class TrainingEnrollment(models.Model):
 
     class Meta:
         unique_together = [("employee", "module")]
+        indexes = [
+            models.Index(fields=["completed_at"]),
+        ]
 
     def __str__(self):
         status = "completed" if self.completed_at else "enrolled"

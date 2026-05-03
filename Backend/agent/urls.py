@@ -11,6 +11,7 @@ from .views import (
     SnapshotIngestView,
     SoftwareAuditView,
     SystemMetricsView,
+    PredictProcessView,
 )
 
 urlpatterns = [
@@ -30,4 +31,6 @@ urlpatterns = [
     path("agent/system-metrics/", SystemMetricsView.as_view()),
     # Disk SMART health (smartctl / pySMART)
     path("agent/disk-health/", DiskHealthView.as_view()),
+    # ML Process Prediction
+    path("agent/predict-process/", PredictProcessView.as_view()),
 ]

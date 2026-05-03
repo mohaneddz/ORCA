@@ -221,6 +221,68 @@ async function answerWithGroqNoContext(
 }
 
 // ──────────────────────────────────────────────────────────────────
+// Semantic Preprocessing (Groq-based)
+// ──────────────────────────────────────────────────────────────────
+
+export async function preprocessDocument(
+  fileName: string,
+  rawText: string,
+  language: AppLanguage
+): Promise<string[]> {
+  const config = await getApiConfig();
+  const apiKey = required("GROQ_API_KEY", config.groqApiKey);
+
+  logger.info("rag.preprocess.start", { fileName, textLength: rawText.length });
+
+  const response = await fetch(`${config.groqBaseUrl}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: config.groqChatModel,
+      temperature: 0.1,
+      messages: [
+        {
+          role: "system",
+          content: `You are a document processing assistant. Your task is to clean up raw text extracted from a ${fileName} file and split it into logical, semantically coherent chunks.
+- Respond only in ${LANGUAGE_LABEL[language]}.
+- Correct OCR errors, fix broken words, and remove useless headers/footers.
+- Preserve all technical data, numbers, and key information.
+- Insert the delimiter "<---CHUNK--->" between logical sections.
+- Each chunk should be around 500-1500 characters.
+- Output ONLY the processed text with delimiters. No preamble or code fences.`,
+        },
+        {
+          role: "user",
+          content: `Document: ${fileName}\n\nRaw Text:\n${rawText.slice(0, 30000)}`, // Limit to 30k chars for context window
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    logger.warn("rag.preprocess.failed", { status: response.status });
+    // Fallback to basic chunking if Groq fails
+    return [];
+  }
+
+  const data = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  const processedText = data?.choices?.[0]?.message?.content || "";
+  
+  const chunks = processedText
+    .split("<---CHUNK--->")
+    .map((c) => c.trim())
+    .filter((c) => c.length > 50);
+
+  logger.info("rag.preprocess.success", { chunkCount: chunks.length });
+  return chunks;
+}
+
+// ──────────────────────────────────────────────────────────────────
 // Public exports
 // ──────────────────────────────────────────────────────────────────
 
@@ -239,6 +301,8 @@ export async function upsertDocumentChunks(
       source: chunk.source || "local-document",
       title: chunk.title || "",
       path: chunk.path || "",
+      contentType: chunk.source?.toLowerCase().endsWith(".pdf") ? "application/pdf" : "text/plain",
+      uploadedAt: new Date().toISOString(),
     })),
   });
   logger.info("rag.upsert.success", { chunkCount: chunks.length });
@@ -297,36 +361,48 @@ export async function deleteDocument(docName: string): Promise<void> {
   const config = await getApiConfig();
   const index = getPineconeIndex(config);
 
-  let paginationToken: string | undefined = undefined;
-  const idsToDelete: string[] = [];
-
-  do {
-    const response = await index.listPaginated({
-      prefix: `${docName}-chunk-`,
-      limit: 100,
-      paginationToken,
+  // Use metadata filter for robust deletion
+  // Note: Depending on the Pinecone client/API version, this might be deleteMany({ filter: ... })
+  // or a different method. For Serverless/Assistant, it often supports filters.
+  try {
+    await index.deleteMany({
+      filter: { source: { "$eq": docName } }
     });
-    if (response.vectors) {
-      idsToDelete.push(
-        ...response.vectors
-          .map((v) => v.id)
-          .filter((id): id is string => id !== undefined)
-      );
-    }
-    paginationToken = response.pagination?.next;
-  } while (paginationToken);
+    logger.info("rag.delete_doc.success.filtered", { docName });
+  } catch (error) {
+    logger.warn("rag.delete_doc.filter_failed", { message: String(error) });
+    
+    // Fallback to ID-based deletion if filter is not supported
+    let paginationToken: string | undefined = undefined;
+    const idsToDelete: string[] = [];
 
-  if (idsToDelete.length > 0) {
-    for (let i = 0; i < idsToDelete.length; i += 1000) {
-      const batch = idsToDelete.slice(i, i + 1000);
-      await index.deleteMany(batch);
+    do {
+      const response = await index.listPaginated({
+        prefix: `${docName}-chunk-`,
+        limit: 100,
+        paginationToken,
+      });
+      if (response.vectors) {
+        idsToDelete.push(
+          ...response.vectors
+            .map((v) => v.id)
+            .filter((id): id is string => id !== undefined)
+        );
+      }
+      paginationToken = response.pagination?.next;
+    } while (paginationToken);
+
+    if (idsToDelete.length > 0) {
+      for (let i = 0; i < idsToDelete.length; i += 1000) {
+        const batch = idsToDelete.slice(i, i + 1000);
+        await index.deleteMany(batch);
+      }
     }
+    logger.info("rag.delete_doc.success.ids", {
+      docName,
+      deletedChunks: idsToDelete.length,
+    });
   }
-
-  logger.info("rag.delete_doc.success", {
-    docName,
-    deletedChunks: idsToDelete.length,
-  });
 }
 
 export async function runRag(

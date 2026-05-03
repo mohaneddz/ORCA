@@ -45,19 +45,28 @@ type StatItem = {
   icon?: ReactNode;
 };
 
-export function StatGrid({ stats }: { stats: StatItem[] }) {
+export function StatGrid({
+  stats,
+  className,
+  cols = 3,
+}: {
+  stats: StatItem[];
+  className?: string;
+  cols?: 3 | 4;
+}) {
+  const lgColsClass = cols === 4 ? "lg:grid-cols-4" : "lg:grid-cols-3";
   return (
-    <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <section className={`grid gap-4 sm:grid-cols-2 ${className || lgColsClass}`}>
       {stats.map((stat, i) => {
-        const trendUp   = stat.trend !== undefined && stat.trend > 0;
+        const trendUp = stat.trend !== undefined && stat.trend > 0;
         const trendDown = stat.trend !== undefined && stat.trend < 0;
         const trendFlat = stat.trend !== undefined && stat.trend === 0;
 
         const valueColor =
           stat.tone === "danger" ? "#fb7185"
-          : stat.tone === "ok"   ? "#34d399"
-          : stat.tone === "warn" ? "#fbbf24"
-          : "var(--color-neutral-100)";
+            : stat.tone === "ok" ? "#34d399"
+              : stat.tone === "warn" ? "#fbbf24"
+                : "var(--color-neutral-100)";
 
         return (
           <article

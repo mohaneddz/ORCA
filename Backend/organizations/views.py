@@ -260,7 +260,13 @@ class ProfileAvatarUploadView(View):
         if uploaded_file is None:
             return JsonResponse({"error": "file is required (multipart/form-data)."}, status=400)
 
-        if not (uploaded_file.content_type or "").startswith("image/"):
+        extension = Path(uploaded_file.name or "avatar.jpg").suffix.lower() or ".jpg"
+        allowed_image_extensions = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+        content_type = (uploaded_file.content_type or "").lower()
+        has_image_mime = content_type.startswith("image/")
+        has_allowed_extension = extension in allowed_image_extensions
+        # Some clients send application/octet-stream for Blob/FormData uploads.
+        if not has_image_mime and not has_allowed_extension:
             return JsonResponse({"error": "Only image files are allowed."}, status=400)
 
         max_bytes = 5 * 1024 * 1024
@@ -285,7 +291,6 @@ class ProfileAvatarUploadView(View):
             )
 
         bucket = getattr(settings, "SUPABASE_AVATARS_BUCKET", None) or "staff-pfps"
-        extension = Path(uploaded_file.name or "avatar.jpg").suffix.lower() or ".jpg"
         object_path = f"staff/{org.id}/avatar{extension}"
         upload_url = f"{supabase_url}/storage/v1/object/{bucket}/{object_path}"
 

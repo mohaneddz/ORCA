@@ -164,7 +164,15 @@ export default function AccountPage() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData?.error || "Failed to upload avatar");
+        const details =
+          typeof errorData?.details === "string"
+            ? errorData.details
+            : errorData?.details
+              ? JSON.stringify(errorData.details)
+              : "";
+        throw new Error(
+          [errorData?.error, details].filter(Boolean).join(" - ") || "Failed to upload avatar"
+        );
       }
 
       const data = await res.json();
@@ -222,6 +230,7 @@ export default function AccountPage() {
         description={t("account.description")}
       />
       <StatGrid
+        cols={4}
         stats={[
           { label: t("account.stats.role"), value: user.role === "admin" ? t("account.role.admin") : t("account.role.staff") },
           { label: t("account.stats.organization"), value: user.organizationName.length > 18 ? user.organizationName.slice(0, 15) + "..." : user.organizationName },

@@ -13,9 +13,9 @@ function connBadge(state: string, maintenance: boolean) {
 }
 
 function barColor(pct: number): string {
-  if (pct >= 85) return "#fb7185";
-  if (pct >= 70) return "#fbbf24";
-  return "var(--color-primary)";
+  if (pct >= 85) return "#fda4af";
+  if (pct >= 70) return "#fcd34d";
+  return "#7dd3fc";
 }
 
 function MiniBar({ pct, label }: { pct: number; label: string }) {
@@ -29,7 +29,7 @@ function MiniBar({ pct, label }: { pct: number; label: string }) {
           style={{ width: `${Math.min(pct, 100)}%`, background: color, boxShadow: `0 0 6px ${color}44` }}
         />
       </div>
-      <span className="text-[10px] w-8 text-right tabular-nums" style={{ color }}>{pct}%</span>
+          <span className="text-[10px] w-8 text-right tabular-nums" style={{ color: "var(--color-neutral-400)" }}>{pct}%</span>
     </div>
   );
 }
@@ -43,31 +43,31 @@ export function VmwareHostUsageList({ hosts }: VmwareHostUsageListProps) {
   });
 
   return (
-    <div className="card p-5 flex flex-col gap-4 h-full">
+    <div className="card p-5 flex flex-col gap-3 h-full">
       <div className="flex items-center justify-between">
         <div>
           <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">Host Load</p>
           <p className="m-0 text-xs mt-0.5" style={{ color: "var(--color-neutral-500)" }}>
-            {hosts.filter(h => h.connection_state === "CONNECTED").length} connected, {hosts.filter(h => h.maintenanceMode).length} maintenance
+            {hosts.filter(h => h.connection_state === "CONNECTED").length} connected · {hosts.filter(h => h.maintenanceMode).length} maintenance
           </p>
         </div>
-        <Server size={16} style={{ color: "var(--color-primary)" }} />
+        <Server size={14} className="opacity-40" style={{ color: "var(--color-neutral-400)" }} />
       </div>
 
-      <div className="space-y-4 overflow-y-auto" style={{ maxHeight: 320 }}>
+      <div className="space-y-2 overflow-y-auto" style={{ maxHeight: 320 }}>
         {sorted.map(h => (
           <div
             key={h.host}
-            className="p-3 rounded-xl space-y-2"
+            className="p-2.5 rounded-lg space-y-1.5"
             style={{
-              background: "var(--color-surface-2)",
+              background: "color-mix(in srgb, var(--color-surface-2) 92%, transparent)",
               border: "1px solid var(--color-border-subtle)",
-              opacity: h.connection_state !== "CONNECTED" ? 0.65 : 1,
+              opacity: h.connection_state !== "CONNECTED" ? 0.6 : 1,
             }}
           >
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <p className="m-0 text-xs font-medium truncate" style={{ color: "var(--color-neutral-200)" }}>
+                <p className="m-0 text-[11px] font-medium truncate" style={{ color: "var(--color-neutral-200)" }}>
                   {h.name}
                 </p>
                 <p className="m-0 text-[10px]" style={{ color: "var(--color-neutral-500)" }}>
@@ -77,7 +77,7 @@ export function VmwareHostUsageList({ hosts }: VmwareHostUsageListProps) {
               {connBadge(h.connection_state, h.maintenanceMode)}
             </div>
             {h.connection_state === "CONNECTED" && !h.maintenanceMode && (
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <MiniBar pct={h.cpuUsagePct} label="CPU" />
                 <MiniBar pct={h.memoryUsagePct} label="RAM" />
               </div>

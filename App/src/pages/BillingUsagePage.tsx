@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PageHeader, StatGrid } from "@/components/cards/BaseCards";
+import { PageHeader, StatGrid, SummaryBanner } from "@/components/cards/BaseCards";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { DonutGauge, GroupedBarChart } from "@/components/ui/TrendChart";
 import { useQuery } from "@tanstack/react-query";
@@ -60,7 +60,18 @@ export default function BillingUsagePage() {
         description={t("billing.description")}
       />
 
+      <SummaryBanner
+        headline="Keep track of your current plan and limits."
+        subtext="See how much of your plan you have used so far this billing cycle."
+        bullets={[
+          "Usage: Check your registered devices and active projects",
+          "Plan limits: Ensure you don't run out of API requests or storage",
+          "Upgrade: Switch to a higher plan if your company grows"
+        ]}
+      />
+
       <StatGrid
+        cols={4}
         stats={[
           { label: t("billing.stats.plan"), value: data.plan.toUpperCase(), helper: data.organization, tone: "ok" },
           { label: t("billing.stats.upgrade"), value: data.plan === "free" ? "PRO" : data.plan === "pro" ? "BUSINESS" : "BUSINESS", helper: "Recommended next tier", tone: "warn" },
@@ -96,7 +107,7 @@ export default function BillingUsagePage() {
           </button>
         </div>
 
-        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {usageByCategory.map((item) => (
             <div key={item.name} className="rounded-md border border-white/10 bg-white/4 px-3 py-2">
               <p className="m-0 text-xs uppercase tracking-wide text-[var(--color-neutral-500)]">{item.name}</p>

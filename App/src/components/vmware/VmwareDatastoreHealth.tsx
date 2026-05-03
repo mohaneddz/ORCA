@@ -6,15 +6,15 @@ interface VmwareDatastoreHealthProps {
 }
 
 function statusBadge(pct: number) {
-  if (pct >= 90) return <span className="status-danger">Critical</span>;
-  if (pct >= 80) return <span className="status-warn">Warning</span>;
-  return <span className="status-ok">Healthy</span>;
+  if (pct >= 90) return <span className="status-danger text-[10px] px-1.5 py-0">Critical</span>;
+  if (pct >= 80) return <span className="status-warn text-[10px] px-1.5 py-0">Warning</span>;
+  return <span className="status-ok text-[10px] px-1.5 py-0">Healthy</span>;
 }
 
 function usageColor(pct: number): string {
-  if (pct >= 90) return "#fb7185";
-  if (pct >= 80) return "#fbbf24";
-  return "#34d399";
+  if (pct >= 90) return "#fda4af";
+  if (pct >= 80) return "#fcd34d";
+  return "#7dd3fc";
 }
 
 function formatBytes(bytes: number): string {
@@ -29,49 +29,54 @@ export function VmwareDatastoreHealth({ datastores }: VmwareDatastoreHealthProps
   const warning = datastores.filter(d => d.usage_percent >= 80 && d.usage_percent < 90).length;
   const critical = datastores.filter(d => d.usage_percent >= 90).length;
 
-  const topFullest = [...datastores]
-    .sort((a, b) => b.usage_percent - a.usage_percent)
-    .slice(0, 4);
+  const troubled = [...datastores]
+    .filter(d => d.usage_percent >= 80)
+    .sort((a, b) => b.usage_percent - a.usage_percent);
+  const total = Math.max(datastores.length, 1);
 
   return (
-    <div className="card p-5 flex flex-col gap-4 h-full">
+    <div className="card p-5 flex flex-col gap-3 h-full">
       <div className="flex items-center justify-between">
         <div>
           <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">Datastore Health</p>
-          <p className="m-0 text-xs mt-0.5" style={{ color: "var(--color-neutral-500)" }}>{datastores.length} datastores monitored</p>
+          <p className="m-0 text-xs mt-0.5" style={{ color: "var(--color-neutral-500)" }}>{datastores.length} monitored</p>
         </div>
-        <Database size={16} style={{ color: "var(--color-primary)" }} />
+        <Database size={14} className="opacity-40" style={{ color: "var(--color-neutral-400)" }} />
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="flex-1 rounded-lg p-3 text-center" style={{ background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.1)" }}>
-          <p className="m-0 text-xl font-bold font-mono" style={{ color: "#34d399" }}>{healthy}</p>
-          <p className="m-0 text-[10px] uppercase tracking-widest mt-1" style={{ color: "var(--color-neutral-500)" }}>Healthy</p>
+      <div className="space-y-2">
+        <div className="h-2 w-full rounded-full overflow-hidden flex" style={{ background: "var(--color-surface-3)" }}>
+          <div style={{ width: `${(healthy / total) * 100}%`, background: "#7dd3fc" }} />
+          <div style={{ width: `${(warning / total) * 100}%`, background: "#fcd34d" }} />
+          <div style={{ width: `${(critical / total) * 100}%`, background: "#fda4af" }} />
         </div>
-        <div className="flex-1 rounded-lg p-3 text-center" style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.1)" }}>
-          <p className="m-0 text-xl font-bold font-mono" style={{ color: "#fbbf24" }}>{warning}</p>
-          <p className="m-0 text-[10px] uppercase tracking-widest mt-1" style={{ color: "var(--color-neutral-500)" }}>Warning</p>
-        </div>
-        <div className="flex-1 rounded-lg p-3 text-center" style={{ background: "rgba(244,63,94,0.05)", border: "1px solid rgba(244,63,94,0.1)" }}>
-          <p className="m-0 text-xl font-bold font-mono" style={{ color: "#fb7185" }}>{critical}</p>
-          <p className="m-0 text-[10px] uppercase tracking-widest mt-1" style={{ color: "var(--color-neutral-500)" }}>Critical</p>
+        <div className="flex items-center gap-3 text-xs">
+          <span className="inline-flex items-center gap-1" style={{ color: "#7dd3fc" }}>
+            <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: "#7dd3fc" }} />
+            {healthy}
+          </span>
+          <span className="inline-flex items-center gap-1" style={{ color: "#fcd34d" }}>
+            <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: "#fcd34d" }} />
+            {warning}
+          </span>
+          <span className="inline-flex items-center gap-1" style={{ color: "#fda4af" }}>
+            <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: "#fda4af" }} />
+            {critical}
+          </span>
         </div>
       </div>
 
-      <div
-        className="flex-1 space-y-2 pt-2"
-        style={{ borderTop: "1px solid var(--color-border-subtle)" }}
-      >
+      <div className="flex-1 space-y-3" style={{ borderTop: "1px solid var(--color-border-subtle)", paddingTop: 12 }}>
         <p className="m-0 text-[10px] uppercase tracking-wider font-semibold" style={{ color: "var(--color-neutral-500)" }}>
-          Fullest Datastores
+          {troubled.length > 0 ? "Needs attention" : "All datastores healthy"}
         </p>
-        {topFullest.map(ds => {
+        {troubled.map(ds => {
           const color = usageColor(ds.usage_percent);
           return (
             <div key={ds.datastore} className="space-y-1">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="text-[11px] font-medium truncate" style={{ color: "var(--color-neutral-300)" }}>
+                  <span className="text-[11px] font-medium truncate" style={{ color: "var(--color-neutral-200)" }}>
                     {ds.name}
                   </span>
                   {statusBadge(ds.usage_percent)}
@@ -80,10 +85,10 @@ export function VmwareDatastoreHealth({ datastores }: VmwareDatastoreHealthProps
                   {ds.usage_percent.toFixed(0)}%
                 </span>
               </div>
-              <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: "var(--color-surface-3)" }}>
+              <div className="h-1 w-full rounded-full overflow-hidden" style={{ background: "var(--color-surface-3)" }}>
                 <div
                   className="h-full rounded-full"
-                  style={{ width: `${ds.usage_percent}%`, background: color }}
+                  style={{ width: `${ds.usage_percent}%`, background: color, opacity: 0.8 }}
                 />
               </div>
               <p className="m-0 text-[10px]" style={{ color: "var(--color-neutral-500)" }}>
@@ -92,6 +97,11 @@ export function VmwareDatastoreHealth({ datastores }: VmwareDatastoreHealthProps
             </div>
           );
         })}
+        {troubled.length === 0 && (
+          <p className="m-0 text-xs italic" style={{ color: "var(--color-neutral-500)" }}>
+            No datastores above 80% usage.
+          </p>
+        )}
       </div>
     </div>
   );

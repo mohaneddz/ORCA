@@ -696,7 +696,7 @@ const fr: TranslationMap = {
   "summary.step3.desc": "Tout le monde reste informe sans attendre un long rapport.",
   "table.action.forceMfa": "Forcer MFA",
   "table.action.patchRollout": "Deploiement de patchs",
-  "table.action.tokenRevoke": "Revocation de token",
+  "table.action.tokenRevoke": "Revocation du jeton",
   "table.action.networkIsolate": "Isolation reseau",
   "table.result.success": "Succes",
   "table.result.inProgress": "En cours",

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+﻿import { useState, useMemo } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
@@ -13,18 +13,16 @@ import {
   Lock,
   Network,
   Plus,
-  RefreshCw,
   Router,
   Server,
   Shield,
   ShieldAlert,
-  Wifi,
-  Zap,
+  Wifi
 } from "lucide-react";
-import { PageHeader, StatGrid } from "@/components/cards/BaseCards";
+import { PageHeader, StatGrid, SummaryBanner } from "@/components/cards/BaseCards";
 import { DualAreaChart, GroupedBarChart } from "@/components/ui/TrendChart";
 
-// ─── Mock data ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Mock data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const MOCK_DEVICES = [
   {
@@ -116,7 +114,7 @@ const MOCK_ALERTS = [
     device__ip_address: "192.168.1.2",
     alert_type: "high_cpu",
     severity: "critical",
-    title: "CRITICAL: CPU at 87.1% (1-min avg) — device may be overloaded",
+    title: "CRITICAL: CPU at 87.1% (1-min avg) â€” device may be overloaded",
     description: "CPU has been above 80% for 12 consecutive minutes. Process thrashing suspected.",
     recommendation: "Run 'show processes cpu sorted' and investigate top consumers. Consider redistributing routing load.",
     ai_generated: false,
@@ -128,7 +126,7 @@ const MOCK_ALERTS = [
     device__ip_address: "192.168.2.3",
     alert_type: "interface_down",
     severity: "critical",
-    title: "CRITICAL: 6/8 interfaces down (75%) — major connectivity loss",
+    title: "CRITICAL: 6/8 interfaces down (75%) â€” major connectivity loss",
     description: "Most interfaces are reporting oper-down status. Possible power or uplink failure.",
     recommendation: "Check physical connections and power. Run 'show interface status' remotely if reachable.",
     ai_generated: false,
@@ -140,7 +138,7 @@ const MOCK_ALERTS = [
     device__ip_address: "192.168.1.1",
     alert_type: "security_vuln",
     severity: "critical",
-    title: "Critical CVE: CVE-2023-20198 — Cisco IOS XE Web UI Privilege Escalation",
+    title: "Critical CVE: CVE-2023-20198 â€” Cisco IOS XE Web UI Privilege Escalation",
     description: "IOS version 17.6.4 is affected by CVE-2023-20198 (CVSS 10.0). Unauthenticated RCE possible.",
     recommendation: "Upgrade IOS to 17.9.4a immediately or disable HTTP server: 'no ip http server'.",
     ai_generated: false,
@@ -164,7 +162,7 @@ const MOCK_ALERTS = [
     device__ip_address: "192.168.2.3",
     alert_type: "auth_failure",
     severity: "high",
-    title: "Authentication failures: 12 — possible brute-force attempt",
+    title: "Authentication failures: 12 â€” possible brute-force attempt",
     description: "12 failed SSH login attempts from 203.0.113.45 in the last 5 minutes.",
     recommendation: "Enable login block-for 60 attempts 3 within 30. Block source IP at perimeter.",
     ai_generated: false,
@@ -204,7 +202,7 @@ const MOCK_VULN_TREND = [
   { name: "Sun", primary: 8, secondary: 4 },
 ];
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const DEVICE_ICONS: Record<string, LucideIcon> = {
   router: Router,
@@ -258,7 +256,7 @@ function severityChip(severity: string) {
   return <span className={cls[severity] ?? "status-neutral"}>{severity}</span>;
 }
 
-// ─── Sub-components ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function DeviceCard({ device, onClick, selected }: {
   device: typeof MOCK_DEVICES[0];
@@ -267,6 +265,9 @@ function DeviceCard({ device, onClick, selected }: {
 }) {
   const Icon = DEVICE_ICONS[device.device_type] ?? Server;
   const riskPct = device.latest_risk_score ?? 0;
+  const alertTone =
+    device.unresolved_alerts >= 6 ? "#f43f5e" : device.unresolved_alerts >= 3 ? "#fb7185" : "#f97316";
+  const ringColor = riskColor(device.latest_risk_level ?? "");
 
   return (
     <div
@@ -277,8 +278,8 @@ function DeviceCard({ device, onClick, selected }: {
         background: selected ? "rgba(124,58,237,0.08)" : undefined,
       }}
     >
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <div className="flex items-center gap-2">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
           <div
             className="flex items-center justify-center rounded-lg"
             style={{
@@ -292,66 +293,70 @@ function DeviceCard({ device, onClick, selected }: {
               <Icon size={16} />
             </span>
           </div>
-          <div>
-            <p className="m-0 text-sm font-semibold text-neutral-900 dark:text-neutral-100">{device.name}</p>
+          <div className="min-w-0">
+            <p className="m-0 text-sm font-semibold text-neutral-900 dark:text-neutral-100 truncate">{device.name}</p>
             <p className="m-0 text-xs text-slate-500 dark:text-neutral-400">{device.ip_address}</p>
           </div>
         </div>
         {statusChip(device.status)}
       </div>
 
-      {/* Risk bar */}
-      <div className="mb-3">
-        <div className="flex justify-between mb-1">
-          <span className="text-xs text-slate-500 dark:text-neutral-400">Health Score</span>
-          <span className="text-xs font-bold" style={{ color: riskColor(device.latest_risk_level ?? "") }}>
-            {riskPct}/100
-          </span>
-        </div>
-        <div style={{ height: 4, background: "var(--border-color, rgba(0,0,0,0.06))", borderRadius: 9999 }}>
+      <div className="mt-3 flex items-center gap-3">
+        <div
+          className="relative shrink-0 rounded-full"
+          style={{
+            width: 70,
+            height: 70,
+            background: `conic-gradient(${ringColor} ${riskPct * 3.6}deg, rgba(148,163,184,0.18) 0deg)`,
+            boxShadow: `0 0 18px ${ringColor}2f`,
+          }}
+        >
           <div
+            className="absolute rounded-full"
             style={{
-              height: "100%",
-              width: `${riskPct}%`,
-              background: riskColor(device.latest_risk_level ?? ""),
-              borderRadius: 9999,
-              transition: "width 0.5s ease",
+              inset: 7,
+              background: "rgba(2,8,23,0.95)",
+              border: "1px solid rgba(148,163,184,0.2)",
             }}
           />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-sm font-bold tabular-nums" style={{ color: ringColor }}>
+              {riskPct}
+            </span>
+          </div>
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="m-0 text-[11px] uppercase tracking-[0.08em] text-slate-500 dark:text-neutral-400">
+            Health Radar
+          </p>
+          <p className="m-0 mt-0.5 text-xs text-slate-400 dark:text-neutral-500 truncate">
+            {device.model || "Unknown model"}
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <span className="pill text-[10px] px-2 py-0.5">
+              CPU {device.latest_cpu != null ? `${device.latest_cpu.toFixed(0)}%` : "N/A"}
+            </span>
+            <span className="pill text-[10px] px-2 py-0.5">
+              Up {device.latest_uptime_hours != null ? `${device.latest_uptime_hours}h` : "-"}
+            </span>
+            <span className="pill text-[10px] px-2 py-0.5">{timeAgo(device.last_polled)}</span>
+            {device.unresolved_alerts > 0 && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full text-[10px] font-semibold px-2 py-0.5"
+                style={{
+                  color: alertTone,
+                  border: `1px solid ${alertTone}66`,
+                  background: `${alertTone}1a`,
+                }}
+              >
+                <AlertTriangle size={10} />
+                {device.unresolved_alerts}
+              </span>
+            )}
+          </div>
         </div>
       </div>
-
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="text-slate-500 dark:text-neutral-400">
-          CPU:{" "}
-          <span style={{ color: (device.latest_cpu ?? 0) > 80 ? "#fb7185" : "currentColor" }}>
-            {device.latest_cpu != null ? `${device.latest_cpu.toFixed(1)}%` : "N/A"}
-          </span>
-        </div>
-        <div className="text-slate-500 dark:text-neutral-400">
-          Uptime: <span style={{ color: "currentColor" }}>
-            {device.latest_uptime_hours != null ? `${device.latest_uptime_hours}h` : "—"}
-          </span>
-        </div>
-        <div className="text-slate-500 dark:text-neutral-400">
-          Model: <span style={{ color: "currentColor" }}>{device.model || "—"}</span>
-        </div>
-        <div className="text-slate-500 dark:text-neutral-400">
-          Polled: <span style={{ color: "currentColor" }}>{timeAgo(device.last_polled)}</span>
-        </div>
-      </div>
-
-      {device.unresolved_alerts > 0 && (
-        <div
-          className="mt-3 flex items-center gap-1.5 rounded-md px-2 py-1.5"
-          style={{ background: "rgba(244,63,94,0.08)", border: "1px solid rgba(244,63,94,0.2)" }}
-        >
-          <AlertTriangle size={11} style={{ color: "#fb7185" }} />
-          <span className="text-xs font-semibold" style={{ color: "#fb7185" }}>
-            {device.unresolved_alerts} active alert{device.unresolved_alerts !== 1 ? "s" : ""}
-          </span>
-        </div>
-      )}
     </div>
   );
 }
@@ -398,7 +403,7 @@ function AlertRow({ alert, onResolve }: {
             )}
           </div>
           <p className="m-0 text-xs text-slate-500 dark:text-neutral-400">
-            {alert["device__name"]} · {timeAgo(alert.created_at)}
+            {alert["device__name"]} Â· {timeAgo(alert.created_at)}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -435,36 +440,18 @@ function AlertRow({ alert, onResolve }: {
   );
 }
 
-function AIInsightPanel({ device }: { device: typeof MOCK_DEVICES[0] | null }) {
-  const [analyzing, setAnalyzing] = useState(false);
-  const [result, setResult] = useState<null | { recommendation: string; failure_prediction: { level: string; summary: string; probability_pct: number | null } }>(null);
-
-  const runAnalysis = () => {
-    setAnalyzing(true);
-    setResult(null);
-    // Simulate AI analysis
-    setTimeout(() => {
-      setAnalyzing(false);
-      if (!device) return;
-      if (device.latest_risk_level === "critical" || device.latest_risk_level === "high") {
-        setResult({
-          recommendation: `Immediate action required on ${device.name}. Run 'show processes cpu sorted' to identify top CPU consumers. Consider 'clear ip bgp *' only if BGP instability is confirmed. Apply QoS policy-map to limit low-priority traffic. Check for routing loops with 'show ip route | include directly'. Enable NetFlow to capture anomalous traffic: 'ip flow-export destination <collector> 2055'.`,
-          failure_prediction: { level: "high", summary: "2 failure indicators detected", probability_pct: 68 },
-        });
-      } else {
-        setResult({
-          recommendation: `${device.name} is performing well. Continue monitoring. Consider scheduling a maintenance window to apply IOS updates. Run periodic 'show version' audits to verify uptime and config register settings.`,
-          failure_prediction: { level: "low", summary: "No failure indicators", probability_pct: 5 },
-        });
-      }
-    }, 2200);
-  };
-
+function AIInsightPanel({
+  device,
+  onRemove,
+}: {
+  device: typeof MOCK_DEVICES[0] | null;
+  onRemove: () => void;
+}) {
   if (!device) {
     return (
-      <div className="card p-5 flex flex-col items-center justify-center" style={{ minHeight: 200 }}>
-        <Brain size={28} style={{ color: "#475569" }} />
-        <p className="m-0 mt-2 text-sm" style={{ color: "#475569" }}>Select a device to run AI analysis</p>
+      <div className="card p-5 flex flex-col items-center justify-center" style={{ minHeight: 220 }}>
+        <Brain size={24} style={{ color: "#475569" }} />
+        <p className="m-0 mt-2 text-sm" style={{ color: "#475569" }}>Select a card to view details</p>
       </div>
     );
   }
@@ -473,95 +460,47 @@ function AIInsightPanel({ device }: { device: typeof MOCK_DEVICES[0] | null }) {
     <div className="card p-5">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Brain size={16} style={{ color: "#22d3ee" }} />
-          <p className="m-0 text-sm font-semibold text-neutral-900 dark:text-neutral-100">AI Analysis — {device.name}</p>
+          <Activity size={16} style={{ color: "#22d3ee" }} />
+          <p className="m-0 text-sm font-semibold text-neutral-900 dark:text-neutral-100">{device.name}</p>
         </div>
         <button
           type="button"
           className="btn-primary"
           style={{ fontSize: "0.72rem", padding: "0.3rem 0.8rem" }}
-          onClick={runAnalysis}
-          disabled={analyzing}
+          onClick={onRemove}
         >
-          {analyzing ? (
-            <>
-              <RefreshCw size={11} className="animate-spin" />
-              Analyzing...
-            </>
-          ) : (
-            <>
-              <Zap size={11} />
-              Run AI Analysis
-            </>
-          )}
+          Remove
         </button>
       </div>
 
-      {analyzing && (
-        <div className="space-y-2">
-          {["Collecting SNMP metrics...", "Running anomaly detection...", "Generating recommendation..."].map((msg, i) => (
-            <div key={i} className="flex items-center gap-2 text-xs" style={{ color: "#475569" }}>
-              <div className="animate-pulse w-1.5 h-1.5 rounded-full" style={{ background: "#a855f7" }} />
-              {msg}
-            </div>
-          ))}
+      <div className="space-y-3">
+        <div className="rounded-lg border border-white/10 px-3 py-2">
+          <p className="m-0 text-[10px] uppercase tracking-wider text-slate-500">IP</p>
+          <p className="m-0 mt-1 text-sm font-semibold text-neutral-900 dark:text-neutral-100">{device.ip_address}</p>
         </div>
-      )}
-
-      {result && (
-        <div className="space-y-3 animate-fade-up">
-          {/* Failure prediction */}
-          <div
-            className="rounded-xl p-3"
-            style={{
-              background: result.failure_prediction.level === "low" ? "rgba(16,185,129,0.06)" : "rgba(244,63,94,0.06)",
-              border: `1px solid ${result.failure_prediction.level === "low" ? "rgba(16,185,129,0.2)" : "rgba(244,63,94,0.2)"}`,
-            }}
-          >
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-semibold" style={{ color: result.failure_prediction.level === "low" ? "#34d399" : "#fb7185" }}>
-                Failure Prediction
-              </span>
-              {result.failure_prediction.probability_pct !== null && (
-                <span className="text-xs font-bold" style={{ color: result.failure_prediction.level === "low" ? "#34d399" : "#fb7185" }}>
-                  {result.failure_prediction.probability_pct}% risk
-                </span>
-              )}
-            </div>
-            <p className="m-0 text-xs text-neutral-400">{result.failure_prediction.summary}</p>
-            {result.failure_prediction.probability_pct !== null && (
-              <div className="mt-2" style={{ height: 3, background: "var(--border-color, rgba(0,0,0,0.06))", borderRadius: 9999 }}>
-                <div style={{
-                  height: "100%",
-                  width: `${result.failure_prediction.probability_pct}%`,
-                  background: result.failure_prediction.level === "low" ? "#34d399" : "#fb7185",
-                  borderRadius: 9999,
-                }} />
-              </div>
-            )}
-          </div>
-
-          {/* Recommendation */}
-          <div className="rounded-xl p-3" style={{ background: "rgba(34,211,238,0.05)", border: "1px solid rgba(34,211,238,0.15)" }}>
-            <p className="m-0 text-xs font-semibold mb-2" style={{ color: "#22d3ee" }}>
-              <Brain size={10} className="inline mr-1" />
-              AI Recommendation
-            </p>
-            <p className="m-0 text-xs leading-relaxed text-neutral-400">{result.recommendation}</p>
-          </div>
+        <div className="rounded-lg border border-white/10 px-3 py-2">
+          <p className="m-0 text-[10px] uppercase tracking-wider text-slate-500">Model</p>
+          <p className="m-0 mt-1 text-sm font-semibold text-neutral-900 dark:text-neutral-100">{device.model || "--"}</p>
         </div>
-      )}
-
-      {!analyzing && !result && (
-        <p className="m-0 text-xs text-center py-4" style={{ color: "#475569" }}>
-          Click "Run AI Analysis" to get failure prediction and recommendations powered by LLaMA 4.
-        </p>
-      )}
+        <div className="rounded-lg border border-white/10 px-3 py-2">
+          <p className="m-0 text-[10px] uppercase tracking-wider text-slate-500">Health Score</p>
+          <p className="m-0 mt-1 text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+            {device.latest_risk_score != null ? `${device.latest_risk_score}/100` : "N/A"}
+          </p>
+        </div>
+        <div className="rounded-lg border border-white/10 px-3 py-2">
+          <p className="m-0 text-[10px] uppercase tracking-wider text-slate-500">Active Alerts</p>
+          <p className="m-0 mt-1 text-sm font-semibold text-neutral-900 dark:text-neutral-100">{device.unresolved_alerts}</p>
+        </div>
+        <div className="rounded-lg border border-white/10 px-3 py-2">
+          <p className="m-0 text-[10px] uppercase tracking-wider text-slate-500">Last Poll</p>
+          <p className="m-0 mt-1 text-sm font-semibold text-neutral-900 dark:text-neutral-100">{timeAgo(device.last_polled)}</p>
+        </div>
+      </div>
     </div>
   );
 }
-
-// ─── Main Page ───────────────────────────────────────────────────────────────
+// Main Page
 
 export default function CiscoPage() {
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
@@ -619,6 +558,16 @@ export default function CiscoPage() {
             Add Device
           </button>
         }
+      />
+
+      <SummaryBanner
+        headline="5 Cisco devices monitored with 2 requiring immediate attention."
+        subtext="Core routers are stable, but one distribution switch is degraded and one access switch is currently down."
+        bullets={[
+          "Critical alerts are concentrated on DIST-SW-01 and ACCESS-SW-03.",
+          "Highest-priority action is patching IOS XE vulnerabilities on core and distribution devices.",
+          "Health scores indicate branch routing is healthy while access layer resilience needs remediation.",
+        ]}
       />
 
       {/* Add Device Form */}
@@ -721,47 +670,9 @@ export default function CiscoPage() {
                 />
               ))}
             </div>
-
-            {selectedDevice && (
-              <section className="card p-5 animate-fade-up">
-                <div className="flex items-center justify-between mb-4">
-                  <p className="m-0 text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-                    {selectedDevice.name} — SNMP Metrics
-                  </p>
-                  <div className="flex items-center gap-1.5 text-xs" style={{ color: "#475569" }}>
-                    <Activity size={11} />
-                    Live via SNMP
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                  {[
-                    { label: "CPU 1m", value: selectedDevice.latest_cpu != null ? `${selectedDevice.latest_cpu.toFixed(1)}%` : "N/A", warn: (selectedDevice.latest_cpu ?? 0) > 80 },
-                    { label: "Health Score", value: selectedDevice.latest_risk_score != null ? `${selectedDevice.latest_risk_score}/100` : "N/A", warn: (selectedDevice.latest_risk_score ?? 100) < 60 },
-                    { label: "Uptime", value: selectedDevice.latest_uptime_hours != null ? `${selectedDevice.latest_uptime_hours}h` : "—", warn: false },
-                    { label: "IOS Version", value: selectedDevice.ios_version || "Unknown", warn: false },
-                    { label: "Location", value: selectedDevice.location || "—", warn: false },
-                    { label: "Model", value: selectedDevice.model || "—", warn: false },
-                    { label: "Active Alerts", value: String(selectedDevice.unresolved_alerts), warn: selectedDevice.unresolved_alerts > 0 },
-                    { label: "Last Poll", value: timeAgo(selectedDevice.last_polled), warn: false },
-                  ].map(({ label, value, warn }) => (
-                    <div
-                      key={label}
-                      className="rounded-xl p-3 bg-neutral-100 dark:bg-white/5 border border-black/5 dark:border-white/5"
-                    >
-                      <p className="m-0 text-[10px] font-semibold uppercase tracking-wider mb-1 text-slate-500 dark:text-slate-400">
-                        {label}
-                      </p>
-                      <p className={`m-0 text-sm font-bold ${warn ? "text-rose-500 dark:text-rose-400" : "text-slate-900 dark:text-white"}`}>
-                        {value}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
           </div>
 
-          <AIInsightPanel device={selectedDevice} />
+          <AIInsightPanel device={selectedDevice} onRemove={() => setSelectedDeviceId(null)} />
         </section>
       )}
 
@@ -784,7 +695,7 @@ export default function CiscoPage() {
             {alerts.length === 0 && (
               <div className="card p-8 text-center">
                 <CheckCircle size={28} style={{ color: "#34d399", margin: "0 auto" }} />
-                <p className="m-0 mt-2 text-sm text-neutral-900 dark:text-neutral-100">All clear — no active alerts.</p>
+                <p className="m-0 mt-2 text-sm text-neutral-900 dark:text-neutral-100">All clear â€” no active alerts.</p>
               </div>
             )}
             {alerts.map(alert => (
@@ -826,7 +737,7 @@ export default function CiscoPage() {
               <tbody>
                 {[
                   { device: "CORE-RTR-01", ios: "17.6.4", cve: "CVE-2023-20198", cvss: 10.0, severity: "critical", title: "Web UI Privilege Escalation", fix: true, fixVer: "17.9.4a" },
-                  { device: "CORE-RTR-01", ios: "17.6.4", cve: "CVE-2023-44487", cvss: 7.5, severity: "high", title: "HTTP/2 Rapid Reset DDoS", fix: false, fixVer: "—" },
+                  { device: "CORE-RTR-01", ios: "17.6.4", cve: "CVE-2023-44487", cvss: 7.5, severity: "high", title: "HTTP/2 Rapid Reset DDoS", fix: false, fixVer: "â€”" },
                   { device: "DIST-SW-01", ios: "17.3.6", cve: "CVE-2023-20198", cvss: 10.0, severity: "critical", title: "Web UI Privilege Escalation", fix: true, fixVer: "17.9.4a" },
                   { device: "DIST-SW-01", ios: "17.3.6", cve: "CVE-2024-20272", cvss: 5.3, severity: "medium", title: "SNMP Information Disclosure", fix: true, fixVer: "17.12.1" },
                   { device: "BRANCH-RTR-02", ios: "17.9.3", cve: "CVE-2024-20272", cvss: 5.3, severity: "medium", title: "SNMP Information Disclosure", fix: true, fixVer: "17.12.1" },
@@ -875,7 +786,7 @@ export default function CiscoPage() {
             <div>
               <p className="m-0 text-sm font-semibold text-neutral-900 dark:text-neutral-100">Configuration Backup History</p>
               <p className="m-0 text-xs text-slate-500 dark:text-neutral-400">
-                SHA-256 checksums · automatic change detection · security diff analysis
+                SHA-256 checksums Â· automatic change detection Â· security diff analysis
               </p>
             </div>
           </div>
@@ -967,3 +878,5 @@ export default function CiscoPage() {
     </div>
   );
 }
+
+

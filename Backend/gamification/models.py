@@ -82,6 +82,10 @@ class QuizSubmission(models.Model):
 
     class Meta:
         unique_together = [["employee", "quiz"]]
+        indexes = [
+            models.Index(fields=["submitted_at"]),
+            models.Index(fields=["is_correct"]),
+        ]
 
     def __str__(self):
         return f"{self.employee} - Quiz {self.quiz_id} ({'correct' if self.is_correct else 'wrong'})"

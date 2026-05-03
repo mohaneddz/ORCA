@@ -8,17 +8,18 @@ import { logger } from "@/lib/logger";
 import { SUMMARY_FALLBACK } from "@/data/mockData";
 import { fetchApi } from "@/lib/apiClient";
 import type { AppLanguage } from "@/types/settings";
+import Skeleton from "@/components/ui/Skeleton";
 
 type SummarySnapshot = {
   generatedAt: string;
   company: string;
   kpis: Array<{ label: string; value: string; helper: string; trend: number }>;
   chart: Array<{ name: string; primary: number; secondary: number }>;
-  interpretation: {
+  interpretationByLanguage: Record<AppLanguage, {
     headline: string;
     highlights: string[];
-    guidance: Array<{ action: string; why: string; priority: "High" | "Medium" | "Low" }>;
-  };
+  }>;
+  guidance: Array<{ action: string; why: string; priority: "High" | "Medium" | "Low" }>;
 };
 
 const CACHE_KEY = "summary-page-cache-v1";
@@ -48,6 +49,16 @@ async function explainWithGroq(input: string, language: AppLanguage): Promise<{ 
   const groqKey = import.meta.env.VITE_GROQ_API_KEY || import.meta.env.GROQ_API_KEY;
   if (!groqKey) {
     logger.info("summary.groq.skipped.no_key");
+    if (language === "fr") {
+      return {
+        headline: "La situation est globalement sous controle aujourd'hui, mais quelques points demandent encore de l'attention.",
+        highlights: [
+          "L'equipe corrige les problemes presque aussi vite qu'ils apparaissent.",
+          "La plupart des appareils et comptes de l'entreprise sont dans un etat sain.",
+          "Un petit groupe d'elements urgents doit etre traite en priorite.",
+        ],
+      };
+    }
     return {
       headline: "Things are generally under control today, but a few issues still need attention.",
       highlights: [
@@ -107,7 +118,16 @@ function readCache(): SummarySnapshot | null {
   if (!raw) return null;
 
   try {
-    const parsed = JSON.parse(raw) as SummarySnapshot;
+    const parsed = JSON.parse(raw) as SummarySnapshot & {
+      interpretation?: { headline: string; highlights: string[] };
+    };
+    if (!parsed.interpretationByLanguage && parsed.interpretation) {
+      parsed.interpretationByLanguage = {
+        en: parsed.interpretation,
+        fr: parsed.interpretation,
+      };
+    }
+    if (!parsed.interpretationByLanguage?.en || !parsed.interpretationByLanguage?.fr) return null;
     const age = Date.now() - new Date(parsed.generatedAt).getTime();
     if (Number.isNaN(age) || age > CACHE_TTL_MS) return null;
     logger.debug("summary.cache.hit", { ageMs: age });
@@ -122,7 +142,7 @@ function writeCache(snapshot: SummarySnapshot) {
   localStorage.setItem(CACHE_KEY, JSON.stringify(snapshot));
 }
 
-async function buildSummarySnapshot(forceRefresh: boolean, language: AppLanguage): Promise<SummarySnapshot> {
+async function buildSummarySnapshot(forceRefresh: boolean): Promise<SummarySnapshot> {
   logger.info("summary.snapshot.build_start", { forceRefresh });
   if (!forceRefresh) {
     const cached = readCache();
@@ -160,27 +180,27 @@ async function buildSummarySnapshot(forceRefresh: boolean, language: AppLanguage
 - Account hygiene score: ${metrics.secureAccounts}%
 Explain what this means in simple terms.`;
 
-  let interpretation: SummarySnapshot["interpretation"];
+  let interpretationByLanguage: SummarySnapshot["interpretationByLanguage"];
   try {
-    const groq = await explainWithGroq(prompt, language);
-    interpretation = {
-      ...groq,
-      guidance: [
-        { action: "summary.step1.title", why: "summary.step1.desc", priority: "High" },
-        { action: "summary.step2.title", why: "summary.step2.desc", priority: "Medium" },
-        { action: "summary.step3.title", why: "summary.step3.desc", priority: "Low" },
-      ],
+    const [enSummary, frSummary] = await Promise.all([
+      explainWithGroq(prompt, "en"),
+      explainWithGroq(prompt, "fr"),
+    ]);
+    interpretationByLanguage = {
+      en: enSummary,
+      fr: frSummary,
     };
   } catch {
     logger.warn("summary.snapshot.groq_fallback_used");
-    interpretation = {
-      headline: SUMMARY_FALLBACK.headline,
-      highlights: SUMMARY_FALLBACK.highlights,
-      guidance: [
-        { action: "summary.step1.title", why: "summary.step1.desc", priority: "High" },
-        { action: "summary.step2.title", why: "summary.step2.desc", priority: "Medium" },
-        { action: "summary.step3.title", why: "summary.step3.desc", priority: "Low" },
-      ],
+    interpretationByLanguage = {
+      en: {
+        headline: SUMMARY_FALLBACK.headline,
+        highlights: SUMMARY_FALLBACK.highlights,
+      },
+      fr: {
+        headline: SUMMARY_FALLBACK.headline,
+        highlights: SUMMARY_FALLBACK.highlights,
+      },
     };
   }
 
@@ -194,7 +214,12 @@ Explain what this means in simple terms.`;
         { label: "summary.stats.accountsGood", value: `${metrics.secureAccounts}%`, helper: "summary.stats.accountsGoodDesc", trend: 2.3 },
       ],
       chart,
-      interpretation,
+      interpretationByLanguage,
+      guidance: [
+        { action: "summary.step1.title", why: "summary.step1.desc", priority: "High" },
+        { action: "summary.step2.title", why: "summary.step2.desc", priority: "Medium" },
+        { action: "summary.step3.title", why: "summary.step3.desc", priority: "Low" },
+      ],
     };
 
     writeCache(snapshot);
@@ -206,11 +231,38 @@ Explain what this means in simple terms.`;
   }
 }
 
+function SummarySkeleton() {
+  return (
+    <div className="page-section">
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-4 w-96" />
+      </div>
+      
+      <Skeleton className="mt-6 h-40 w-full" />
+      
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+      
+      <div className="mt-6 grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+        <Skeleton className="h-[400px] w-full" />
+        <Skeleton className="h-[400px] w-full" />
+      </div>
+      
+      <Skeleton className="mt-6 h-[300px] w-full" />
+    </div>
+  );
+}
+
 export default function SummaryPage() {
   const { t, settings } = useAppSettings();
-  const { data, isFetching, refetch } = useQuery({
+  const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["summary-page"],
-    queryFn: ({ meta }) => buildSummarySnapshot(Boolean(meta?.forceRefresh), settings.language),
+    queryFn: ({ meta }) => buildSummarySnapshot(Boolean(meta?.forceRefresh)),
     staleTime: CACHE_TTL_MS,
   });
 
@@ -219,6 +271,11 @@ export default function SummaryPage() {
     const time = new Date(data.generatedAt);
     return `${t("summary.refresh")} ${time.toLocaleTimeString()}`;
   }, [data?.generatedAt, t]);
+
+  if (isLoading) {
+    return <SummarySkeleton />;
+  }
+  const interpretation = data?.interpretationByLanguage?.[settings.language] ?? data?.interpretationByLanguage?.en;
 
   return (
     <div className="page-section">
@@ -249,15 +306,16 @@ export default function SummaryPage() {
         {generatedLabel}
       </p>
 
-      {data && (
+      {data && interpretation && (
         <>
           <SummaryBanner
-            headline={t(data.interpretation.headline)}
+            headline={t(interpretation.headline)}
             subtext={t("summary.explanation")}
-            bullets={data.interpretation.highlights.map((h) => t(h))}
+            bullets={interpretation.highlights.map((h) => t(h))}
           />
 
           <StatGrid
+            cols={data.kpis.length === 4 || data.kpis.length === 8 ? 4 : 3}
             stats={data.kpis.map((kpi, index) => ({
               label: t(kpi.label),
               value: kpi.value,
@@ -273,12 +331,12 @@ export default function SummaryPage() {
               metrics={[
                 {
                   label: t("summary.chart.primary"),
-                  value: data.chart.length > 0 ? data.chart[data.chart.length - 1].primary : "—",
-                  description: "Average device risk score this month. Lower is healthier — below 30 is your target.",
+                  value: data.chart.length > 0 ? data.chart[data.chart.length - 1].primary : "-",
+                  description: "Average device risk score this month. Lower is healthier - below 30 is your target.",
                 },
                 {
                   label: t("summary.chart.secondary"),
-                  value: data.chart.length > 0 ? `${data.chart[data.chart.length - 1].secondary}%` : "—",
+                  value: data.chart.length > 0 ? `${data.chart[data.chart.length - 1].secondary}%` : "-",
                   description: "Phishing click rate this month. Shows how often employees fall for simulated phishing emails.",
                   color: (() => {
                     const rate = data.chart.length > 0 ? data.chart[data.chart.length - 1].secondary : 0;
@@ -306,7 +364,7 @@ export default function SummaryPage() {
           <DataTable
             title={t("summary.table.steps")}
             columns={[t("table.action"), t("table.why"), t("table.priority")]}
-            rows={data.interpretation.guidance.map((item) => [t(item.action), t(item.why), item.priority])}
+            rows={data.guidance.map((item) => [t(item.action), t(item.why), t(`table.priority.${item.priority.toLowerCase()}`)])}
             minWidth={500}
             searchPlaceholder={t("summary.table.search")}
             filterColumn={t("table.priority")}
