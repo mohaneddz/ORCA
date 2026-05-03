@@ -1,4 +1,5 @@
 import json
+import math
 from datetime import datetime, timezone
 
 from django.db.models import Count
@@ -7,12 +8,97 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
+from core.telegram import send_telegram_alert
 from organizations.models import Employee
 from organizations.views import get_org_from_request, get_org_or_employee_from_request
 
 from .models import ApprovedSoftware, DeviceSnapshot, DiskHealthSnapshot, NetworkDeviceSnapshot, PortRemediationRequest, SystemMetricsSnapshot
 from .ml_process import predict_process
 from .risk import _RISKY_PORTS, compute_disk_risk, compute_network_risk, compute_risk, compute_system_risk
+
+_ANOMALY_Z_THRESHOLD = 2.0
+_ANOMALY_SUDDEN_DROP = 25
+
+
+def _maybe_send_anomaly_alert(org, employee, snapshot, risk):
+    """
+    After a snapshot is saved, check whether it represents an anomaly and,
+    if so, send a Telegram message to the organisation manager.
+
+    Triggers:
+      1. Risk level is "high" or "critical" (absolute threshold).
+      2. Latest risk score is ≥ _ANOMALY_Z_THRESHOLD σ below the employee's
+         historical mean (Z-score anomaly).
+      3. Risk score dropped more than _ANOMALY_SUDDEN_DROP points from the
+         previous snapshot (sudden drop).
+    """
+    chat_id = getattr(org, "telegram_chat_id", "") or ""
+    if not chat_id:
+        return  # Manager hasn't configured Telegram yet
+
+    reasons = []
+    current_score = snapshot.risk_score
+    current_level = snapshot.risk_level or ""
+
+    # 1. High / critical absolute risk
+    if current_level.lower() in ("high", "critical"):
+        reasons.append(
+            f"Risk level is <b>{current_level.upper()}</b> (score: {current_score})"
+        )
+
+    # 2 & 3. Historical comparison (need at least 3 prior snapshots)
+    if current_score is not None:
+        prior_scores = list(
+            DeviceSnapshot.objects.filter(employee=employee)
+            .exclude(id=snapshot.id)
+            .order_by("collected_at")
+            .values_list("risk_score", flat=True)
+        )
+        prior_scores = [s for s in prior_scores if s is not None]
+
+        if len(prior_scores) >= 3:
+            prev_score = prior_scores[-1]
+            history = prior_scores[:-1]
+            mean = sum(history) / len(history)
+            variance = sum((x - mean) ** 2 for x in history) / len(history)
+            std = math.sqrt(variance)
+
+            if std > 0:
+                z = (mean - current_score) / std
+                if z >= _ANOMALY_Z_THRESHOLD:
+                    reasons.append(
+                        f"Risk score ({current_score}) is {z:.1f}σ below historical mean ({mean:.1f})"
+                    )
+
+            delta = prev_score - current_score
+            if delta > _ANOMALY_SUDDEN_DROP:
+                reasons.append(
+                    f"Risk score dropped {delta} points "
+                    f"({prev_score} → {current_score})"
+                )
+
+    if not reasons:
+        return
+
+    signals_text = ""
+    if risk.get("signals"):
+        top_signals = risk["signals"][:5]
+        signals_text = "\n• " + "\n• ".join(top_signals)
+
+    message = (
+        f"🚨 <b>Security Anomaly Detected</b>\n\n"
+        f"<b>Employee:</b> {employee.name}\n"
+        f"<b>Device:</b> {snapshot.hostname or 'unknown'}\n"
+        f"<b>Department:</b> {employee.department or '—'}\n\n"
+        f"<b>Issues detected:</b>\n"
+        + "\n".join(f"• {r}" for r in reasons)
+        + (f"\n\n<b>Risk signals:</b>{signals_text}" if signals_text else "")
+    )
+
+    send_telegram_alert(chat_id, message)
+
+
+
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -182,6 +268,9 @@ class SnapshotIngestView(View):
             risk_signals=risk["signals"],
             raw=raw,
         )
+
+        # ── Telegram anomaly alert ────────────────────────────────────────
+        _maybe_send_anomaly_alert(org, employee, snapshot, risk)
 
         return JsonResponse(
             {

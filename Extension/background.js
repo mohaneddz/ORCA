@@ -1162,6 +1162,22 @@ async function handleMessage(message, sender = null) {
       return { ok: true };
     }
 
+    case "DLP_REPORT_MISTAKE": {
+      const reportPayload = {
+        filename: message.filename,
+        website: message.website,
+        event_channel: message.event_channel,
+        document_topic: message.document_topic,
+        detection_tier: message.detection_tier,
+        detection_reason: message.detection_reason,
+        matched_pattern: message.matched_pattern,
+        semantic_score: message.semantic_score,
+      };
+      const reportResult = await postLog("/api/logs/dlp/report-mistake/", reportPayload);
+      if (!reportResult.ok && !reportResult.authMissing) await queueLog("/api/logs/dlp/report-mistake/", reportPayload);
+      return { ok: true };
+    }
+
     case "SUBMIT_QUIZ": {
       const payload = {
         quiz_id: message.quiz_id,
