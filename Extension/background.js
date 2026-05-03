@@ -1,7 +1,7 @@
 // Must be at the top level — MV3 service workers only allow importScripts() during initial evaluation
 try { importScripts("./lib/transformers.min.js"); } catch (e) { console.warn("[CyberBase BG] Top-level transformers import failed:", e.message); }
 
-const BACKEND_URL = "http://127.0.0.1:8000";
+const BACKEND_URL = "https://innov.leapcell.app";
 const DEBUG_MODE = true;
 const POLL_INTERVAL_MINUTES = 0.2; // 12 seconds
 const OFFLINE_QUEUE_MAX = 20;

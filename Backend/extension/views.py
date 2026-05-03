@@ -15,6 +15,13 @@ import json
 EMPLOYEE_AUTH_PREFIX = "EmployeeToken "
 
 
+def _strip_nul(value):
+    """Remove NUL (0x00) bytes that PostgreSQL string columns reject."""
+    if isinstance(value, str):
+        return value.replace("\x00", "")
+    return value
+
+
 def _to_float(value):
     try:
         return float(value)
@@ -75,18 +82,18 @@ class DLPLogView(View):
 
         DLPLog.objects.create(
             employee=employee,
-            filename=filename,
-            website=website,
+            filename=_strip_nul(filename),
+            website=_strip_nul(website),
             action_taken=action_taken,
             event_channel=event_channel,
-            document_topic=body.get("document_topic") or "",
+            document_topic=_strip_nul(body.get("document_topic") or ""),
             semantic_score=_to_float(body.get("semantic_score")),
-            detection_tier=body.get("detection_tier") or "",
-            detection_reason=body.get("detection_reason") or "",
-            matched_pattern=body.get("matched_pattern") or "",
+            detection_tier=_strip_nul(body.get("detection_tier") or ""),
+            detection_reason=_strip_nul(body.get("detection_reason") or ""),
+            matched_pattern=_strip_nul(body.get("matched_pattern") or ""),
             input_size_bytes=_to_int(body.get("input_size_bytes")),
             input_size_chars=_to_int(body.get("input_size_chars")),
-            threshold_type=body.get("threshold_type") or "",
+            threshold_type=_strip_nul(body.get("threshold_type") or ""),
             threshold_value=_to_float(body.get("threshold_value")),
             decision_score=_to_float(body.get("decision_score")),
         )
@@ -138,13 +145,13 @@ class DlpFalsePositiveView(View):
 
         report = DlpFalsePositive.objects.create(
             employee=employee,
-            filename=filename,
-            website=website,
+            filename=_strip_nul(filename),
+            website=_strip_nul(website),
             event_channel=event_channel,
-            document_topic=body.get("document_topic") or "",
-            detection_tier=body.get("detection_tier") or "",
-            detection_reason=body.get("detection_reason") or "",
-            matched_pattern=body.get("matched_pattern") or "",
+            document_topic=_strip_nul(body.get("document_topic") or ""),
+            detection_tier=_strip_nul(body.get("detection_tier") or ""),
+            detection_reason=_strip_nul(body.get("detection_reason") or ""),
+            matched_pattern=_strip_nul(body.get("matched_pattern") or ""),
             semantic_score=_to_float(body.get("semantic_score")),
         )
         return JsonResponse({"ok": True, "report_id": str(report.id)}, status=200)

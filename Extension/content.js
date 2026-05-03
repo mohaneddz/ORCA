@@ -342,7 +342,8 @@ async function handleFileChange(event) {
         inputSizeBytes: file.size,
         inputSizeChars: analysis.inputSizeChars || 0,
       });
-      void sendDlpMistakeReport(file.name, analysis, "file_upload");
+      await sendDlpMistakeReport(file.name, analysis, "file_upload");
+      await showReportMistakeConfirmation();
     } else {
       void sendDlpDecisionLog("cancel", file.name, analysis, {
         eventChannel: "file_upload",
@@ -629,7 +630,8 @@ async function processAiPromptEvent(event, promptEl, triggerType) {
         inputSizeBytes: approximateTextBytes(text),
         inputSizeChars: text.length,
       });
-      void sendDlpMistakeReport("AI prompt submission", analysis, "ai_prompt");
+      await sendDlpMistakeReport("AI prompt submission", analysis, "ai_prompt");
+      await showReportMistakeConfirmation();
     } else {
       await sendDlpDecisionLog("cancel", "AI prompt submission", analysis, {
         eventChannel: "ai_prompt",
@@ -1140,6 +1142,21 @@ async function sendDlpMistakeReport(filename, analysis, eventChannel) {
     matched_pattern: analysis.matchedPattern,
     semantic_score: Number((analysis.similarity || 0).toFixed(4)),
   }, { ok: false });
+}
+
+async function showReportMistakeConfirmation() {
+  await Swal.fire({
+    html:
+      '<div class="cb-result-modal">' +
+      '<span class="cb-result-icon cb-result-success">&#10003;</span>' +
+      "<p>Your feedback has been recorded.<br>Thank you for reporting this mistake.</p></div>",
+    timer: 2500,
+    showConfirmButton: false,
+    customClass: {
+      container: "cb-swal-container",
+      popup: "cb-swal-popup cb-swal-compact",
+    },
+  });
 }
 
 // Admin quiz trigger
