@@ -25,5 +25,6 @@ urlpatterns = [
     path("api/", include("gamification.urls")),
     path("api/", include("phishing.urls")),
     path("api/", include("agent.urls")),
+    path("api/", include("cisco.urls")),   
     path("api/", include("datawarehouse.urls")),
 ]

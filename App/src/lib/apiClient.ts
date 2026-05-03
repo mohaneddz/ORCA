@@ -1,7 +1,7 @@
 import { APP_URLS } from "@/config/urls";
 import { logger } from "@/lib/logger";
 
-const AUTH_STORAGE_KEY = "cyberbase-auth-v1";
+const AUTH_STORAGE_KEY = "orca.auth.session";
 
 function getStoredToken(): string | null {
   try {

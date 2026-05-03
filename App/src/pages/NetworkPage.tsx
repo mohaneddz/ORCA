@@ -13,21 +13,21 @@ const CHART_SECONDARY = "#38bdf8";
 export default function NetworkPage() {
   const { t } = useAppSettings();
 
-  const { data: portAudit, isLoading: isPortsLoading } = useQuery({
+  const { data: portAuditData, isLoading: isPortsLoading } = useQuery({
     queryKey: ["network-port-audit"],
-    queryFn: () => fetchApi<any[]>("/api/agent/port-audit/").catch(() => []),
+    queryFn: () => fetchApi<any>("/api/agent/port-audit/").catch(() => null),
   });
 
-  const { data: softwareAudit, isLoading: isSoftwareLoading } = useQuery({
+  const { data: softwareAuditData, isLoading: isSoftwareLoading } = useQuery({
     queryKey: ["network-software-audit"],
-    queryFn: () => fetchApi<any[]>("/api/agent/software-audit/").catch(() => []),
+    queryFn: () => fetchApi<any>("/api/agent/software-audit/").catch(() => null),
   });
 
   if (isPortsLoading || isSoftwareLoading) {
     return <PageSkeleton />;
   }
 
-  const tableRows = [...(portAudit || []), ...(softwareAudit || [])].map((item: any) => [
+  const tableRows = [...(portAuditData?.port_audit || []), ...(softwareAuditData?.unapproved_software || [])].map((item: any) => [
     item.hostname || item.device_id || "Unknown Node",
     item.ip_address || item.port || "N/A",
     item.process_name || item.software_name || "Service",

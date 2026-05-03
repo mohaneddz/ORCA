@@ -124,10 +124,12 @@ export default function ControlCenterPage() {
   const { t } = useAppSettings();
   const queryClient = useQueryClient();
 
-  const { data: campaigns, isLoading } = useQuery({
+  const { data: campaignsData, isLoading } = useQuery({
     queryKey: ["phishing-campaigns"],
-    queryFn: () => fetchApi<any[]>("/api/phishing/campaigns/"),
+    queryFn: () => fetchApi<any>("/api/phishing/campaigns/"),
   });
+
+  const campaigns: any[] = campaignsData?.campaigns || [];
 
   const launchMutation = useMutation({
     mutationFn: (id: string) => fetchApi(`/api/phishing/campaigns/${id}/launch/`, { method: "POST" }),
@@ -151,7 +153,7 @@ export default function ControlCenterPage() {
     }
   });
 
-  if (isLoading || !campaigns) {
+  if (isLoading || !campaignsData) {
     return <PageSkeleton />;
   }
 

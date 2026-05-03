@@ -1,13 +1,57 @@
-import { DataTable, PageHeader } from "@/components/cards/BaseCards";
+import { useState, FormEvent } from "react";
+import { PageHeader } from "@/components/cards/BaseCards";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/apiClient";
 import PageSkeleton from "@/components/ui/PageSkeleton";
 
-const AXIS_STYLE = { fill: "#64748b", fontSize: 11 };
-const CHART_PRIMARY = "#1d4ed8";
-const CHART_SECONDARY = "#38bdf8";
+// ─── Status badge ────────────────────────────────────────────────────────────
+
+const STATUS_STYLES: Record<string, string> = {
+  ACTIVE:    "bg-emerald-500/15 text-emerald-300 border-emerald-500/25",
+  DRAFT:     "bg-amber-500/15 text-amber-300 border-amber-500/25",
+  COMPLETED: "bg-slate-500/15 text-slate-300 border-slate-500/30",
+};
+
+function StatusBadge({ status }: { status: string }) {
+  const cls = STATUS_STYLES[status] ?? "bg-slate-500/15 text-slate-300 border-slate-500/30";
+  return (
+    <span className={`inline-block rounded border px-2 py-0.5 text-xs font-semibold ${cls}`}>
+      {status}
+    </span>
+  );
+}
+
+// ─── Small stat card ─────────────────────────────────────────────────────────
+
+function KpiCard({ label, value, tone }: { label: string; value: string; tone?: "warn" | "danger" | "ok" }) {
+  const toneClass =
+    tone === "danger" ? "text-rose-300" :
+    tone === "warn"   ? "text-amber-300" :
+    tone === "ok"     ? "text-emerald-300" : "text-white";
+  return (
+    <div className="card p-4">
+      <p className="m-0 text-xs uppercase tracking-[0.08em] text-slate-400">{label}</p>
+      <p className={`m-0 mt-2 text-2xl font-bold ${toneClass}`}>{value}</p>
+    </div>
+  );
+}
+
+// ─── Inline alert ─────────────────────────────────────────────────────────────
+
+function InlineAlert({ msg, onDismiss }: { msg: string; onDismiss: () => void }) {
+  const isError = msg.toLowerCase().startsWith("error") || msg.toLowerCase().includes("failed");
+  return (
+    <div className={`flex items-center justify-between rounded-lg border px-4 py-2 text-sm ${
+      isError
+        ? "border-rose-500/30 bg-rose-900/20 text-rose-300"
+        : "border-emerald-500/30 bg-emerald-900/20 text-emerald-300"
+    }`}>
+      <span>{msg}</span>
+      <button type="button" onClick={onDismiss} className="ml-4 text-slate-400 hover:text-white">✕</button>
+    </div>
+  );
+}
 
 export default function TrainingPage() {
   const { t } = useAppSettings();

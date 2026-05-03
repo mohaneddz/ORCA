@@ -33,17 +33,17 @@ export default function DeviceDetailsPage() {
       status: "N/A"
     };
     if (!devicesList || !deviceId) return defaultData;
-    const device = devicesList.find((d: any) => d.hostname === deviceId || d.id === deviceId);
+    const device = (devicesList?.data || []).find((d: any) => d.hostname === deviceId || d.snapshot_id === deviceId);
     if (!device) return defaultData;
 
     return {
-      id: device.id,
-      hostname: device.hostname || device.id,
+      id: device.snapshot_id,
+      hostname: device.hostname || device.snapshot_id,
       assignedUser: device.employee_name || device.employee_id || "Unassigned",
-      os: device.os_info?.os || "Unknown",
-      lastSeen: new Date(device.last_sync).toLocaleString() || "N/A",
-      riskScore: device.latest_risk_score || 0,
-      status: device.latest_risk_score > 70 ? "At Risk" : "Healthy"
+      os: device.os_name || "Unknown",
+      lastSeen: device.collected_at ? new Date(device.collected_at).toLocaleString() : "N/A",
+      riskScore: device.risk_score || 0,
+      status: (device.risk_score ?? 0) > 70 ? "At Risk" : "Healthy"
     };
   }, [deviceId, devicesList]);
 

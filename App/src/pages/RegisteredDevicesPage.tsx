@@ -37,11 +37,11 @@ export default function DevicesPage() {
     return <PageSkeleton />;
   }
 
-  const tableRows = (devicesList || []).map((d: any) => [
-    d.hostname || d.id,
-    d.os_info?.os || "Unknown",
-    d.ip_address || "N/A",
-    d.latest_risk_score > 70 ? "At Risk" : "Healthy"
+  const tableRows = (devicesList?.data || []).map((d: any) => [
+    d.hostname || d.snapshot_id,
+    d.os_name || "Unknown",
+    d.employee_name || "N/A",
+    (d.risk_score ?? 0) > 70 ? "At Risk" : "Healthy"
   ]);
 
   return (
