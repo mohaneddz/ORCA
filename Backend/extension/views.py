@@ -7,7 +7,7 @@ from django.conf import settings
 from organizations.auth import get_employee_from_request
 from organizations.models import EmployeeAuthToken
 
-from .models import AdminEvent, BlacklistLog, DLPLog
+from .models import AdminEvent, BlacklistLog, DLPLog, DlpFalsePositive
 from .reputation import evaluate_url_reputation
 
 import json
@@ -64,9 +64,9 @@ class DLPLogView(View):
         if not all([filename, website, action_taken]):
             return JsonResponse({"error": "Missing required fields."}, status=400)
 
-        if action_taken not in ("allow", "cancel", "force"):
+        if action_taken not in ("allow", "cancel", "force", "report_mistake"):
             return JsonResponse(
-                {"error": "action_taken must be allow, cancel, or force."}, status=400
+                {"error": "action_taken must be allow, cancel, force, or report_mistake."}, status=400
             )
 
         event_channel = body.get("event_channel") or "file_upload"
@@ -112,6 +112,42 @@ class BlacklistLogView(View):
 
         BlacklistLog.objects.create(employee=employee, attempted_url=attempted_url)
         return JsonResponse({}, status=200)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class DlpFalsePositiveView(View):
+    def post(self, request):
+        employee, err = get_employee_from_request(request)
+        if err:
+            return err
+
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON."}, status=400)
+
+        filename = body.get("filename")
+        website = body.get("website")
+
+        if not all([filename, website]):
+            return JsonResponse({"error": "Missing required fields."}, status=400)
+
+        event_channel = body.get("event_channel") or "file_upload"
+        if event_channel not in ("file_upload", "ai_prompt"):
+            event_channel = "file_upload"
+
+        report = DlpFalsePositive.objects.create(
+            employee=employee,
+            filename=filename,
+            website=website,
+            event_channel=event_channel,
+            document_topic=body.get("document_topic") or "",
+            detection_tier=body.get("detection_tier") or "",
+            detection_reason=body.get("detection_reason") or "",
+            matched_pattern=body.get("matched_pattern") or "",
+            semantic_score=_to_float(body.get("semantic_score")),
+        )
+        return JsonResponse({"ok": True, "report_id": str(report.id)}, status=200)
 
 
 class PollView(View):

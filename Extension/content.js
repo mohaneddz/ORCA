@@ -203,6 +203,8 @@ const DLP_PIPELINE_CONFIG = {
   uploadSizeThresholdBytes: 10 * 1024 * 1024,
   promptTextThresholdChars: 2500,
   keywordHitThreshold: 2,
+  largeSizeKeywordHitThreshold: 1,
+  largeSizeSemanticPenalty: 0.85,
 };
 
 const AI_MONITOR_FALLBACK = {
@@ -280,8 +282,10 @@ async function handleFileChange(event) {
 
   // Allow our synthetic replay event to pass through even if the guard
   // is still finalizing state from the prior decision.
+  // Defer deletion to a microtask so the bypass survives all synchronous
+  // handler invocations (window + document capture) for the same event.
   if (replayBypassInputs.has(input)) {
-    replayBypassInputs.delete(input);
+    Promise.resolve().then(() => replayBypassInputs.delete(input));
     return;
   }
 
@@ -310,47 +314,6 @@ async function handleFileChange(event) {
 
   const file = input.files[0];
   dlpActive = true;
-  const tooLarge = (file?.size || 0) > DLP_PIPELINE_CONFIG.uploadSizeThresholdBytes;
-
-  if (tooLarge) {
-    const analysis = {
-      shouldBlock: true,
-      topic: "File: " + sanitize(file.name, 80),
-      tier: "size_threshold",
-      similarity: 0.9,
-      reason: "File size exceeds upload threshold",
-      matchedPattern: null,
-      thresholdType: "file_size_bytes",
-      thresholdValue: DLP_PIPELINE_CONFIG.uploadSizeThresholdBytes,
-      inputSizeChars: 0,
-    };
-
-    try {
-      const decision = await showDlpWarningModal(file.name, analysis);
-      const actionTaken = decision === "cancel" ? "cancel" : "force";
-      if (actionTaken === "cancel") {
-        input.value = "";
-        void sendDlpDecisionLog("cancel", file.name, analysis, {
-          eventChannel: "file_upload",
-          inputSizeBytes: file.size,
-          inputSizeChars: 0,
-        });
-        return;
-      }
-
-      void sendDlpDecisionLog("force", file.name, analysis, {
-        eventChannel: "file_upload",
-        inputSizeBytes: file.size,
-        inputSizeChars: 0,
-      });
-
-      replayBypassInputs.add(input);
-      input.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
-      return;
-    } finally {
-      dlpActive = false;
-    }
-  }
 
   showCheckingModal(file.name);
 
@@ -371,29 +334,51 @@ async function handleFileChange(event) {
     }
 
     const decision = await showDlpWarningModal(file.name, analysis);
-    const actionTaken = decision === "cancel" ? "cancel" : "force";
-    if (actionTaken === "cancel") {
-      input.value = "";
+    input.value = "";
+
+    if (decision === "report") {
+      void sendDlpDecisionLog("report_mistake", file.name, analysis, {
+        eventChannel: "file_upload",
+        inputSizeBytes: file.size,
+        inputSizeChars: analysis.inputSizeChars || 0,
+      });
+      void sendDlpMistakeReport(file.name, analysis, "file_upload");
+    } else {
       void sendDlpDecisionLog("cancel", file.name, analysis, {
         eventChannel: "file_upload",
         inputSizeBytes: file.size,
         inputSizeChars: analysis.inputSizeChars || 0,
       });
-      return;
     }
-
-    void sendDlpDecisionLog("force", file.name, analysis, {
-      eventChannel: "file_upload",
-      inputSizeBytes: file.size,
-      inputSizeChars: analysis.inputSizeChars || 0,
-    });
-
-    replayBypassInputs.add(input);
-    input.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
   } catch (error) {
     closeCheckingModal();
     log("DLP pipeline error:", error?.message || error);
     input.value = "";
+    await Swal.fire({
+      html:
+        '<div class="cb-dlp-modal">' +
+        '<div class="cb-dlp-header">' +
+        '<span class="cb-dlp-icon">&#9888;</span>' +
+        '<span class="cb-dlp-title">Upload Blocked</span>' +
+        '<span class="cb-dlp-badge">CyberBase</span>' +
+        "</div>" +
+        '<div class="cb-dlp-body-wrap">' +
+        '<p class="cb-dlp-body">Selected item:</p>' +
+        '<div class="cb-dlp-filename">' + sanitize(file.name, 80) + "</div>" +
+        '<p class="cb-dlp-question">The security check could not complete. The upload has been blocked as a precaution.</p>' +
+        '<p class="cb-dlp-question" style="font-size:11px;opacity:0.7;margin-top:6px">' + sanitize(error?.message || String(error), 120) + '</p>' +
+        "</div>" +
+        "</div>",
+      confirmButtonText: "OK",
+      confirmButtonColor: "#c53030",
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showClass: { popup: "cb-swal-enter" },
+      customClass: {
+        container: "cb-swal-container",
+        popup: "cb-swal-popup cb-swal-popup--dlp",
+      },
+    });
     await sendDlpDecisionLog("cancel", file.name, {
       topic: "Extraction pipeline failure",
       similarity: 1,
@@ -418,29 +403,20 @@ async function runUploadPipeline(file) {
   const semanticInput = buildSemanticInput(file.name, extractedText);
   const tier1Patterns = await getTier1Patterns();
   const inputSizeChars = extractedText.length;
+  const isLargeFile = (file?.size || 0) > DLP_PIPELINE_CONFIG.uploadSizeThresholdBytes;
 
-  if ((file?.size || 0) > DLP_PIPELINE_CONFIG.uploadSizeThresholdBytes) {
-    return {
-      shouldBlock: true,
-      topic,
-      tier: "size_threshold",
-      similarity: 0.9,
-      reason: "File size exceeds upload threshold",
-      matchedPattern: null,
-      thresholdType: "file_size_bytes",
-      thresholdValue: DLP_PIPELINE_CONFIG.uploadSizeThresholdBytes,
-      inputSizeChars,
-    };
-  }
-
+  // --- Tier 1a: Regex patterns ---
   const tier1 = runTier1Regex(extractedText, file.name, tier1Patterns);
   if (tier1.hit) {
+    const riskScore = computeRegexRiskScore(tier1);
     return {
       shouldBlock: true,
       topic,
-      tier: "tier1_regex",
-      similarity: computeRegexRiskScore(tier1),
-      reason: "Sensitive terms detected",
+      tier: isLargeFile ? "tier1_regex+large_file" : "tier1_regex",
+      similarity: isLargeFile ? Math.min(1, riskScore + 0.05) : riskScore,
+      reason: isLargeFile
+        ? "Sensitive terms detected in a large file"
+        : "Sensitive terms detected",
       matchedPattern: tier1.ids.join(","),
       thresholdType: "regex_match",
       thresholdValue: tier1.hitCount,
@@ -448,14 +424,22 @@ async function runUploadPipeline(file) {
     };
   }
 
+  // --- Tier 1b: Keyword matching (large files use lower threshold) ---
+  const keywordThreshold = isLargeFile
+    ? DLP_PIPELINE_CONFIG.largeSizeKeywordHitThreshold
+    : DLP_PIPELINE_CONFIG.keywordHitThreshold;
   const tierKeyword = runTier1Keyword(extractedText, file.name, HIGH_RISK_KEYWORDS);
-  if (tierKeyword.hit) {
+  const keywordHit = tierKeyword.hitCount >= keywordThreshold;
+  if (keywordHit) {
+    const riskScore = computeKeywordRiskScore(tierKeyword);
     return {
       shouldBlock: true,
       topic,
-      tier: "tier1_keyword",
-      similarity: computeKeywordRiskScore(tierKeyword),
-      reason: "High-risk keyword combination detected",
+      tier: isLargeFile ? "tier1_keyword+large_file" : "tier1_keyword",
+      similarity: isLargeFile ? Math.min(1, riskScore + 0.05) : riskScore,
+      reason: isLargeFile
+        ? "High-risk keyword detected in a large file"
+        : "High-risk keyword combination detected",
       matchedPattern: tierKeyword.keywords.join(","),
       thresholdType: "keyword_match",
       thresholdValue: tierKeyword.hitCount,
@@ -463,29 +447,48 @@ async function runUploadPipeline(file) {
     };
   }
 
+  // --- Tier 2: Semantic similarity (large files use stricter threshold) ---
   const semanticResponse = await safeRuntimeMessage({
     action: "DLP_SEMANTIC_CHECK",
     text: semanticInput,
-  }, {
-    blocked: true,
-    top_score: 1,
-    top_topic: "semantic_error",
-    threshold: 0.65,
-  });
+  }, null);
 
-  const similarity = typeof semanticResponse?.top_score === "number" ? semanticResponse.top_score : 0;
-  const threshold = typeof semanticResponse?.threshold === "number" ? semanticResponse.threshold : 0.85;
   const semanticError = !semanticResponse || semanticResponse?.top_topic === "semantic_error";
-  const blocked = semanticError ? true : similarity >= threshold;
-  const semanticRisk = semanticError ? 0.92 : computeDecisionScore(similarity, threshold);
+
+  // When the semantic model is unavailable, Tier 1 (regex + keywords) has
+  // already checked the content.  Allow the file through rather than blocking
+  // everything — false-positive blocks on every upload are worse than the
+  // small window of reduced protection while the model warms up.
+  if (semanticError) {
+    log("[DLP] Semantic model unavailable — allowing upload (Tier 1 passed)");
+    return {
+      shouldBlock: false,
+      topic,
+      tier: "tier2_semantic_unavailable",
+      similarity: 0,
+      reason: "Semantic model unavailable; Tier 1 checks passed",
+      matchedPattern: null,
+      thresholdType: "semantic_unavailable",
+      thresholdValue: 0,
+      inputSizeChars,
+    };
+  }
+
+  const similarity = typeof semanticResponse.top_score === "number" ? semanticResponse.top_score : 0;
+  const rawThreshold = typeof semanticResponse.threshold === "number" ? semanticResponse.threshold : 0.85;
+  const threshold = isLargeFile
+    ? Number((rawThreshold * DLP_PIPELINE_CONFIG.largeSizeSemanticPenalty).toFixed(4))
+    : rawThreshold;
+  const blocked = similarity >= threshold;
+  const semanticRisk = computeDecisionScore(similarity, threshold);
 
   return {
     shouldBlock: blocked,
     topic,
-    tier: "tier2_semantic",
+    tier: (blocked && isLargeFile) ? "tier2_semantic+large_file" : "tier2_semantic",
     similarity: semanticRisk,
-    reason: semanticError
-      ? "semantic check unavailable (fail-safe block)"
+    reason: (blocked && isLargeFile)
+      ? "Content in large file appears related to private company domains"
       : "Content appears related to private company domains",
     matchedPattern: null,
     thresholdType: "semantic_similarity",
@@ -619,17 +622,21 @@ async function processAiPromptEvent(event, promptEl, triggerType) {
     }
 
     const decision = await showDlpWarningModal("AI prompt submission", analysis);
-    const actionTaken = decision === "cancel" ? "cancel" : "force";
-    await sendDlpDecisionLog(actionTaken, "AI prompt submission", analysis, {
-      eventChannel: "ai_prompt",
-      inputSizeBytes: approximateTextBytes(text),
-      inputSizeChars: text.length,
-    });
 
-    if (actionTaken === "cancel") return;
-
-    replayBypassPromptElements.add(promptEl);
-    replayPromptSubmission(promptEl, triggerType);
+    if (decision === "report") {
+      await sendDlpDecisionLog("report_mistake", "AI prompt submission", analysis, {
+        eventChannel: "ai_prompt",
+        inputSizeBytes: approximateTextBytes(text),
+        inputSizeChars: text.length,
+      });
+      void sendDlpMistakeReport("AI prompt submission", analysis, "ai_prompt");
+    } else {
+      await sendDlpDecisionLog("cancel", "AI prompt submission", analysis, {
+        eventChannel: "ai_prompt",
+        inputSizeBytes: approximateTextBytes(text),
+        inputSizeChars: text.length,
+      });
+    }
   } catch (error) {
     closeCheckingModal();
     await sendDlpDecisionLog("cancel", "AI prompt submission", {
@@ -729,27 +736,36 @@ async function runPromptPipeline(text) {
   const semanticResponse = await safeRuntimeMessage({
     action: "DLP_SEMANTIC_CHECK",
     text: buildSemanticInput("ai_prompt.txt", text),
-  }, {
-    blocked: true,
-    top_score: 1,
-    top_topic: "semantic_error",
-    threshold: 0.65,
-  });
+  }, null);
 
-  const similarity = typeof semanticResponse?.top_score === "number" ? semanticResponse.top_score : 0;
-  const threshold = typeof semanticResponse?.threshold === "number" ? semanticResponse.threshold : 0.85;
   const semanticError = !semanticResponse || semanticResponse?.top_topic === "semantic_error";
-  const blocked = semanticError ? true : similarity >= threshold;
-  const semanticRisk = semanticError ? 0.92 : computeDecisionScore(similarity, threshold);
+
+  if (semanticError) {
+    log("[DLP] Semantic model unavailable — allowing prompt (Tier 1 passed)");
+    return {
+      shouldBlock: false,
+      topic,
+      tier: "tier2_semantic_unavailable",
+      similarity: 0,
+      reason: "Semantic model unavailable; Tier 1 checks passed",
+      matchedPattern: null,
+      thresholdType: "semantic_unavailable",
+      thresholdValue: 0,
+      inputSizeChars: text.length,
+    };
+  }
+
+  const similarity = typeof semanticResponse.top_score === "number" ? semanticResponse.top_score : 0;
+  const threshold = typeof semanticResponse.threshold === "number" ? semanticResponse.threshold : 0.85;
+  const blocked = similarity >= threshold;
+  const semanticRisk = computeDecisionScore(similarity, threshold);
 
   return {
     shouldBlock: blocked,
     topic,
     tier: "tier2_semantic",
     similarity: semanticRisk,
-    reason: semanticError
-      ? "semantic check unavailable (fail-safe block)"
-      : "Prompt appears related to private company domains",
+    reason: "Prompt appears related to private company domains",
     matchedPattern: null,
     thresholdType: "semantic_similarity",
     thresholdValue: threshold,
@@ -898,7 +914,8 @@ async function getTier1Patterns() {
       }));
     })().catch((error) => {
       tier1PatternsPromise = null;
-      throw error;
+      log("[DLP] Failed to load regex patterns:", error?.message || error);
+      return [];
     });
   }
   return tier1PatternsPromise;
@@ -974,22 +991,27 @@ function computeDecisionScore(rawSimilarity, threshold) {
 
 async function extractTextFromFile(file) {
   if (!file) return "";
-  const name = (file.name || "").toLowerCase();
+  try {
+    const name = (file.name || "").toLowerCase();
 
-  if (isStructuredText(file, name)) {
-    const raw = await file.slice(0, DLP_PIPELINE_CONFIG.maxExtractChars * 3).text();
-    return normalizeExtractedText(raw);
+    if (isStructuredText(file, name)) {
+      const raw = await file.slice(0, DLP_PIPELINE_CONFIG.maxExtractChars * 3).text();
+      return normalizeExtractedText(raw);
+    }
+
+    if (name.endsWith(".pdf")) {
+      return extractPdfText(file);
+    }
+
+    if (name.endsWith(".docx")) {
+      return extractDocxText(file);
+    }
+
+    return "";
+  } catch (error) {
+    log("[DLP] Text extraction failed:", error?.message || error);
+    return "";
   }
-
-  if (name.endsWith(".pdf")) {
-    return extractPdfText(file);
-  }
-
-  if (name.endsWith(".docx")) {
-    return extractDocxText(file);
-  }
-
-  return "";
 }
 
 function isStructuredText(file, lowerName) {
@@ -1053,21 +1075,21 @@ async function showDlpWarningModal(filename, analysis) {
       '<div class="cb-dlp-modal">' +
       '<div class="cb-dlp-header">' +
       '<span class="cb-dlp-icon">&#9888;</span>' +
-      '<span class="cb-dlp-title">Sensitive Content Detected</span>' +
+      '<span class="cb-dlp-title">Upload Blocked</span>' +
       '<span class="cb-dlp-badge">CyberBase</span>' +
       "</div>" +
       '<div class="cb-dlp-body-wrap">' +
       '<p class="cb-dlp-body">Selected item:</p>' +
       '<div class="cb-dlp-filename">' + sanitize(filename, 80) + "</div>" +
       '<p class="cb-dlp-question"><strong>Risk score:</strong> ' + similarityPct + "%</p>" +
-      '<p class="cb-dlp-question">This content may include private company information and should not be shared externally.</p>' +
+      '<p class="cb-dlp-question">This content contains private company information and has been blocked by your organization\'s security policy.</p>' +
       "</div>" +
       "</div>",
     showCancelButton: true,
-    confirmButtonText: "Cancel upload",
-    cancelButtonText: "Force upload",
-    cancelButtonColor: "#c53030",
-    confirmButtonColor: "#276749",
+    confirmButtonText: "OK",
+    cancelButtonText: "\u26A0 Report Mistake",
+    confirmButtonColor: "#c53030",
+    cancelButtonColor: "#2563eb",
     allowOutsideClick: false,
     allowEscapeKey: false,
     showClass: { popup: "cb-swal-enter" },
@@ -1077,8 +1099,7 @@ async function showDlpWarningModal(filename, analysis) {
     },
   });
 
-  if (result.isConfirmed) return "cancel";
-  if (result.dismiss === Swal.DismissReason.cancel) return "force";
+  if (result.dismiss === Swal.DismissReason.cancel) return "report";
   return "cancel";
 }
 
@@ -1103,6 +1124,21 @@ async function sendDlpDecisionLog(actionTaken, filename, analysis, context = {})
       ? context.thresholdValue
       : (Number.isFinite(analysis.thresholdValue) ? analysis.thresholdValue : null),
     decision_score: safeScore,
+  }, { ok: false });
+}
+
+async function sendDlpMistakeReport(filename, analysis, eventChannel) {
+  if (!isProtectionEnabled()) return;
+  await safeRuntimeMessage({
+    action: "DLP_REPORT_MISTAKE",
+    filename,
+    website: window.location.hostname,
+    event_channel: eventChannel,
+    document_topic: analysis.topic,
+    detection_tier: analysis.tier,
+    detection_reason: analysis.reason,
+    matched_pattern: analysis.matchedPattern,
+    semantic_score: Number((analysis.similarity || 0).toFixed(4)),
   }, { ok: false });
 }
 

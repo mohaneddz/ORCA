@@ -46,6 +46,7 @@ const state = {
     blockedHosts: [],
     degraded: false,
   },
+  falsePositiveReports: [],
 };
 
 function sendJson(res, statusCode, body) {
@@ -437,9 +438,9 @@ const server = http.createServer(async (req, res) => {
       const missing = required.filter((k) => !body[k]);
       if (missing.length) return sendJson(res, 400, { error: `Missing required fields: ${missing.join(", ")}` });
 
-      const allowedActions = new Set(["allow", "cancel", "force"]);
+      const allowedActions = new Set(["allow", "cancel", "force", "report_mistake"]);
       if (!allowedActions.has(body.action_taken)) {
-        return sendJson(res, 400, { error: "action_taken must be allow, cancel, or force." });
+        return sendJson(res, 400, { error: "action_taken must be allow, cancel, force, or report_mistake." });
       }
 
       const logEntry = {
@@ -449,6 +450,26 @@ const server = http.createServer(async (req, res) => {
       };
       state.dlpLogs.push(logEntry);
       return sendJson(res, 200, { ok: true });
+    }
+
+    if (req.method === "POST" && path === "/api/logs/dlp/report-mistake") {
+      const employee = requireEmployeeAuth(req, res);
+      if (!employee) return;
+
+      const body = await readJsonBody(req);
+      const required = ["filename", "website"];
+      const missing = required.filter((k) => !body[k]);
+      if (missing.length) return sendJson(res, 400, { error: `Missing required fields: ${missing.join(", ")}` });
+
+      const report = {
+        ...body,
+        id: `fp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        employee_id: employee.id,
+        status: "pending",
+        reported_at: new Date().toISOString(),
+      };
+      state.falsePositiveReports.push(report);
+      return sendJson(res, 200, { ok: true, report_id: report.id });
     }
 
     if (req.method === "POST" && path === "/api/logs/blacklist") {

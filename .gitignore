@@ -6,3 +6,4 @@
 /Extension/node_modules
 App/lightmode_issues_full.txt
 **/migrations/__pycache__/
+.vscode
