@@ -1,0 +1,12 @@
+Monthly Team Update - May 2026
+==============================
+
+This month the frontend team shipped the new dashboard redesign.
+The backend team completed API versioning for v2 endpoints.
+Infrastructure upgraded all staging servers to the latest Ubuntu LTS.
+
+No blockers reported. Next sprint planning is scheduled for Monday 9 AM.
+All team members are reminded to submit their time-off requests before the end of the month.
+
+Best regards,
+Project Management Office

@@ -6,7 +6,6 @@
   <title>Access Blocked - CyberBase</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
       min-height: 100vh;
       background: #0f1117;
@@ -17,18 +16,16 @@
       justify-content: center;
       padding: 24px;
     }
-
     .card {
       background: #1a202c;
       border: 1px solid #742a2a;
       border-radius: 10px;
-      padding: 40px 48px;
-      max-width: 520px;
+      padding: 38px 44px;
+      max-width: 560px;
       width: 100%;
       text-align: center;
       box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
     }
-
     .badge {
       display: inline-flex;
       align-items: center;
@@ -42,24 +39,21 @@
       padding: 3px 10px;
       text-transform: uppercase;
       letter-spacing: 0.6px;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
     }
-
     h1 {
-      font-size: 20px;
+      font-size: 21px;
       font-weight: 700;
-      color: #e2e8f0;
+      color: #f8fafc;
       margin-bottom: 10px;
       line-height: 1.3;
     }
-
     .subtitle {
-      color: #718096;
+      color: #94a3b8;
       font-size: 13px;
-      margin-bottom: 24px;
+      margin-bottom: 22px;
       line-height: 1.6;
     }
-
     .url-label {
       font-size: 10px;
       font-weight: 600;
@@ -69,54 +63,102 @@
       margin-bottom: 6px;
       text-align: left;
     }
-
     .url-box {
       background: #2d3748;
       border: 1px solid #3a4a5c;
       border-radius: 5px;
       padding: 9px 14px;
-      font-family: monospace;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       font-size: 12px;
-      color: #a0aec0;
+      color: #cbd5e1;
       word-break: break-all;
-      margin-bottom: 24px;
+      margin-bottom: 18px;
       text-align: left;
     }
-
-    .back-btn {
-      background: #2b6cb0;
-      color: #fff;
-      padding: 9px 24px;
+    .meta {
+      margin-bottom: 20px;
+      text-align: left;
+      font-size: 12px;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+    .meta strong {
+      color: #e2e8f0;
+      font-weight: 600;
+    }
+    .btn-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      border: none;
       border-radius: 5px;
+      padding: 9px 18px;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
-      border: none;
-      transition: background 0.15s;
       font-family: inherit;
+      transition: opacity 0.15s;
     }
-
-    .back-btn:hover { background: #2562a0; }
-
+    .btn:hover { opacity: 0.9; }
+    .btn-primary {
+      background: #2b6cb0;
+      color: #fff;
+    }
+    .btn-muted {
+      background: #2d3748;
+      color: #e2e8f0;
+      border: 1px solid #4a5568;
+    }
     .footer {
-      margin-top: 20px;
+      margin-top: 18px;
       font-size: 11px;
-      color: #3a4a5c;
+      color: #4a5568;
     }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="badge">&#9632; CyberBase Web Guard</div>
-    <h1>Access blocked by security policy</h1>
+    <h1>Navigation blocked for your safety</h1>
     <p class="subtitle">
-      This site has been identified as a security risk.<br />
-      Access was blocked automatically.
+      This destination matched cybersecurity threat intelligence sources and was blocked before page load.
     </p>
     <p class="url-label">Blocked URL</p>
-    <div class="url-box">{{ATTEMPTED_URL}}</div>
-    <button class="back-btn" onclick="history.back()">&#8592; Go back</button>
-    <p class="footer">CyberBase · Contact your IT administrator if you think this is an error.</p>
+    <div class="url-box" id="blockedUrl">{{ATTEMPTED_URL}}</div>
+    <div class="meta" id="metaInfo">
+      <div><strong>Verdict:</strong> <span id="verdictValue">malicious</span></div>
+      <div><strong>Matched sources:</strong> <span id="sourcesValue">security policy</span></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="history.back()">Go back</button>
+      <button class="btn btn-muted" onclick="window.location.replace('about:blank')">Close page</button>
+    </div>
+    <p class="footer">CyberBase · Contact your IT administrator if you believe this is a false positive.</p>
   </div>
+  <script>
+    (function bootstrapBlockedPage() {
+      const params = new URLSearchParams(window.location.search);
+      const target = params.get("target");
+      const verdict = params.get("verdict");
+      const sources = params.get("sources");
+
+      if (target) {
+        document.getElementById("blockedUrl").textContent = target;
+      }
+      if (verdict) {
+        document.getElementById("verdictValue").textContent = verdict;
+      }
+      if (sources) {
+        document.getElementById("sourcesValue").textContent = sources
+          .split(",")
+          .map((item) => item.replace(/_/g, " "))
+          .join(", ");
+      }
+    })();
+  </script>
 </body>
 </html>

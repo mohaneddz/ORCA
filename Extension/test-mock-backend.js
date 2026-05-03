@@ -30,6 +30,12 @@ async function run() {
   await assertJson("GET", "/api/extension/poll", null, 401);
   await assertJson("GET", "/api/extension/blacklist", null, 401);
   await assertJson("GET", "/api/extension/ai-targets", null, 401);
+  await assertJson(
+    "POST",
+    "/api/extension/reputation/check",
+    { url: "https://example.com/" },
+    200
+  );
   await assertJson("POST", "/api/logs/blacklist", { attempted_url: "http://x.test" }, 401);
   await assertJson("POST", "/api/gamification/submit-quiz", { quiz_id: "q1", answer_selected: "a" }, 401);
 
@@ -86,6 +92,38 @@ async function run() {
   const aiTargets = await assertJson("GET", "/api/extension/ai-targets", null, 200, token);
   if (!Array.isArray(aiTargets.domains) || !Array.isArray(aiTargets.keywords)) {
     throw new Error(`Expected ai-targets payload with domains and keywords. Got: ${JSON.stringify(aiTargets)}`);
+  }
+
+  await assertJson(
+    "POST",
+    "/dev/reputation",
+    {
+      blockedUrls: ["https://phish.example.test/login"],
+      blockedHosts: ["malicious.example.test"],
+      degraded: false,
+    },
+    200
+  );
+
+  const reputationBlocked = await assertJson(
+    "POST",
+    "/api/extension/reputation/check",
+    { url: "https://phish.example.test/login" },
+    200
+  );
+  if (reputationBlocked.decision !== "block") {
+    throw new Error(`Expected blocked reputation verdict. Got: ${JSON.stringify(reputationBlocked)}`);
+  }
+
+  await assertJson("POST", "/dev/reputation", { degraded: true }, 200);
+  const reputationDegraded = await assertJson(
+    "POST",
+    "/api/extension/reputation/check",
+    { url: "https://clean.example.test/" },
+    200
+  );
+  if (reputationDegraded.degraded !== true || reputationDegraded.decision !== "allow") {
+    throw new Error(`Expected degraded allow verdict. Got: ${JSON.stringify(reputationDegraded)}`);
   }
 
   await assertJson(

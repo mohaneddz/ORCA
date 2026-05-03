@@ -18,12 +18,15 @@
         "content.js"
       ],
       "css": ["custom.css"],
-      "run_at": "document_idle"
+      "run_at": "document_start"
     }
   ],
   "web_accessible_resources": [
     {
       "resources": [
+        "blocked.html",
+        "reputation-check.html",
+        "reputation-check.js",
         "lib/pdf.worker.min.js",
         "lib/transformers.min.js",
         "config/regex-patterns.json",
@@ -31,11 +34,15 @@
         "lib/ort-wasm.wasm",
         "lib/ort-wasm-threaded.wasm",
         "lib/ort-wasm-simd.wasm",
-        "lib/ort-wasm-simd-threaded.wasm"
+        "lib/ort-wasm-simd-threaded.wasm",
+        "models/*"
       ],
       "matches": ["<all_urls>"]
     }
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+  },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

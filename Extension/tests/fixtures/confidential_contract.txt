@@ -1,0 +1,22 @@
+CONFIDENTIAL - INTERNAL USE ONLY
+Do Not Share Outside Legal & Executive Teams
+
+NON-DISCLOSURE AGREEMENT (NDA)
+
+This agreement is entered into as of May 1, 2026, between CyberBase Corp ("Disclosing Party")
+and Acme Ventures LLC ("Receiving Party").
+
+The Receiving Party agrees not to disclose, reproduce, or use any confidential information
+shared during the course of merger negotiations and acquisition due diligence.
+
+Subject matter covered under this NDA includes, but is not limited to:
+- Financial reports and revenue forecast for FY2026
+- Product roadmap and unreleased features
+- Payroll and compensation structures
+- Source code, proprietary algorithms, and internal architecture
+
+Private and Confidential. Breach of this NDA may result in immediate legal action.
+Governing law: French jurisdiction, Paris Commercial Court.
+
+Signed,
+Legal Department - CyberBase Corp

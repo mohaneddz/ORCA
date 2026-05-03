@@ -41,6 +41,11 @@ const state = {
     keywords: ["chatgpt", "claude", "gemini", "copilot", "assistant", "ai chat", "prompt"],
   },
   employeeTokens: new Map(),
+  reputation: {
+    blockedUrls: [],
+    blockedHosts: [],
+    degraded: false,
+  },
 };
 
 function sendJson(res, statusCode, body) {
@@ -83,6 +88,26 @@ function dequeueEvent(employeeId) {
   const queue = state.eventsByEmployee.get(employeeId);
   if (!queue || !queue.length) return null;
   return queue.shift();
+}
+
+function normalizeHttpUrl(raw) {
+  try {
+    const parsed = new URL(String(raw || ""));
+    const protocol = parsed.protocol.toLowerCase();
+    if (protocol !== "http:" && protocol !== "https:") return "";
+    parsed.hash = "";
+    if ((protocol === "http:" && parsed.port === "80") || (protocol === "https:" && parsed.port === "443")) {
+      parsed.port = "";
+    }
+    return parsed.toString();
+  } catch (_) {
+    return "";
+  }
+}
+
+function isHostnameBlocked(hostname, blockedHosts) {
+  const host = String(hostname || "").toLowerCase().trim();
+  return blockedHosts.some((entry) => host === entry || host.endsWith("." + entry));
 }
 
 function issueEmployeeToken(employeeId) {
@@ -249,7 +274,28 @@ const server = http.createServer(async (req, res) => {
       state.quizSubmissions = [];
       state.eventsByEmployee.clear();
       state.employeeTokens.clear();
+      state.reputation = {
+        blockedUrls: [],
+        blockedHosts: [],
+        degraded: false,
+      };
       return sendJson(res, 200, { ok: true, message: "Mock backend state reset." });
+    }
+
+    if (req.method === "POST" && path === "/dev/reputation") {
+      const body = await readJsonBody(req);
+      const blockedUrls = Array.isArray(body.blockedUrls) ? body.blockedUrls : [];
+      const blockedHosts = Array.isArray(body.blockedHosts) ? body.blockedHosts : [];
+      state.reputation = {
+        blockedUrls: blockedUrls
+          .map((item) => normalizeHttpUrl(item))
+          .filter(Boolean),
+        blockedHosts: blockedHosts
+          .map((item) => String(item || "").toLowerCase().trim())
+          .filter(Boolean),
+        degraded: Boolean(body.degraded),
+      };
+      return sendJson(res, 200, { ok: true, reputation: state.reputation });
     }
 
     if (req.method === "POST" && path === "/dev/trigger") {
@@ -329,6 +375,57 @@ const server = http.createServer(async (req, res) => {
       const employee = requireEmployeeAuth(req, res);
       if (!employee) return;
       return sendJson(res, 200, state.aiTargets);
+    }
+
+    if (req.method === "POST" && path === "/api/extension/reputation/check") {
+      const body = await readJsonBody(req);
+      const target = normalizeHttpUrl(body.url);
+      if (!target) {
+        return sendJson(res, 400, { error: "A valid http/https URL is required." });
+      }
+
+      const parsedTarget = new URL(target);
+      const blockedByPolicy = isHostnameBlocked(parsedTarget.hostname, state.blacklistDomains);
+      const blockedByFeedUrl = state.reputation.blockedUrls.includes(target);
+      const blockedByFeedHost = isHostnameBlocked(parsedTarget.hostname, state.reputation.blockedHosts);
+
+      if (blockedByPolicy) {
+        return sendJson(res, 200, {
+          decision: "block",
+          verdict: "policy_block",
+          matched_sources: ["policy_blacklist"],
+          degraded: false,
+          reason: "policy_blacklist_match",
+        });
+      }
+
+      if (blockedByFeedUrl || blockedByFeedHost) {
+        return sendJson(res, 200, {
+          decision: "block",
+          verdict: "phishing",
+          matched_sources: ["openphish", "phishtank"],
+          degraded: false,
+          reason: "threat_match",
+        });
+      }
+
+      if (state.reputation.degraded) {
+        return sendJson(res, 200, {
+          decision: "allow",
+          verdict: "unknown",
+          matched_sources: [],
+          degraded: true,
+          reason: "provider_degraded_allow",
+        });
+      }
+
+      return sendJson(res, 200, {
+        decision: "allow",
+        verdict: "clean",
+        matched_sources: [],
+        degraded: false,
+        reason: "no_match",
+      });
     }
 
     if (req.method === "POST" && path === "/api/logs/dlp") {

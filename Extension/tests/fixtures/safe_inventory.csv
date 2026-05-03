@@ -1,0 +1,7 @@
+product_id,product_name,category,quantity_in_stock,unit_price_eur,warehouse_location
+PRD-001,Office Chair Model X,Furniture,42,189.99,Warehouse A
+PRD-002,Standing Desk Pro,Furniture,18,349.50,Warehouse A
+PRD-003,USB-C Hub 7-port,Electronics,130,39.99,Warehouse B
+PRD-004,Webcam 1080p,Electronics,75,64.99,Warehouse B
+PRD-005,Ergonomic Keyboard,Electronics,60,89.00,Warehouse C
+PRD-006,Monitor 27inch 4K,Electronics,25,499.00,Warehouse C

@@ -5,10 +5,14 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 
 from organizations.auth import get_employee_from_request
+from organizations.models import EmployeeAuthToken
 
 from .models import AdminEvent, BlacklistLog, DLPLog
+from .reputation import evaluate_url_reputation
 
 import json
+
+EMPLOYEE_AUTH_PREFIX = "EmployeeToken "
 
 
 def _to_float(value):
@@ -22,6 +26,22 @@ def _to_int(value):
     try:
         return int(value)
     except (TypeError, ValueError):
+        return None
+
+
+def _resolve_employee_if_present(request):
+    header = request.headers.get("Authorization", "")
+    if not header.startswith(EMPLOYEE_AUTH_PREFIX):
+        return None
+
+    key = header[len(EMPLOYEE_AUTH_PREFIX):].strip()
+    if not key:
+        return None
+
+    try:
+        token = EmployeeAuthToken.objects.select_related("employee").get(key=key)
+        return token.employee
+    except EmployeeAuthToken.DoesNotExist:
         return None
 
 
@@ -161,3 +181,37 @@ class AITargetsView(View):
         return JsonResponse({"domains": safe_domains, "keywords": safe_keywords})
 
 
+@method_decorator(csrf_exempt, name="dispatch")
+class ReputationCheckView(View):
+    def post(self, request):
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON."}, status=400)
+
+        raw_url = body.get("url")
+        if not raw_url:
+            return JsonResponse({"error": "url is required."}, status=400)
+
+        try:
+            result = evaluate_url_reputation(raw_url)
+        except ValueError as error:
+            return JsonResponse({"error": str(error)}, status=400)
+
+        employee = _resolve_employee_if_present(request)
+        if employee and result.get("decision") == "block":
+            BlacklistLog.objects.create(
+                employee=employee,
+                attempted_url=result.get("normalized_url", str(raw_url)),
+            )
+
+        return JsonResponse(
+            {
+                "decision": result["decision"],
+                "verdict": result["verdict"],
+                "matched_sources": result["matched_sources"],
+                "degraded": result["degraded"],
+                "reason": result["reason"],
+            },
+            status=200,
+        )
