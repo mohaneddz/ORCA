@@ -356,12 +356,14 @@ class EmployeeReportView(View):
 
             rows.append(
                 {
+                    "id": eid,
                     "employee_id": eid,
                     "name": emp.name,
                     "email": emp.email,
                     "department": emp.department,
                     "role": emp.role,
                     "seniority": emp.seniority,
+                    "is_active": emp.is_active,
                     "phishing": {
                         "simulations_sent": sent,
                         "clicks": clicks,
