@@ -454,11 +454,11 @@ async function waitForContentScript(page) {
 }
 
 async function handleDlpWarning(page, decision) {
-  await page.waitForSelector("text=Sensitive Content Detected", { timeout: DEFAULT_TIMEOUT });
-  if (decision === "cancel") {
-    await page.click(".swal2-confirm");
-  } else {
+  await page.waitForSelector("text=Upload Blocked", { timeout: DEFAULT_TIMEOUT });
+  if (decision === "report") {
     await page.click(".swal2-cancel");
+  } else {
+    await page.click(".swal2-confirm");
   }
   await sleep(800);
 }
@@ -673,7 +673,7 @@ async function main() {
         await page.goto(`${lab.baseUrl}/upload-lab`, { waitUntil: "domcontentloaded" });
         await waitForContentScript(page);
         await page.setInputFiles("#f1", filePath);
-        await handleDlpWarning(page, "cancel");
+        await handleDlpWarning(page);
 
         const fileCount = await page.locator("#f1").evaluate((el) => el.files.length);
         if (fileCount !== 0) {
@@ -697,8 +697,8 @@ async function main() {
       }
     });
 
-    await runStep("DLP regex force", null, async () => {
-      const filePath = cloneFixtureWithRunId("sensitive.txt", "force");
+    await runStep("DLP regex report mistake", null, async () => {
+      const filePath = cloneFixtureWithRunId("sensitive.txt", "report");
       tempFiles.push(filePath);
       const fileName = path.basename(filePath);
       const stepStart = new Date().toISOString();
@@ -708,14 +708,19 @@ async function main() {
         await page.goto(`${lab.baseUrl}/upload-lab`, { waitUntil: "domcontentloaded" });
         await waitForContentScript(page);
         await page.setInputFiles("#f1", filePath);
-        await handleDlpWarning(page, "force");
+        await handleDlpWarning(page, "report");
+
+        const fileCount = await page.locator("#f1").evaluate((el) => el.files.length);
+        if (fileCount !== 0) {
+          throw new Error("Report Mistake action should still block the upload.");
+        }
 
         const latest = await waitForDlpLog(
           {
             employee_id: auth.employee_id,
             logged_after: stepStart,
             filename: fileName,
-            action_taken: "force",
+            action_taken: "report_mistake",
             event_channel: "file_upload",
           },
           POLL_TIMEOUT
@@ -727,7 +732,8 @@ async function main() {
       }
     });
 
-    await runStep("DLP size threshold", null, async () => {
+
+    await runStep("DLP large benign file allow-through", null, async () => {
       const largeFile = createLargeFixtureFile();
       tempFiles.push(largeFile);
       const fileName = path.basename(largeFile);
@@ -738,25 +744,47 @@ async function main() {
         await page.goto(`${lab.baseUrl}/upload-lab`, { waitUntil: "domcontentloaded" });
         await waitForContentScript(page);
         await page.setInputFiles("#f1", largeFile);
-        try {
-          await handleDlpWarning(page, "force");
-        } catch (_) {
-          throw new SkipStepError("Size-threshold warning was not triggered in this run.");
+
+        // Large benign files (no sensitive content) should now pass through
+        // since size alone is no longer a blocking criterion.
+        const outcome = await Promise.race([
+          page.waitForSelector("text=Upload Blocked", { timeout: 15000 })
+            .then(() => "modal"),
+          page.waitForFunction(() => {
+            const el = document.getElementById("uploadState");
+            return el && el.textContent && el.textContent !== "none";
+          }, { timeout: 15000 })
+            .then(() => "accepted"),
+        ]);
+
+        if (outcome === "modal") {
+          // Modal appeared — dismiss so we can check the detection tier
+          await page.click(".swal2-confirm");
+          await sleep(800);
+          const log = await waitForDlpLog(
+            { employee_id: auth.employee_id, logged_after: stepStart, filename: fileName, event_channel: "file_upload" },
+            POLL_TIMEOUT
+          );
+          cleanupState.dlpLogIds.add(log.id);
+          if (log.detection_tier === "tier2_semantic" || log.detection_tier === "tier2_semantic+large_file") {
+            throw new SkipStepError("Semantic model not loaded — large benign file was fail-safe blocked (expected when model is cold)");
+          }
+          throw new Error(`Large benign file blocked at unexpected tier: ${log.detection_tier}`);
         }
 
+        // File was accepted without modal
         const latest = await waitForDlpLog(
           {
             employee_id: auth.employee_id,
             logged_after: stepStart,
             filename: fileName,
-            action_taken: "force",
+            action_taken: "allow",
             event_channel: "file_upload",
-            detection_tier: "size_threshold",
           },
           POLL_TIMEOUT
         );
         cleanupState.dlpLogIds.add(latest.id);
-        return `tier=${latest.detection_tier}`;
+        return `action=${latest.action_taken}, large benign file passed through`;
       } finally {
         await page.close();
       }
@@ -777,7 +805,7 @@ async function main() {
 
         // Safe files should not trigger the DLP warning — wait for either modal or file acceptance
         const outcome = await Promise.race([
-          page.waitForSelector("text=Sensitive Content Detected", { timeout: 15000 })
+          page.waitForSelector("text=Upload Blocked", { timeout: 15000 })
             .then(() => "modal"),
           page.waitForFunction(() => {
             const el = document.getElementById("uploadState");
@@ -787,8 +815,8 @@ async function main() {
         ]);
 
         if (outcome === "modal") {
-          // Modal appeared — force-allow so we can check the detection tier
-          await page.click(".swal2-cancel");
+          // Modal appeared — dismiss so we can check the detection tier
+          await page.click(".swal2-confirm");
           await sleep(800);
           const log = await waitForDlpLog(
             { employee_id: auth.employee_id, logged_after: stepStart, filename: fileName, event_channel: "file_upload" },
@@ -833,7 +861,7 @@ async function main() {
         await page.setInputFiles("#f1", filePath);
 
         const outcome = await Promise.race([
-          page.waitForSelector("text=Sensitive Content Detected", { timeout: 15000 })
+          page.waitForSelector("text=Upload Blocked", { timeout: 15000 })
             .then(() => "modal"),
           page.waitForFunction(() => {
             const el = document.getElementById("uploadState");
@@ -843,7 +871,7 @@ async function main() {
         ]);
 
         if (outcome === "modal") {
-          await page.click(".swal2-cancel");
+          await page.click(".swal2-confirm");
           await sleep(800);
           const log = await waitForDlpLog(
             { employee_id: auth.employee_id, logged_after: stepStart, filename: fileName, event_channel: "file_upload" },
@@ -886,7 +914,7 @@ async function main() {
         await page.setInputFiles("#f1", filePath);
 
         const outcome = await Promise.race([
-          page.waitForSelector("text=Sensitive Content Detected", { timeout: 15000 })
+          page.waitForSelector("text=Upload Blocked", { timeout: 15000 })
             .then(() => "modal"),
           page.waitForFunction(() => {
             const el = document.getElementById("uploadState");
@@ -896,7 +924,7 @@ async function main() {
         ]);
 
         if (outcome === "modal") {
-          await page.click(".swal2-cancel");
+          await page.click(".swal2-confirm");
           await sleep(800);
           const log = await waitForDlpLog(
             { employee_id: auth.employee_id, logged_after: stepStart, filename: fileName, event_channel: "file_upload" },
@@ -937,7 +965,7 @@ async function main() {
         await page.goto(`${lab.baseUrl}/upload-lab`, { waitUntil: "domcontentloaded" });
         await waitForContentScript(page);
         await page.setInputFiles("#f1", filePath);
-        await handleDlpWarning(page, "cancel");
+        await handleDlpWarning(page);
 
         const fileCount = await page.locator("#f1").evaluate((el) => el.files.length);
         if (fileCount !== 0) {
@@ -961,35 +989,7 @@ async function main() {
       }
     });
 
-    await runStep("DLP confidential_contract.txt force", null, async () => {
-      const filePath = cloneFixtureWithRunId("confidential_contract.txt", "force");
-      tempFiles.push(filePath);
-      const fileName = path.basename(filePath);
-      const stepStart = new Date().toISOString();
 
-      const page = await context.newPage();
-      try {
-        await page.goto(`${lab.baseUrl}/upload-lab`, { waitUntil: "domcontentloaded" });
-        await waitForContentScript(page);
-        await page.setInputFiles("#f1", filePath);
-        await handleDlpWarning(page, "force");
-
-        const latest = await waitForDlpLog(
-          {
-            employee_id: auth.employee_id,
-            logged_after: stepStart,
-            filename: fileName,
-            action_taken: "force",
-            event_channel: "file_upload",
-          },
-          POLL_TIMEOUT
-        );
-        cleanupState.dlpLogIds.add(latest.id);
-        return `action=${latest.action_taken}, tier=${latest.detection_tier || "n/a"}`;
-      } finally {
-        await page.close();
-      }
-    });
 
     await runStep("DLP payroll_data.csv cancel", null, async () => {
       const filePath = cloneFixtureWithRunId("payroll_data.csv", "cancel");
@@ -1002,7 +1002,7 @@ async function main() {
         await page.goto(`${lab.baseUrl}/upload-lab`, { waitUntil: "domcontentloaded" });
         await waitForContentScript(page);
         await page.setInputFiles("#f1", filePath);
-        await handleDlpWarning(page, "cancel");
+        await handleDlpWarning(page);
 
         const fileCount = await page.locator("#f1").evaluate((el) => el.files.length);
         if (fileCount !== 0) {
@@ -1038,7 +1038,7 @@ async function main() {
           form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
         });
         try {
-          await handleDlpWarning(page, "cancel");
+          await handleDlpWarning(page);
         } catch (_) {
           throw new SkipStepError("AI prompt interception is not active on this build/environment.");
         }
@@ -1064,44 +1064,7 @@ async function main() {
       }
     });
 
-    await runStep("AI prompt force", null, async () => {
-      const stepStart = new Date().toISOString();
-      const oversizedPrompt = "Y".repeat(3000);
-      const page = await context.newPage();
-      try {
-        await page.goto(`${lab.baseUrl}/prompt-lab`, { waitUntil: "domcontentloaded" });
-        await waitForContentScript(page);
-        await page.fill("#promptBox", oversizedPrompt);
-        await page.evaluate(() => {
-          const form = document.getElementById("promptForm");
-          form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-        });
-        try {
-          await handleDlpWarning(page, "force");
-        } catch (_) {
-          throw new SkipStepError("AI prompt interception is not active on this build/environment.");
-        }
 
-        const submitCount = await page.evaluate(() => window.__promptSubmitCount || 0);
-        if (submitCount < 1) {
-          throw new Error("Prompt was not submitted after force action.");
-        }
-
-        const latest = await waitForDlpLog(
-          {
-            employee_id: auth.employee_id,
-            logged_after: stepStart,
-            action_taken: "force",
-            event_channel: "ai_prompt",
-          },
-          POLL_TIMEOUT
-        );
-        cleanupState.dlpLogIds.add(latest.id);
-        return `action=${latest.action_taken}, channel=${latest.event_channel}`;
-      } finally {
-        await page.close();
-      }
-    });
 
     await runStep("Admin quiz delivered and submitted", null, async () => {
       const quizQuestion = `Cyber quiz ${RUN_ID}`;
