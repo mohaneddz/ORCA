@@ -253,3 +253,39 @@ class ApprovedSoftware(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.organization})"
+
+
+class PortRemediationRequest(models.Model):
+    """
+    A flag raised by the admin to request closure of a risky port on an employee device.
+    The Tauri agent polls for these and can execute the closure command locally.
+    """
+
+    STATUS_CHOICES = [
+        ("PENDING", "Pending"),
+        ("RESOLVED", "Resolved"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="port_remediation_requests"
+    )
+    employee = models.ForeignKey(
+        Employee, on_delete=models.CASCADE, related_name="port_remediation_requests"
+    )
+    hostname = models.CharField(max_length=255)
+    port = models.IntegerField()
+    port_label = models.CharField(max_length=255, blank=True, default="")
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="PENDING")
+    requested_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-requested_at"]
+        indexes = [
+            models.Index(fields=["organization", "status"]),
+            models.Index(fields=["employee"]),
+        ]
+
+    def __str__(self):
+        return f"Port {self.port} on {self.hostname} [{self.status}]"

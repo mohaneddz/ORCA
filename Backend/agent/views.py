@@ -10,7 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from organizations.models import Employee
 from organizations.views import get_org_from_request
 
-from .models import ApprovedSoftware, DeviceSnapshot, DiskHealthSnapshot, NetworkDeviceSnapshot, SystemMetricsSnapshot
+from .models import ApprovedSoftware, DeviceSnapshot, DiskHealthSnapshot, NetworkDeviceSnapshot, PortRemediationRequest, SystemMetricsSnapshot
 from .risk import _RISKY_PORTS, compute_disk_risk, compute_network_risk, compute_risk, compute_system_risk
 
 
@@ -343,7 +343,7 @@ class PortAuditView(View):
             if snap:
                 latest_ids.append(snap.id)
 
-        snapshots = DeviceSnapshot.objects.filter(id__in=latest_ids)
+        snapshots = DeviceSnapshot.objects.filter(id__in=latest_ids).select_related("employee")
 
         # Aggregate risky ports across all devices
         risky_port_map = {}  # port_number -> {label, affected_devices: [...]}
@@ -357,6 +357,7 @@ class PortAuditView(View):
                     risky_port_map[port]["affected_devices"].append(
                         {
                             "employee_id": str(snap.employee_id),
+                            "employee_name": snap.employee.name,
                             "hostname": snap.hostname,
                             "snapshot_id": str(snap.id),
                             "collected_at": snap.collected_at.isoformat(),
@@ -373,6 +374,101 @@ class PortAuditView(View):
                 "port_audit": results,
             }
         )
+
+
+# ---------------------------------------------------------------------------
+# Port Remediation Requests
+# GET  /api/agent/port-remediation/        — list all requests for the org
+# POST /api/agent/port-remediation/        — flag a port on a device for closure
+# PATCH /api/agent/port-remediation/<id>/  — mark as resolved
+# ---------------------------------------------------------------------------
+@method_decorator(csrf_exempt, name="dispatch")
+class PortRemediationView(View):
+    def get(self, request):
+        org, err = get_org_from_request(request)
+        if err:
+            return err
+
+        requests_qs = PortRemediationRequest.objects.filter(
+            organization=org
+        ).select_related("employee").order_by("-requested_at")
+
+        return JsonResponse({
+            "remediations": [
+                {
+                    "id": str(r.id),
+                    "employee_id": str(r.employee_id),
+                    "employee_name": r.employee.name,
+                    "hostname": r.hostname,
+                    "port": r.port,
+                    "port_label": r.port_label,
+                    "status": r.status,
+                    "requested_at": r.requested_at.isoformat(),
+                    "resolved_at": r.resolved_at.isoformat() if r.resolved_at else None,
+                }
+                for r in requests_qs
+            ]
+        })
+
+    def post(self, request):
+        org, err = get_org_from_request(request)
+        if err:
+            return err
+
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON."}, status=400)
+
+        employee_id = body.get("employee_id", "")
+        port = body.get("port")
+        hostname = (body.get("hostname") or "").strip()
+        port_label = (body.get("port_label") or "").strip()
+
+        if not employee_id or port is None or not hostname:
+            return JsonResponse({"error": "employee_id, port, and hostname are required."}, status=400)
+
+        try:
+            employee = Employee.objects.get(id=employee_id, organization=org)
+        except Employee.DoesNotExist:
+            return JsonResponse({"error": "Employee not found."}, status=404)
+
+        # Avoid duplicate PENDING requests for the same port on the same device
+        existing = PortRemediationRequest.objects.filter(
+            organization=org,
+            employee=employee,
+            port=port,
+            status="PENDING",
+        ).first()
+        if existing:
+            return JsonResponse({
+                "id": str(existing.id),
+                "detail": "Already flagged for closure.",
+            }, status=200)
+
+        rem = PortRemediationRequest.objects.create(
+            organization=org,
+            employee=employee,
+            hostname=hostname,
+            port=port,
+            port_label=port_label,
+        )
+        return JsonResponse({"id": str(rem.id), "status": "PENDING"}, status=201)
+
+    def patch(self, request, request_id):
+        org, err = get_org_from_request(request)
+        if err:
+            return err
+
+        try:
+            rem = PortRemediationRequest.objects.get(id=request_id, organization=org)
+        except PortRemediationRequest.DoesNotExist:
+            return JsonResponse({"error": "Not found."}, status=404)
+
+        rem.status = "RESOLVED"
+        rem.resolved_at = timezone.now()
+        rem.save(update_fields=["status", "resolved_at"])
+        return JsonResponse({"id": str(rem.id), "status": "RESOLVED"})
 
 
 # ---------------------------------------------------------------------------

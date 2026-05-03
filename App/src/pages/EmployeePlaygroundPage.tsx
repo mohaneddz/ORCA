@@ -65,6 +65,15 @@ export default function TrainingPage() {
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [actionMsg, setActionMsg] = useState<string | null>(null);
 
+  // AI generate state
+  const [showAiPanel, setShowAiPanel] = useState(false);
+  const [aiForm, setAiForm] = useState({
+    attack_type: "IT_RESET",
+    language: "EN",
+    difficulty: 2,
+  });
+  const [aiPreview, setAiPreview] = useState<any>(null);
+
   // ── Queries ───────────────────────────────────────────────────────────────
 
   const { data: campaignsData, isLoading: isCampaignsLoading } = useQuery({
@@ -135,6 +144,28 @@ export default function TrainingPage() {
       setSelectedTemplate("");
     },
     onError: (err: any) => setActionMsg(`Error: ${err.message}`),
+  });
+
+  const aiGenerateMutation = useMutation({
+    mutationFn: (params: { attack_type: string; language: string; difficulty: number; save: boolean }) =>
+      fetchApi<any>("/api/phishing/templates/generate/", {
+        method: "POST",
+        body: JSON.stringify(params),
+      }),
+    onSuccess: (res) => {
+      if (res.id) {
+        // saved — refresh templates and auto-select the new one
+        queryClient.invalidateQueries({ queryKey: ["training-templates"] });
+        setSelectedTemplate(res.id);
+        setShowNewCampaign(true);
+        setAiPreview(null);
+        setShowAiPanel(false);
+        setActionMsg("Template generated and saved — now give your campaign a name and create it.");
+      } else {
+        setAiPreview(res);
+      }
+    },
+    onError: (err: any) => setActionMsg(`Error generating template: ${err.message}`),
   });
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -210,6 +241,121 @@ export default function TrainingPage() {
       {/* ── CAMPAIGNS TAB ──────────────────────────────────────────────────── */}
       {tab === "campaigns" && (
         <div className="grid gap-3">
+          {/* AI Template Generator */}
+          <div className="card p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="m-0 text-sm font-semibold text-white flex items-center gap-2">
+                  <span className="inline-block rounded bg-violet-500/20 border border-violet-500/30 px-2 py-0.5 text-xs font-bold text-violet-300">AI</span>
+                  Generate Phishing Template
+                </p>
+                <p className="m-0 mt-1 text-xs text-slate-400">
+                  Use AI (NVIDIA NIM / Llama 4) to generate a realistic, localised phishing simulation email. Falls back to the built-in library if no API key is configured.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setShowAiPanel((v) => !v); setAiPreview(null); }}
+                className="rounded-lg border border-violet-500/40 bg-violet-500/10 px-4 py-1.5 text-sm font-semibold text-violet-300 hover:bg-violet-500/20 transition-colors"
+              >
+                {showAiPanel ? "Close" : "Generate with AI"}
+              </button>
+            </div>
+
+            {showAiPanel && (
+              <div className="mt-5 border-t border-white/8 pt-5">
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Attack Type</label>
+                    <select
+                      value={aiForm.attack_type}
+                      onChange={(e) => setAiForm((p) => ({ ...p, attack_type: e.target.value }))}
+                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-violet-500"
+                    >
+                      <option value="IT_RESET">IT Password Reset</option>
+                      <option value="INVOICE">Fake Invoice Approval</option>
+                      <option value="DELIVERY">Package Delivery</option>
+                      <option value="HR_UPDATE">HR Policy Update</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Language</label>
+                    <select
+                      value={aiForm.language}
+                      onChange={(e) => setAiForm((p) => ({ ...p, language: e.target.value }))}
+                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-violet-500"
+                    >
+                      <option value="EN">English</option>
+                      <option value="FR">French</option>
+                      <option value="AR_MSA">Arabic (MSA)</option>
+                      <option value="AR_DARIJA">Arabic (Darija)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Difficulty</label>
+                    <select
+                      value={aiForm.difficulty}
+                      onChange={(e) => setAiForm((p) => ({ ...p, difficulty: Number(e.target.value) }))}
+                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-violet-500"
+                    >
+                      <option value={1}>1 — Easy (obvious signals)</option>
+                      <option value={2}>2 — Medium (plausible)</option>
+                      <option value={3}>3 — Hard (spear-phishing)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex gap-3">
+                  <button
+                    type="button"
+                    disabled={aiGenerateMutation.isPending}
+                    onClick={() => aiGenerateMutation.mutate({ ...aiForm, save: false })}
+                    className="rounded-lg border border-violet-500/40 bg-violet-500/10 px-4 py-2 text-sm font-semibold text-violet-300 hover:bg-violet-500/20 disabled:opacity-50 transition-colors"
+                  >
+                    {aiGenerateMutation.isPending && !aiPreview ? "Generating…" : "Preview"}
+                  </button>
+                  {aiPreview && (
+                    <button
+                      type="button"
+                      disabled={aiGenerateMutation.isPending}
+                      onClick={() => aiGenerateMutation.mutate({ ...aiForm, save: true })}
+                      className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-300 hover:bg-emerald-500/20 disabled:opacity-50 transition-colors"
+                    >
+                      {aiGenerateMutation.isPending ? "Saving…" : "Save & Use for Campaign"}
+                    </button>
+                  )}
+                </div>
+
+                {/* Preview output */}
+                {aiPreview && (
+                  <div className="mt-5 rounded-xl border border-violet-500/20 bg-slate-900/60 p-4 space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <p className="m-0 text-xs text-slate-500 uppercase tracking-widest">Subject</p>
+                        <p className="m-0 mt-1 text-sm font-medium text-white">{aiPreview.subject}</p>
+                      </div>
+                      <div>
+                        <p className="m-0 text-xs text-slate-500 uppercase tracking-widest">Sender</p>
+                        <p className="m-0 mt-1 text-sm text-slate-300">
+                          {aiPreview.sender_name} &lt;{aiPreview.sender_domain}&gt;
+                        </p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="m-0 text-xs text-slate-500 uppercase tracking-widest">Email Body</p>
+                      <pre className="m-0 mt-2 whitespace-pre-wrap rounded-lg border border-white/6 bg-slate-950/60 p-3 text-xs text-slate-300 leading-relaxed font-sans">
+                        {aiPreview.body}
+                      </pre>
+                    </div>
+                    <p className="m-0 text-xs text-slate-500 italic">
+                      {"{{tracking_url}}"} will be replaced with a unique click-tracking link per employee when the campaign is launched.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Create campaign panel */}
           <div className="card p-5">
             <div className="flex items-center justify-between">
