@@ -1,3 +1,4 @@
+import type { UserRole } from "@/contexts/AuthContext";
 import { ROUTES } from "@/config/routes";
 
 type NavItem = {
@@ -45,4 +46,17 @@ export const SIDEBAR_SECTIONS: NavSection[] = [
     ],
   },
 ];
+
+const STAFF_ALLOWED_KEYS = new Set(["chat", "settings", "account"]);
+
+export function getSidebarSectionsForRole(role: UserRole): NavSection[] {
+  if (role === "admin") return SIDEBAR_SECTIONS;
+
+  return SIDEBAR_SECTIONS
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => STAFF_ALLOWED_KEYS.has(item.key)),
+    }))
+    .filter((section) => section.items.length > 0);
+}
 

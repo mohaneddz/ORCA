@@ -60,6 +60,10 @@ type AuthContextValue = {
 type StoredSession = {
   token: string;
   user: SessionUser;
+  credentials?: {
+    email: string;
+    password: string;
+  };
 };
 
 type AuthApiResponse = {
@@ -68,6 +72,20 @@ type AuthApiResponse = {
     id: string;
     name: string;
     email: string;
+  };
+};
+
+type EmployeeAuthApiResponse = {
+  token: string;
+  employee: {
+    id: string;
+    name: string;
+    email: string;
+    role?: string;
+    organization?: {
+      id: string;
+      name: string;
+    };
   };
 };
 
@@ -177,25 +195,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         logger.info("auth.login.attempt", { email: email.trim().toLowerCase() });
 
-        const result = await authRequest<AuthApiResponse>("/api/auth/login", {
+        const trimmedEmail = email.trim().toLowerCase();
+        const isStaffLogin = !trimmedEmail.includes("admin");
+        const loginPath = isStaffLogin ? "/api/auth/employee/login" : "/api/auth/login";
+
+        const result = await authRequest<AuthApiResponse | EmployeeAuthApiResponse>(loginPath, {
           method: "POST",
           body: JSON.stringify({
-            email: email.trim().toLowerCase(),
+            email: trimmedEmail,
             password,
           }),
         });
 
         if (!result.ok || !result.data) return { ok: false, message: result.message || "Sign in failed." };
 
-        const nextUser = mapOrganizationToUser(
-          result.data.organization,
-          "admin",
-          (result.data.organization as any).phone || "",
-          (result.data.organization as any).avatarUrl || "",
-        );
+        let nextUser: SessionUser;
+        if ("employee" in result.data) {
+          const employee = result.data.employee;
+          nextUser = {
+            id: employee.id,
+            name: employee.name || employee.email.split("@")[0] || "Staff User",
+            email: employee.email,
+            organizationName: employee.organization?.name || DEFAULT_ORG_NAME,
+            phone: "",
+            avatarUrl: "",
+            role: "staff",
+            lastLoginAt: new Date().toISOString(),
+          };
+        } else {
+          nextUser = mapOrganizationToUser(
+            result.data.organization,
+            "admin",
+            (result.data.organization as any).phone || "",
+            (result.data.organization as any).avatarUrl || "",
+          );
+        }
+
         const session: StoredSession = {
           token: result.data.token,
           user: nextUser,
+          credentials: {
+            email: trimmedEmail,
+            password,
+          },
         };
 
         setToken(result.data.token);
@@ -205,17 +247,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         return { ok: true };
       },
-      signup: async ({ email, password, role, name, organizationName, phone }) => {
+      signup: async ({ email, password, role, name, phone, organizationName }) => {
         if (!email.trim()) return { ok: false, message: "Email is required." };
         if (!password.trim()) return { ok: false, message: "Password is required." };
 
         logger.info("auth.signup.attempt", { email: email.trim().toLowerCase(), role });
 
+        const trimmedEmail = email.trim().toLowerCase();
+
+        if (role === "staff") {
+          const loginResult = await authRequest<EmployeeAuthApiResponse>("/api/auth/employee/login", {
+            method: "POST",
+            body: JSON.stringify({
+              email: trimmedEmail,
+              password,
+            }),
+          });
+
+          if (!loginResult.ok || !loginResult.data) {
+            return { ok: false, message: loginResult.message || "Staff sign in failed." };
+          }
+
+          const employee = loginResult.data.employee;
+          const nextUser: SessionUser = {
+            id: employee.id,
+            name: employee.name || employee.email.split("@")[0] || "Staff User",
+            email: employee.email,
+            organizationName: employee.organization?.name || organizationName?.trim() || DEFAULT_ORG_NAME,
+            phone: phone?.trim() || "",
+            avatarUrl: "",
+            role: "staff",
+            lastLoginAt: new Date().toISOString(),
+          };
+
+          const session: StoredSession = {
+            token: loginResult.data.token,
+            user: nextUser,
+            credentials: {
+              email: trimmedEmail,
+              password,
+            },
+          };
+
+          setToken(loginResult.data.token);
+          setUser(nextUser);
+          saveStoredSession(session);
+          logger.info("auth.staff.login.success", { userId: nextUser.id });
+
+          return { ok: true };
+        }
+
         const organization = organizationName?.trim() || name?.trim() || DEFAULT_ORG_NAME;
         const result = await authRequest<AuthApiResponse>("/api/auth/register", {
           method: "POST",
           body: JSON.stringify({
-            email: email.trim().toLowerCase(),
+            email: trimmedEmail,
             name: organization,
             password,
           }),
@@ -227,6 +313,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const session: StoredSession = {
           token: result.data.token,
           user: nextUser,
+          credentials: {
+            email: trimmedEmail,
+            password,
+          },
         };
 
         setToken(result.data.token);

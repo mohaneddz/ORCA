@@ -36,7 +36,8 @@ function LoginRoute() {
 
 function RootRoute() {
   const { user } = useAuth();
-  return <Navigate to={user ? ROUTES.summary : ROUTES.login} replace />;
+  if (!user) return <Navigate to={ROUTES.login} replace />;
+  return <Navigate to={user.role === "admin" ? ROUTES.summary : ROUTES.chat} replace />;
 }
 
 function NotFoundRoute() {
@@ -61,6 +62,9 @@ function RouteLogger() {
 }
 
 export default function App() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
   return (
     <>
       <RouteLogger />
@@ -70,18 +74,18 @@ export default function App() {
 
         <Route element={<RequireAuth />}>
           <Route element={<AppLayout />}>
-            <Route path={ROUTES.summary} element={<SummaryPage />} />
-            <Route path={ROUTES.home} element={<HomePage />} />
-            <Route path={ROUTES.controlCenter} element={<ControlCenterPage />} />
-            <Route path={ROUTES.devices} element={<DevicesPage />} />
-            <Route path={ROUTES.deviceDetails} element={<DeviceDetailsPage />} />
-            <Route path={ROUTES.network} element={<NetworkPage />} />
-            <Route path={ROUTES.accounts} element={<AccountsPage />} />
-            <Route path={ROUTES.training} element={<TrainingPage />} />
-            <Route path={ROUTES.cisco} element={<CiscoPage />} />
+            <Route path={ROUTES.summary} element={isAdmin ? <SummaryPage /> : <Navigate to={ROUTES.chat} replace />} />
+            <Route path={ROUTES.home} element={isAdmin ? <HomePage /> : <Navigate to={ROUTES.chat} replace />} />
+            <Route path={ROUTES.controlCenter} element={isAdmin ? <ControlCenterPage /> : <Navigate to={ROUTES.chat} replace />} />
+            <Route path={ROUTES.devices} element={isAdmin ? <DevicesPage /> : <Navigate to={ROUTES.chat} replace />} />
+            <Route path={ROUTES.deviceDetails} element={isAdmin ? <DeviceDetailsPage /> : <Navigate to={ROUTES.chat} replace />} />
+            <Route path={ROUTES.network} element={isAdmin ? <NetworkPage /> : <Navigate to={ROUTES.chat} replace />} />
+            <Route path={ROUTES.accounts} element={isAdmin ? <AccountsPage /> : <Navigate to={ROUTES.chat} replace />} />
+            <Route path={ROUTES.training} element={isAdmin ? <TrainingPage /> : <Navigate to={ROUTES.chat} replace />} />
+            <Route path={ROUTES.cisco} element={isAdmin ? <CiscoPage /> : <Navigate to={ROUTES.chat} replace />} />
             <Route path={ROUTES.chat} element={<ChatPage />} />
-            <Route path={ROUTES.virtualMachines} element={<VirtualMachinesPage />} />
-            <Route path={ROUTES.billingUsage} element={<BillingUsagePage />} />
+            <Route path={ROUTES.virtualMachines} element={isAdmin ? <VirtualMachinesPage /> : <Navigate to={ROUTES.chat} replace />} />
+            <Route path={ROUTES.billingUsage} element={isAdmin ? <BillingUsagePage /> : <Navigate to={ROUTES.chat} replace />} />
             <Route path={ROUTES.settings} element={<SettingsPage />} />
             <Route path={ROUTES.account} element={<AccountPage />} />
           </Route>

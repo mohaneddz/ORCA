@@ -7,6 +7,7 @@ import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { logger } from "@/lib/logger";
 import { SUMMARY_FALLBACK } from "@/data/mockData";
 import { fetchApi } from "@/lib/apiClient";
+import type { AppLanguage } from "@/types/settings";
 
 type SummarySnapshot = {
   generatedAt: string;
@@ -24,6 +25,10 @@ const CACHE_KEY = "summary-page-cache-v1";
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const GROQ_BASE_URL = import.meta.env.VITE_GROQ_BASE_URL || "https://api.groq.com/openai/v1";
 const GROQ_CHAT_MODEL = import.meta.env.VITE_GROQ_CHAT_MODEL || "openai/gpt-oss-20b";
+const LANGUAGE_LABEL: Record<AppLanguage, string> = {
+  en: "English",
+  fr: "French",
+};
 
 interface DwSummaryResponse {
   device: { risk_level_distribution: { high: number; critical: number }; devices_reporting: number };
@@ -39,7 +44,7 @@ interface DwTrendResponse {
   }>;
 }
 
-async function explainWithGroq(input: string): Promise<{ headline: string; highlights: string[] }> {
+async function explainWithGroq(input: string, language: AppLanguage): Promise<{ headline: string; highlights: string[] }> {
   const groqKey = import.meta.env.VITE_GROQ_API_KEY || import.meta.env.GROQ_API_KEY;
   if (!groqKey) {
     logger.info("summary.groq.skipped.no_key");
@@ -66,7 +71,7 @@ async function explainWithGroq(input: string): Promise<{ headline: string; highl
         {
           role: "system",
           content:
-            "You explain company status to non-technical people. Return strict JSON with keys headline (string) and highlights (array of 3 short simple strings).",
+            `You explain company status to non-technical people. Respond only in ${LANGUAGE_LABEL[language]} and never switch languages. Return strict JSON with keys headline (string) and highlights (array of 3 short simple strings), all written in ${LANGUAGE_LABEL[language]}.`,
         },
         {
           role: "user",
@@ -117,7 +122,7 @@ function writeCache(snapshot: SummarySnapshot) {
   localStorage.setItem(CACHE_KEY, JSON.stringify(snapshot));
 }
 
-async function buildSummarySnapshot(forceRefresh: boolean): Promise<SummarySnapshot> {
+async function buildSummarySnapshot(forceRefresh: boolean, language: AppLanguage): Promise<SummarySnapshot> {
   logger.info("summary.snapshot.build_start", { forceRefresh });
   if (!forceRefresh) {
     const cached = readCache();
@@ -157,7 +162,7 @@ Explain what this means in simple terms.`;
 
   let interpretation: SummarySnapshot["interpretation"];
   try {
-    const groq = await explainWithGroq(prompt);
+    const groq = await explainWithGroq(prompt, language);
     interpretation = {
       ...groq,
       guidance: [
@@ -202,10 +207,10 @@ Explain what this means in simple terms.`;
 }
 
 export default function SummaryPage() {
-  const { t } = useAppSettings();
+  const { t, settings } = useAppSettings();
   const { data, isFetching, refetch } = useQuery({
     queryKey: ["summary-page"],
-    queryFn: ({ meta }) => buildSummarySnapshot(Boolean(meta?.forceRefresh)),
+    queryFn: ({ meta }) => buildSummarySnapshot(Boolean(meta?.forceRefresh), settings.language),
     staleTime: CACHE_TTL_MS,
   });
 

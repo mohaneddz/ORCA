@@ -16,7 +16,7 @@ type ChatMessage = {
 };
 
 export default function ChatPage() {
-  const { t } = useAppSettings();
+  const { t, settings } = useAppSettings();
   const [showDocs, setShowDocs] = useState(false);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -40,7 +40,7 @@ export default function ChatPage() {
     setIsStreaming(true);
 
     try {
-      const rag = await runRag(question);
+      const rag = await runRag(question, settings.language);
       logger.info("chat.response.received", { sourceCount: rag.sources.length });
       setMessages((prev) => [
         ...prev,

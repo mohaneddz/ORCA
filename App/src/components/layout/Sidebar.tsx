@@ -8,7 +8,6 @@ import {
   Network,
   Settings,
   ShieldAlert,
-  ShieldCheck,
   Server,
   UserCog,
   Users,
@@ -17,7 +16,7 @@ import {
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { SIDEBAR_SECTIONS } from "@/data/navigation";
+import { getSidebarSectionsForRole } from "@/data/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { ROUTES } from "@/config/routes";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
@@ -43,7 +42,7 @@ const sidebarIcons: Record<string, ComponentType<{ size?: number; className?: st
 };
 
 export default function Sidebar({ expanded }: SidebarProps) {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const { t, settings } = useAppSettings();
   const navigate = useNavigate();
 
@@ -51,6 +50,8 @@ export default function Sidebar({ expanded }: SidebarProps) {
     await logout();
     navigate(ROUTES.login, { replace: true });
   };
+
+  const sections = getSidebarSectionsForRole(user?.role ?? "admin");
 
   return (
     <aside
@@ -84,7 +85,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
       </NavLink>
 
       <nav className={["flex-1 overflow-y-auto no-scrollbar", expanded ? "space-y-6" : "space-y-4"].join(" ")}>
-        {SIDEBAR_SECTIONS.map((section, sectionIndex) => (
+        {sections.map((section, sectionIndex) => (
           <div key={section.key}>
             {sectionIndex > 0 && (
               <div className="mb-4" style={{ borderTop: "1px solid var(--color-border-subtle)" }} />
@@ -128,7 +129,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
           className={["rounded-xl border text-center text-xs font-semibold tracking-[0.08em]", expanded ? "px-3 py-3" : "px-2 py-2"].join(" ")}
           style={{ borderColor: "var(--color-border)", background: "var(--color-surface-muted)", color: "var(--color-neutral-300)" }}
         >
-          {expanded ? "Admin Dashboard" : "ADM"}
+          {expanded ? (user?.role === "admin" ? "Admin Dashboard" : "Staff Workspace") : user?.role === "admin" ? "ADM" : "STF"}
         </div>
         
         <button

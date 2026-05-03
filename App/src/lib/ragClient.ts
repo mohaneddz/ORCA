@@ -1,6 +1,7 @@
 import { Pinecone } from "@pinecone-database/pinecone";
 import { logger } from "@/lib/logger";
 import { getApiConfig, type ApiKeysConfig } from "@/lib/apiKeysStore";
+import type { AppLanguage } from "@/types/settings";
 
 type RagResult = {
   answer: string;
@@ -22,6 +23,10 @@ type UpsertChunkInput = {
 };
 
 const PINECONE_TEXT_FIELD = "chunk_text";
+const LANGUAGE_LABEL: Record<AppLanguage, string> = {
+  en: "English",
+  fr: "French",
+};
 
 function required(name: string, value?: string): string {
   if (!value || !value.trim()) {
@@ -108,7 +113,8 @@ async function searchPineconeByText(
 async function answerWithGroq(
   question: string,
   hits: SearchHit[],
-  config: ApiKeysConfig
+  config: ApiKeysConfig,
+  language: AppLanguage
 ): Promise<string> {
   const apiKey = required("GROQ_API_KEY", config.groqApiKey);
 
@@ -136,8 +142,7 @@ async function answerWithGroq(
       messages: [
         {
           role: "system",
-          content:
-            "You are a security assistant. Answer only from the provided context. If context is insufficient, say that clearly.",
+          content: `You are a security assistant. Respond only in ${LANGUAGE_LABEL[language]} and never switch languages. Answer only from the provided context. If context is insufficient, say that clearly in ${LANGUAGE_LABEL[language]}.`,
         },
         {
           role: "user",
@@ -167,7 +172,8 @@ async function answerWithGroq(
 
 async function answerWithGroqNoContext(
   question: string,
-  config: ApiKeysConfig
+  config: ApiKeysConfig,
+  language: AppLanguage
 ): Promise<string> {
   const apiKey = required("GROQ_API_KEY", config.groqApiKey);
 
@@ -184,7 +190,7 @@ async function answerWithGroqNoContext(
       messages: [
         {
           role: "system",
-          content: "You are a security assistant. Answer clearly and briefly.",
+          content: `You are a security assistant. Respond only in ${LANGUAGE_LABEL[language]} and never switch languages. Answer clearly and briefly.`,
         },
         {
           role: "user",
@@ -323,7 +329,10 @@ export async function deleteDocument(docName: string): Promise<void> {
   });
 }
 
-export async function runRag(question: string): Promise<RagResult> {
+export async function runRag(
+  question: string,
+  language: AppLanguage
+): Promise<RagResult> {
   logger.info("rag.run.start", { questionLength: question.length });
   const config = await getApiConfig();
 
@@ -342,11 +351,11 @@ export async function runRag(question: string): Promise<RagResult> {
 
     if (!hits.length) {
       logger.info("rag.run.no_hits.fallback_to_groq");
-      const answer = await answerWithGroqNoContext(question, config);
+      const answer = await answerWithGroqNoContext(question, config, language);
       return { answer, sources: [] };
     }
 
-    const answer = await answerWithGroq(question, hits, config);
+    const answer = await answerWithGroq(question, hits, config, language);
     const sources = Array.from(new Set(hits.map(extractSource))).filter(
       Boolean
     );
