@@ -3,13 +3,17 @@ import {
   House,
   LayoutGrid,
   LogOut,
+  MessageSquare,
+  Monitor,
   Network,
-  Router,
   Settings,
   ShieldAlert,
   ShieldCheck,
+  Server,
   UserCog,
   Users,
+  Router,
+  CreditCard,
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
@@ -23,21 +27,24 @@ type SidebarProps = {
 };
 
 const sidebarIcons: Record<string, ComponentType<{ size?: number; className?: string }>> = {
+  summary: LayoutGrid,
   home: House,
   "control-center": LayoutGrid,
-  "registered-devices": ShieldCheck,
+  devices: Monitor,
+  "virtual-machines": Server,
   network: Network,
   accounts: Users,
-  "employee-playground": ShieldAlert,
+  training: ShieldAlert,
+  chat: MessageSquare,
+  "billing-usage": CreditCard,
   settings: Settings,
   account: CircleUserRound,
-  "cisco": Router,               
-
+  cisco: Router,
 };
 
 export default function Sidebar({ expanded }: SidebarProps) {
   const { logout } = useAuth();
-  const { t } = useAppSettings();
+  const { t, settings } = useAppSettings();
   const navigate = useNavigate();
 
   const onSignOut = async () => {
@@ -53,56 +60,39 @@ export default function Sidebar({ expanded }: SidebarProps) {
         expanded ? "px-4 py-5" : "px-2 py-5",
       ].join(" ")}
       style={{
-        background: "linear-gradient(180deg, #0a0f1e 0%, #080c18 100%)",
-        borderColor: "rgba(255,255,255,0.06)",
+        background: "linear-gradient(180deg, color-mix(in srgb, var(--color-surface-2) 96%, transparent) 0%, var(--color-surface-1) 100%)",
+        borderColor: "var(--color-border)",
       }}
     >
-      {/* Logo / Brand */}
       <NavLink
-        to={ROUTES.home}
-        title={t("sidebar.item.home")}
+        to={ROUTES.summary}
+        title={t("sidebar.item.summary")}
         className={[
-          "flex items-center shrink-0 font-bold tracking-tight text-white transition-opacity hover:opacity-80",
+          "flex items-center shrink-0 font-bold tracking-tight transition-opacity hover:opacity-80",
           expanded ? "gap-2.5 mb-6" : "justify-center mb-5",
         ].join(" ")}
       >
-        {/* Icon mark */}
-        <span
-          className="flex items-center justify-center rounded-lg shrink-0 text-white font-black text-xs"
+        <img
+          src={settings.theme === "light" ? "/title-light.png" : "/title-dark.png"}
+          alt="ORCA"
+          className="shrink-0 object-contain"
           style={{
-            width: 30,
-            height: 30,
-            background: "linear-gradient(135deg, #7c3aed, #a855f7)",
-            boxShadow: "0 4px 12px rgba(124,58,237,0.45)",
+            width: expanded ? 250 : 30,
+            height: 80,
           }}
-        >
-          IB
-        </span>
-        {expanded && (
-          <span
-            className="text-base font-extrabold"
-            style={{
-              background: "linear-gradient(90deg, #fff 30%, #c084fc)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            InnovByte
-          </span>
-        )}
+        />
       </NavLink>
 
-      {/* Nav */}
       <nav className={["flex-1 overflow-y-auto no-scrollbar", expanded ? "space-y-6" : "space-y-4"].join(" ")}>
         {SIDEBAR_SECTIONS.map((section, sectionIndex) => (
           <div key={section.key}>
             {sectionIndex > 0 && (
-              <div className="mb-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }} />
+              <div className="mb-4" style={{ borderTop: "1px solid var(--color-border-subtle)" }} />
             )}
             {expanded && (
               <p
                 className="m-0 mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.1em]"
-                style={{ color: "#475569" }}
+                style={{ color: "var(--color-neutral-500)" }}
               >
                 {t(`sidebar.section.${section.key}`)}
               </p>
@@ -133,21 +123,24 @@ export default function Sidebar({ expanded }: SidebarProps) {
         ))}
       </nav>
 
-      {/* Sign Out */}
-      <div
-        className={["shrink-0 pt-4 mt-2", expanded ? "" : ""].join(" ")}
-        style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
-      >
+      <div className="shrink-0 pt-4 mt-2 flex flex-col gap-2" style={{ borderTop: "1px solid var(--color-border-subtle)" }}>
+        <div
+          className={["rounded-xl border text-center text-xs font-semibold tracking-[0.08em]", expanded ? "px-3 py-3" : "px-2 py-2"].join(" ")}
+          style={{ borderColor: "var(--color-border)", background: "var(--color-surface-muted)", color: "var(--color-neutral-300)" }}
+        >
+          {expanded ? "Admin Dashboard" : "ADM"}
+        </div>
+        
         <button
           type="button"
           onClick={onSignOut}
           title={t("action.signout")}
           className={[
-            "flex w-full items-center justify-center rounded-md text-xs font-medium transition-colors",
-            "hover:bg-red-500/10",
+            "flex items-center justify-center rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors",
+            "hover:bg-red-500/10 hover:text-red-400",
             expanded ? "gap-2 px-3 py-2" : "px-2 py-2",
           ].join(" ")}
-          style={{ color: "#fb7185" }}
+          style={{ color: "var(--color-neutral-500)", border: "1px solid transparent" }}
         >
           <LogOut size={13} />
           {expanded && <span>{t("action.signout")}</span>}
