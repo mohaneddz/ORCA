@@ -23,10 +23,10 @@ export const SIDEBAR_SECTIONS: NavSection[] = [
     label: "Functionalities",
     items: [
       { key: "control-center", label: "Control Center", href: ROUTES.controlCenter },
-      { key: "registered-devices", label: "Registered Devices", href: ROUTES.registeredDevices },
+      { key: "devices", label: "Registered Devices", href: ROUTES.devices },
       { key: "network", label: "Network", href: ROUTES.network },
       { key: "accounts", label: "Accounts", href: ROUTES.accounts },
-      { key: "employee-playground", label: "Employee Playground", href: ROUTES.employeePlayground },
+      { key: "training", label: "Training", href: ROUTES.training },
       { key: "cisco", label: "Cisco Devices", href: ROUTES.cisco },
     ],
   },

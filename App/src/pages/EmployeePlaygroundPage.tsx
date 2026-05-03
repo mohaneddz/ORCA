@@ -53,12 +53,38 @@ function InlineAlert({ msg, onDismiss }: { msg: string; onDismiss: () => void })
   );
 }
 
+// ─── Main page ───────────────────────────────────────────────────────────────
+
 export default function TrainingPage() {
   const { t } = useAppSettings();
+  const queryClient = useQueryClient();
+
+  const [tab, setTab] = useState<"campaigns" | "gamification" | "enrollments">("campaigns");
+  const [showNewCampaign, setShowNewCampaign] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState("");
+  const [actionMsg, setActionMsg] = useState<string | null>(null);
+
+  // ── Queries ───────────────────────────────────────────────────────────────
+
+  const { data: campaignsData, isLoading: isCampaignsLoading } = useQuery({
+    queryKey: ["training-campaigns"],
+    queryFn: () => fetchApi<any>("/api/phishing/campaigns/"),
+  });
+
+  const { data: templatesData } = useQuery({
+    queryKey: ["training-templates"],
+    queryFn: () => fetchApi<any>("/api/phishing/templates/").catch(() => null),
+  });
 
   const { data: analyticsData, isLoading: isAnalyticsLoading } = useQuery({
     queryKey: ["training-analytics"],
     queryFn: () => fetchApi<any>("/api/phishing/analytics/"),
+  });
+
+  const { data: leaderboardData, isLoading: isLeaderboardLoading } = useQuery({
+    queryKey: ["training-leaderboard"],
+    queryFn: () => fetchApi<any>("/api/gamification/leaderboard/").catch(() => null),
   });
 
   const { data: quizzesData } = useQuery({
@@ -66,37 +92,84 @@ export default function TrainingPage() {
     queryFn: () => fetchApi<any>("/api/gamification/quizzes/").catch(() => null),
   });
 
-  const { data: enrollmentsData } = useQuery({
+  const { data: enrollmentsData, isLoading: isEnrollmentsLoading } = useQuery({
     queryKey: ["training-enrollments"],
     queryFn: () => fetchApi<any>("/api/phishing/training/enrollments/").catch(() => null),
   });
 
-  if (isAnalyticsLoading || !analyticsData) {
+  // ── Mutations ─────────────────────────────────────────────────────────────
+
+  const launchMutation = useMutation({
+    mutationFn: (id: string) =>
+      fetchApi(`/api/phishing/campaigns/${id}/launch/`, { method: "POST", body: JSON.stringify({}) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["training-campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["training-analytics"] });
+      setActionMsg("Campaign launched — phishing emails are being sent.");
+    },
+    onError: (err: any) => setActionMsg(`Error: ${err.message}`),
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: (id: string) =>
+      fetchApi(`/api/phishing/campaigns/${id}/complete/`, { method: "POST" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["training-campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["training-analytics"] });
+      setActionMsg("Campaign marked as completed.");
+    },
+    onError: (err: any) => setActionMsg(`Error: ${err.message}`),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: ({ name, template_id }: { name: string; template_id: string }) =>
+      fetchApi<any>("/api/phishing/campaigns/", {
+        method: "POST",
+        body: JSON.stringify({ name, template_id }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["training-campaigns"] });
+      setActionMsg("Campaign created as DRAFT. You can now launch it.");
+      setShowNewCampaign(false);
+      setNewName("");
+      setSelectedTemplate("");
+    },
+    onError: (err: any) => setActionMsg(`Error: ${err.message}`),
+  });
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
+
+  const handleCreate = (e: FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim() || !selectedTemplate) {
+      setActionMsg("Error: Campaign name and template are required.");
+      return;
+    }
+    createMutation.mutate({ name: newName.trim(), template_id: selectedTemplate });
+  };
+
+  // ── Derived data ──────────────────────────────────────────────────────────
+
+  const campaigns: any[]  = campaignsData?.campaigns  || [];
+  const templates: any[]  = templatesData?.templates  || [];
+  const leaderboard: any[] = leaderboardData?.leaderboard || [];
+  const quizzes: any[]    = quizzesData?.quizzes       || [];
+  const enrollments: any[] = enrollmentsData?.enrollments || [];
+
+  const clickRate      = Math.round(analyticsData?.overall_click_rate || 0);
+  const totalSent      = analyticsData?.total_sent       || 0;
+  const totalCampaigns = analyticsData?.total_campaigns  || 0;
+  const activeCampaigns = campaigns.filter((c) => c.status === "ACTIVE").length;
+
+  if (isCampaignsLoading || isAnalyticsLoading) {
     return <PageSkeleton />;
   }
 
-  const tableRows = (quizzesData?.quizzes || []).map((q: any) => [
-    q.title || q.question,
-    q.difficulty || "Medium",
-    `${q.points_reward || 10} pts`,
-    "Available"
-  ]);
-
-  const enrollmentRows = (enrollmentsData?.enrollments || []).map((e: any) => [
-    e.employee_name,
-    e.module_title,
-    new Date(e.enrolled_at).toLocaleDateString(),
-    e.completed_at ? "Completed" : "Pending"
-  ]);
-
-  const trendData = (analyticsData?.trend || []).map((t: any) => ({
-    week: t.month,
-    passRate: t.trainings_completed ? 100 : 0, // Mock pass rate from trainings
-    reportRate: t.click_rate ? 100 - t.click_rate : 100, // Inverse of click rate
-  }));
-
-  const clickRate = Math.round(analyticsData?.overall_click_rate || 0);
-  const reportRate = 100 - clickRate;
+  const TABS = [
+    { key: "campaigns",    label: "Phishing Campaigns" },
+    { key: "gamification", label: "Gamification & Quizzes" },
+    { key: "enrollments",  label: "Training Enrollments" },
+  ] as const;
 
   return (
     <div className="page-section">
@@ -106,107 +179,355 @@ export default function TrainingPage() {
         description={t("training.description")}
       />
 
-      <section className="grid gap-3 xl:grid-cols-3">
-        <section className="card p-5 xl:col-span-2 min-h-[420px]">
-          <p className="m-0 text-sm font-semibold text-white">{t("training.board.title")}</p>
-          <p className="m-0 mt-2 text-sm text-slate-400">{t("training.board.description")}</p>
-          <div className="mt-4 grid gap-3 md:grid-cols-[1.65fr_1fr]">
-            <section className="rounded-xl border border-white/8 bg-slate-900/30 p-3">
-              <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
-                <span>{t("training.trend.title")}</span>
-                <span className="text-cyan-300">{t("training.trend.risk")}</span>
-              </div>
-              <div className="h-[230px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={trendData.length ? trendData : [{ week: "Current", passRate: 0, reportRate: 0 }]} margin={{ top: 4, right: 6, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="passRateGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={CHART_PRIMARY} stopOpacity={0.46} />
-                        <stop offset="100%" stopColor={CHART_PRIMARY} stopOpacity={0.03} />
-                      </linearGradient>
-                      <linearGradient id="reportRateGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={CHART_SECONDARY} stopOpacity={0.38} />
-                        <stop offset="100%" stopColor={CHART_SECONDARY} stopOpacity={0.02} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
-                    <XAxis dataKey="week" tick={AXIS_STYLE} tickLine={false} axisLine={false} />
-                    <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={32} domain={[0, 100]} />
-                    <Tooltip
-                      contentStyle={{ background: "rgba(10, 25, 49, 0.76)", border: "1px solid rgba(29,78,216,0.45)", borderRadius: 10, color: "#e2e8f0", backdropFilter: "blur(10px)" }}
-                      labelStyle={{ color: "#64748b" }}
-                    />
-                    <Area type="monotone" dataKey="passRate" name="Pass rate %" stroke={CHART_PRIMARY} strokeWidth={2.4} fill="url(#passRateGradient)" dot={false} />
-                    <Area type="monotone" dataKey="reportRate" name="Report rate %" stroke={CHART_SECONDARY} strokeWidth={2.4} fill="url(#reportRateGradient)" dot={false} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </section>
-            <section className="rounded-xl border border-white/8 bg-slate-900/30 p-3">
-              <p className="m-0 text-xs text-slate-400">{t("training.completion.title")}</p>
-              <div className="mt-2 h-[230px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={trendData.length ? trendData.map((d: any) => ({ group: d.week, completed: d.passRate })) : []} margin={{ top: 4, right: 6, left: -20, bottom: 0 }} barCategoryGap="28%">
-                    <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
-                    <XAxis dataKey="group" tick={AXIS_STYLE} tickLine={false} axisLine={false} />
-                    <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={32} domain={[0, 100]} />
-                    <Tooltip
-                      contentStyle={{ background: "rgba(10, 25, 49, 0.76)", border: "1px solid rgba(56,189,248,0.4)", borderRadius: 10, color: "#e2e8f0", backdropFilter: "blur(10px)" }}
-                      labelStyle={{ color: "#64748b" }}
-                    />
-                    <Bar dataKey="completed" name="Completed %" fill={CHART_SECONDARY} radius={[5, 5, 0, 0]} maxBarSize={24} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </section>
-          </div>
-          <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-            <div className="rounded-lg border border-blue-700/35 bg-blue-900/20 px-3 py-2 text-slate-300 backdrop-blur-sm">{t("training.stats.passRate")} <span className="ml-1 font-semibold text-white">N/A</span></div>
-            <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-slate-300">{t("training.stats.reportRate")} <span className="ml-1 font-semibold text-white">{reportRate}%</span></div>
-            <div className="rounded-lg border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-slate-300">{t("training.stats.clickRate")} <span className="ml-1 font-semibold text-white">{clickRate}%</span></div>
-          </div>
-        </section>
-        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-1">
-          {[
-            { key: "training.kpi.active", val: String(analyticsData?.total_campaigns || 0) },
-            { key: "training.kpi.failure", val: `${clickRate}%` },
-            { key: "training.kpi.report", val: `${reportRate}%` },
-            { key: "training.kpi.enrolled", val: String(analyticsData?.total_sent || 0) }
-          ].map((item) => (
-            <section key={item.key} className="card p-5 min-h-[96px]">
-              <p className="m-0 text-xs uppercase tracking-[0.08em] text-slate-400">{t(item.key)}</p>
-              <p className="m-0 mt-2 text-xl font-bold text-white">{item.val}</p>
-            </section>
-          ))}
-        </div>
-      </section>
+      {/* KPI row */}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard label="Total Campaigns"  value={String(totalCampaigns)} />
+        <KpiCard label="Active Campaigns" value={String(activeCampaigns)} tone="ok" />
+        <KpiCard label="Simulations Sent" value={String(totalSent)} />
+        <KpiCard label="Avg Click Rate"   value={`${clickRate}%`}
+          tone={clickRate > 30 ? "danger" : clickRate > 15 ? "warn" : "ok"} />
+      </div>
 
-      <section className="grid gap-3 xl:grid-cols-5">
-        <div className="xl:col-span-4 grid gap-3">
-          <DataTable
-            title={t("training.table.title") + " (Quizzes)"}
-            columns={["Quiz", "Difficulty", "Reward", "Status"]}
-            rows={tableRows}
-            minWidth={500}
-          />
-          <DataTable
-            title="Training Enrollments"
-            columns={["Employee", "Module", "Enrolled", "Status"]}
-            rows={enrollmentRows}
-            minWidth={500}
-            filterColumn="Status"
-          />
+      {actionMsg && <InlineAlert msg={actionMsg} onDismiss={() => setActionMsg(null)} />}
+
+      {/* Tab nav */}
+      <div className="flex gap-1 rounded-xl border border-white/8 bg-slate-950/40 p-1 w-fit">
+        {TABS.map((tb) => (
+          <button
+            key={tb.key}
+            type="button"
+            onClick={() => setTab(tb.key)}
+            className={[
+              "rounded-lg px-4 py-1.5 text-sm font-medium transition-colors",
+              tab === tb.key ? "bg-white/10 text-white" : "text-slate-400 hover:text-slate-200",
+            ].join(" ")}
+          >
+            {tb.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── CAMPAIGNS TAB ──────────────────────────────────────────────────── */}
+      {tab === "campaigns" && (
+        <div className="grid gap-3">
+          {/* Create campaign panel */}
+          <div className="card p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="m-0 text-sm font-semibold text-white">Phishing Simulation Campaigns</p>
+                <p className="m-0 mt-1 text-xs text-slate-400">
+                  Create a campaign from a template, then launch it to send simulation emails to all active employees.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNewCampaign((v) => !v)}
+                className="btn-primary text-sm"
+              >
+                {showNewCampaign ? "Cancel" : "+ New Campaign"}
+              </button>
+            </div>
+
+            {showNewCampaign && (
+              <form onSubmit={handleCreate} className="mt-4 flex flex-wrap items-end gap-3 border-t border-white/8 pt-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-slate-400">Campaign Name</label>
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="e.g. Q2 Credential Harvest"
+                    className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 w-64"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-slate-400">Template</label>
+                  <select
+                    value={selectedTemplate}
+                    onChange={(e) => setSelectedTemplate(e.target.value)}
+                    className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-cyan-500 w-72"
+                  >
+                    <option value="">— Select a template —</option>
+                    {templates.map((tmpl: any) => (
+                      <option key={tmpl.id} value={tmpl.id}>
+                        {tmpl.subject} ({tmpl.attack_type} · Difficulty {tmpl.difficulty})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="submit"
+                  disabled={createMutation.isPending}
+                  className="btn-primary text-sm"
+                >
+                  {createMutation.isPending ? "Creating…" : "Create Campaign"}
+                </button>
+              </form>
+            )}
+          </div>
+
+          {/* Campaigns table */}
+          <div className="card overflow-hidden">
+            <div className="border-b border-white/8 px-5 py-3">
+              <p className="m-0 text-sm font-semibold text-white">All Campaigns</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/6 text-xs text-slate-400">
+                    <th className="px-5 py-3 text-left font-medium">Name</th>
+                    <th className="px-4 py-3 text-left font-medium">Status</th>
+                    <th className="px-4 py-3 text-left font-medium">Attack Type</th>
+                    <th className="px-4 py-3 text-left font-medium">Difficulty</th>
+                    <th className="px-4 py-3 text-right font-medium">Targets</th>
+                    <th className="px-4 py-3 text-right font-medium">Clicked</th>
+                    <th className="px-4 py-3 text-right font-medium">Click Rate</th>
+                    <th className="px-4 py-3 text-left font-medium">Launched</th>
+                    <th className="px-4 py-3 text-right font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {campaigns.length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="px-5 py-8 text-center text-slate-500">
+                        No campaigns yet. Create one above.
+                      </td>
+                    </tr>
+                  )}
+                  {campaigns.map((c: any) => (
+                    <tr key={c.id} className="border-b border-white/4 hover:bg-white/2 transition-colors">
+                      <td className="px-5 py-3 font-medium text-slate-200">{c.name}</td>
+                      <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
+                      <td className="px-4 py-3 text-slate-300">{c.attack_type}</td>
+                      <td className="px-4 py-3 text-slate-300">
+                        {"★".repeat(c.difficulty)}{"☆".repeat(Math.max(0, 3 - c.difficulty))}
+                      </td>
+                      <td className="px-4 py-3 text-right text-slate-300">{c.total_targets}</td>
+                      <td className="px-4 py-3 text-right text-rose-300">{c.clicked_count}</td>
+                      <td className="px-4 py-3 text-right">
+                        <span className={
+                          c.click_rate > 30 ? "text-rose-300" :
+                          c.click_rate > 15 ? "text-amber-300" : "text-emerald-300"
+                        }>
+                          {c.click_rate}%
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-400">
+                        {c.launched_at ? new Date(c.launched_at).toLocaleDateString() : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {c.status === "DRAFT" && (
+                            <button
+                              type="button"
+                              onClick={() => launchMutation.mutate(c.id)}
+                              disabled={launchMutation.isPending}
+                              className="rounded border border-emerald-600/40 bg-emerald-900/30 px-3 py-1 text-xs font-semibold text-emerald-300 hover:bg-emerald-900/50 disabled:opacity-50"
+                            >
+                              Launch
+                            </button>
+                          )}
+                          {c.status === "ACTIVE" && (
+                            <button
+                              type="button"
+                              onClick={() => completeMutation.mutate(c.id)}
+                              disabled={completeMutation.isPending}
+                              className="rounded border border-slate-600/40 bg-slate-800/50 px-3 py-1 text-xs font-semibold text-slate-300 hover:bg-slate-700/60 disabled:opacity-50"
+                            >
+                              Complete
+                            </button>
+                          )}
+                          {c.status === "COMPLETED" && (
+                            <span className="text-xs text-slate-500">Done</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Department breakdown */}
+          {(analyticsData?.departments || []).length > 0 && (
+            <div className="card p-5">
+              <p className="m-0 mb-3 text-sm font-semibold text-white">Click Rate by Department</p>
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                {analyticsData.departments.map((dept: any) => {
+                  const rate = dept.sent > 0 ? Math.round((dept.clicked / dept.sent) * 100) : 0;
+                  return (
+                    <div key={dept.department} className="rounded-lg border border-white/8 bg-slate-900/40 p-3">
+                      <div className="flex items-center justify-between">
+                        <p className="m-0 text-xs font-medium text-slate-300">{dept.department}</p>
+                        <span className={`text-xs font-bold ${
+                          rate > 30 ? "text-rose-300" : rate > 15 ? "text-amber-300" : "text-emerald-300"
+                        }`}>{rate}%</span>
+                      </div>
+                      <p className="m-0 mt-1 text-xs text-slate-500">
+                        {dept.sent} sent · {dept.clicked} clicked
+                      </p>
+                      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+                        <div
+                          className={`h-full rounded-full ${
+                            rate > 30 ? "bg-rose-500" : rate > 15 ? "bg-amber-400" : "bg-emerald-400"
+                          }`}
+                          style={{ width: `${Math.min(rate, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
-        <section className="card p-5">
-          <p className="m-0 text-sm font-semibold text-white">{t("training.tools.title")}</p>
-          <ul className="m-0 mt-3 space-y-2 pl-5 text-sm text-slate-400">
-            <li>{t("training.tools.generator")}</li>
-            <li>{t("training.tools.difficulty")}</li>
-            <li>{t("training.tools.remediation")}</li>
-            <li>{t("training.tools.export")}</li>
-          </ul>
-        </section>
-      </section>
+      )}
+
+      {/* ── GAMIFICATION TAB ───────────────────────────────────────────────── */}
+      {tab === "gamification" && (
+        <div className="grid gap-3 xl:grid-cols-5">
+          {/* Leaderboard */}
+          <div className="card overflow-hidden xl:col-span-3">
+            <div className="border-b border-white/8 px-5 py-3">
+              <p className="m-0 text-sm font-semibold text-white">Security Leaderboard</p>
+              <p className="m-0 mt-0.5 text-xs text-slate-400">
+                Score = +1 per correct quiz answer · −5 per phishing link clicked
+              </p>
+            </div>
+            {isLeaderboardLoading ? (
+              <div className="px-5 py-8 text-center text-sm text-slate-500">Loading…</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/6 text-xs text-slate-400">
+                      <th className="px-5 py-3 text-left font-medium w-10">#</th>
+                      <th className="px-4 py-3 text-left font-medium">Employee</th>
+                      <th className="px-4 py-3 text-left font-medium">Department</th>
+                      <th className="px-4 py-3 text-right font-medium">Quiz ✓</th>
+                      <th className="px-4 py-3 text-right font-medium">Clicks</th>
+                      <th className="px-4 py-3 text-right font-medium">Score</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaderboard.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-5 py-8 text-center text-slate-500">
+                          No leaderboard data yet.
+                        </td>
+                      </tr>
+                    )}
+                    {leaderboard.map((row: any, i: number) => (
+                      <tr key={row.employee_id} className="border-b border-white/4 hover:bg-white/2 transition-colors">
+                        <td className="px-5 py-3 font-bold text-slate-400 w-10">
+                          {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : row.rank}
+                        </td>
+                        <td className="px-4 py-3 font-medium text-slate-200">{row.employee_name}</td>
+                        <td className="px-4 py-3 text-slate-400">{row.department || "—"}</td>
+                        <td className="px-4 py-3 text-right text-emerald-300">{row.correct_quiz_answers}</td>
+                        <td className="px-4 py-3 text-right text-rose-300">{row.phishing_clicks}</td>
+                        <td className="px-4 py-3 text-right">
+                          <span className={`font-semibold ${row.total_score >= 0 ? "text-cyan-300" : "text-rose-300"}`}>
+                            {row.total_score}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Quizzes */}
+          <div className="card overflow-hidden xl:col-span-2">
+            <div className="border-b border-white/8 px-5 py-3">
+              <p className="m-0 text-sm font-semibold text-white">Security Quizzes</p>
+              <p className="m-0 mt-0.5 text-xs text-slate-400">
+                {quizzes.length} quiz{quizzes.length !== 1 ? "zes" : ""} available
+              </p>
+            </div>
+            <div className="divide-y divide-white/5">
+              {quizzes.length === 0 && (
+                <p className="px-5 py-8 text-center text-sm text-slate-500">No quizzes yet.</p>
+              )}
+              {quizzes.map((q: any) => {
+                const optionCount = q.options ? Object.keys(q.options).length : 0;
+                return (
+                  <div key={q.id} className="px-5 py-3 hover:bg-white/2 transition-colors">
+                    <p className="m-0 text-sm text-slate-200 leading-snug">{q.question}</p>
+                    <p className="m-0 mt-1 text-xs text-slate-500">
+                      {optionCount} options · added {new Date(q.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ENROLLMENTS TAB ────────────────────────────────────────────────── */}
+      {tab === "enrollments" && (
+        <div className="card overflow-hidden">
+          <div className="border-b border-white/8 px-5 py-3">
+            <p className="m-0 text-sm font-semibold text-white">Training Enrollments</p>
+            <p className="m-0 mt-0.5 text-xs text-slate-400">
+              Employees are auto-enrolled in a training module when they click a simulated phishing link.
+            </p>
+          </div>
+          {isEnrollmentsLoading ? (
+            <div className="px-5 py-8 text-center text-sm text-slate-500">Loading…</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/6 text-xs text-slate-400">
+                    <th className="px-5 py-3 text-left font-medium">Employee</th>
+                    <th className="px-4 py-3 text-left font-medium">Module</th>
+                    <th className="px-4 py-3 text-left font-medium">Attack Type</th>
+                    <th className="px-4 py-3 text-left font-medium">Enrolled</th>
+                    <th className="px-4 py-3 text-left font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {enrollments.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-5 py-8 text-center text-slate-500">
+                        No enrollments yet. Employees are auto-enrolled when they click a phishing simulation link.
+                      </td>
+                    </tr>
+                  )}
+                  {enrollments.map((e: any) => (
+                    <tr key={e.id} className="border-b border-white/4 hover:bg-white/2 transition-colors">
+                      <td className="px-5 py-3 font-medium text-slate-200">
+                        {e.employee_name || e.employee_id}
+                      </td>
+                      <td className="px-4 py-3 text-slate-300">{e.module_title || "—"}</td>
+                      <td className="px-4 py-3 text-slate-400">{e.attack_type || "—"}</td>
+                      <td className="px-4 py-3 text-xs text-slate-400">
+                        {e.enrolled_at ? new Date(e.enrolled_at).toLocaleDateString() : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {e.completed_at ? (
+                          <span className="inline-block rounded border border-emerald-500/25 bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-300">
+                            Completed
+                          </span>
+                        ) : (
+                          <span className="inline-block rounded border border-amber-500/25 bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-300">
+                            In Progress
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

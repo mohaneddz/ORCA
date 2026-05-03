@@ -8,6 +8,7 @@ import DeviceDetailsPage from "@/pages/DeviceDetailsPage";
 import NetworkPage from "@/pages/NetworkPage";
 import AccountsPage from "@/pages/AccountsPage";
 import TrainingPage from "@/pages/EmployeePlaygroundPage";
+import CiscoPage from "@/pages/CiscoPage";
 import SettingsPage from "@/pages/SettingsPage";
 import AccountPage from "@/pages/AccountPage";
 import HomePage from "@/pages/HomePage";
@@ -77,6 +78,7 @@ export default function App() {
             <Route path={ROUTES.network} element={<NetworkPage />} />
             <Route path={ROUTES.accounts} element={<AccountsPage />} />
             <Route path={ROUTES.training} element={<TrainingPage />} />
+            <Route path={ROUTES.cisco} element={<CiscoPage />} />
             <Route path={ROUTES.chat} element={<ChatPage />} />
             <Route path={ROUTES.virtualMachines} element={<VirtualMachinesPage />} />
             <Route path={ROUTES.billingUsage} element={<BillingUsagePage />} />

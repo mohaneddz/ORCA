@@ -9,6 +9,7 @@ export const ROUTES = {
   network: "/network",
   accounts: "/accounts",
   training: "/training",
+  cisco: "/cisco",
   chat: "/chat",
   billingUsage: "/billing-usage",
   settings: "/settings",
