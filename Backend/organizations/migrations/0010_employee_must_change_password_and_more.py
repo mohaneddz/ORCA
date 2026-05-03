@@ -13,38 +13,57 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name="employee",
-            name="must_change_password",
-            field=models.BooleanField(default=False),
-        ),
-        migrations.AddField(
-            model_name="employee",
-            name="password_last_audited_at",
-            field=models.DateTimeField(blank=True, null=True),
-        ),
-        migrations.AddField(
-            model_name="employee",
-            name="password_risk_level",
-            field=models.CharField(blank=True, default="", max_length=20),
-        ),
-        migrations.AddField(
-            model_name="employee",
-            name="password_risk_reason",
-            field=models.TextField(blank=True, default=""),
-        ),
-        migrations.AddField(
-            model_name="organization",
-            name="avatar_url",
-            field=models.URLField(blank=True, default="", max_length=1024),
-        ),
-        migrations.AddField(
-            model_name="organization",
-            name="phone",
-            field=models.CharField(blank=True, default="", max_length=20),
+        # Use RunSQL with IF NOT EXISTS so re-deploying against a DB that already
+        # has these columns (applied manually / outside migrations) doesn't fail.
+        migrations.RunSQL(
+            sql=[
+                "ALTER TABLE organizations_employee ADD COLUMN IF NOT EXISTS must_change_password boolean NOT NULL DEFAULT false;",
+                "ALTER TABLE organizations_employee ADD COLUMN IF NOT EXISTS password_last_audited_at timestamp with time zone NULL;",
+                "ALTER TABLE organizations_employee ADD COLUMN IF NOT EXISTS password_risk_level varchar(20) NOT NULL DEFAULT '';",
+                "ALTER TABLE organizations_employee ADD COLUMN IF NOT EXISTS password_risk_reason text NOT NULL DEFAULT '';",
+                "ALTER TABLE organizations_organization ADD COLUMN IF NOT EXISTS avatar_url varchar(1024) NOT NULL DEFAULT '';",
+                "ALTER TABLE organizations_organization ADD COLUMN IF NOT EXISTS phone varchar(20) NOT NULL DEFAULT '';",
+            ],
+            reverse_sql=[
+                "ALTER TABLE organizations_employee DROP COLUMN IF EXISTS must_change_password;",
+                "ALTER TABLE organizations_employee DROP COLUMN IF EXISTS password_last_audited_at;",
+                "ALTER TABLE organizations_employee DROP COLUMN IF EXISTS password_risk_level;",
+                "ALTER TABLE organizations_employee DROP COLUMN IF EXISTS password_risk_reason;",
+                "ALTER TABLE organizations_organization DROP COLUMN IF EXISTS avatar_url;",
+                "ALTER TABLE organizations_organization DROP COLUMN IF EXISTS phone;",
+            ],
         ),
         migrations.CreateModel(
             name="AuditLog",
+            fields=[
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("action", models.CharField(max_length=255)),
+                ("target", models.CharField(max_length=255)),
+                ("result", models.CharField(max_length=50)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "organization",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="audit_logs",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+            ],
+            options={
+                "ordering": ["-created_at"],
+            },
+        ),
+    ]
+
             fields=[
                 (
                     "id",
