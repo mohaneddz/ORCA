@@ -1,9 +1,8 @@
 import { useMemo } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
-import { DualAreaChart, GroupedBarChart, DonutGauge } from "@/components/ui/TrendChart";
+import { MetricPairCard, GroupedBarChart, DonutGauge } from "@/components/ui/TrendChart";
 import PageSkeleton from "@/components/ui/PageSkeleton";
-import { DataTable, PageHeader, StatGrid } from "@/components/cards/BaseCards";
+import { DataTable, PageHeader, StatGrid, SummaryBanner } from "@/components/cards/BaseCards";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { fetchApi } from "@/lib/apiClient";
 
@@ -95,9 +94,8 @@ function TasksPanel({ items }: { items: Item[] }) {
   );
 }
 
-export default function DashboardPage({ pageKey, title, description }: DashboardPageProps) {
+export default function DashboardPage({ title, description }: DashboardPageProps) {
   const { t } = useAppSettings();
-  const { user } = useAuth();
   const { data: summaryData, isLoading: isSummaryLoading } = useQuery({
     queryKey: ["dashboard-summary"],
     queryFn: () => fetchApi<any>("/api/dw/summary/"),
@@ -117,6 +115,10 @@ export default function DashboardPage({ pageKey, title, description }: Dashboard
   const { data: managerAlertsData } = useQuery({
     queryKey: ["dashboard-manager-alerts"],
     queryFn: () => fetchApi<any>("/api/phishing/alerts/managers/").catch(() => null),
+  });
+  const { data: tasksData } = useQuery({
+    queryKey: ["dashboard-tasks"],
+    queryFn: () => fetchApi<any>("/api/tasks/").catch(() => null),
   });
 
   const alerts = useMemo<Item[]>(() => {
@@ -141,14 +143,16 @@ export default function DashboardPage({ pageKey, title, description }: Dashboard
     return items;
   }, [anomaliesData, managerAlertsData]);
 
-  const tasks = useMemo<Item[]>(
-    () => [
-      { title: "Review active campaigns", subtitle: "Ensure phishing simulations are running smoothly.", status: "in progress" },
-      { title: "Check Shadow IT alerts", subtitle: "Verify unapproved software on Registered Devices.", status: "todo" },
-      { title: "Publish weekly digest", subtitle: "Summarize status for stakeholder channel.", status: "scheduled" },
-    ],
-    [],
-  );
+  const tasks = useMemo<Item[]>(() => {
+    if (!tasksData?.tasks?.length) {
+      return [{ title: "No pending tasks", subtitle: "All port remediations are resolved.", status: "Healthy" }];
+    }
+    return tasksData.tasks.map((task: any) => ({
+      title: task.title,
+      subtitle: task.employee || task.type,
+      status: task.status,
+    }));
+  }, [tasksData]);
 
   const rows = useMemo(() => {
     if (summaryData?.leaderboard_top3) {
@@ -160,21 +164,6 @@ export default function DashboardPage({ pageKey, title, description }: Dashboard
     }
     return [];
   }, [summaryData]);
-
-  // Dual area chart data based on trend
-  const dualData = useMemo(() => {
-    if (!trendData?.trend) return [];
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    return trendData.trend.map((t: any) => {
-      const parts = t.month.split('-');
-      const mIndex = parts.length > 1 ? parseInt(parts[1], 10) - 1 : 0;
-      return {
-        name: monthNames[mIndex] || t.month,
-        primary: Math.round(t.device?.avg_risk_score || 0),
-        secondary: Math.round(t.phishing?.click_rate || 0),
-      };
-    });
-  }, [trendData]);
 
   // Grouped bar chart data based on quiz vs phishing
   const barData = useMemo(() => {
@@ -195,32 +184,54 @@ export default function DashboardPage({ pageKey, title, description }: Dashboard
     return <PageSkeleton />;
   }
 
+  const totalCampaigns = analyticsData?.total_campaigns || 0;
+  const totalClicked = analyticsData?.total_clicked || 0;
+  const avgRisk = Math.round(summaryData?.device?.avg_risk_score || 0);
+  const overallClickRate = analyticsData?.overall_click_rate || 0;
+
   const kpis = [
-    { label: "Total Campaigns", value: String(analyticsData?.total_campaigns || 0), helper: "Active & completed", trend: 0 },
-    { label: "Total Phishing Clicks", value: String(analyticsData?.total_clicked || 0), helper: "Links clicked", trend: 0 },
-    { label: "Avg Device Risk", value: String(Math.round(summaryData?.device?.avg_risk_score || 0)), helper: "Out of 100", trend: 0 },
-    { label: "Global Click Rate", value: `${analyticsData?.overall_click_rate || 0}%`, helper: "Org average", trend: 0 },
+    { label: "Security Campaigns", value: String(totalCampaigns), helper: "Phishing tests run so far", trend: 1.2 },
+    { label: "Employees Caught", value: String(totalClicked), helper: "Clicked a simulated link", trend: -3.4, tone: "warn" as const },
+    { label: "Avg Device Risk Score", value: `${avgRisk}/100`, helper: "Lower is healthier", trend: 0.5, tone: (avgRisk > 60 ? "danger" : avgRisk > 30 ? "warn" : "ok") as "danger" | "warn" | "ok" },
+    { label: "Click Rate", value: `${overallClickRate}%`, helper: "Org-wide phishing success rate", trend: -2.1, tone: (overallClickRate > 20 ? "danger" : overallClickRate > 10 ? "warn" : "ok") as "danger" | "warn" | "ok" },
   ];
+
+  const bannerHeadline = `${totalCampaigns} security test${totalCampaigns !== 1 ? "s" : ""} run. ${totalClicked > 0 ? `${totalClicked} employees clicked a simulated phishing link.` : "No employees clicked any phishing tests — great discipline!"}`;
 
   return (
     <div className="page-section">
       <PageHeader title={title} description={description} />
 
-      <StatGrid
-        stats={kpis.map((k, i) => ({
-          ...k,
-          trend: [1.2, -3.4, 0.5, -2.1][i % 4],
-          tone: i === 2 ? "danger" : i === 1 ? "warn" : "default",
-        }))}
+      <SummaryBanner
+        headline={bannerHeadline}
+        subtext="This dashboard gives you a full picture of your security programme. You can see how many tests have been run, how many devices are at risk, and how employees are performing on training."
+        bullets={[
+          `Average device risk: ${avgRisk}/100 — ideal is below 30`,
+          `Click rate: ${overallClickRate}% — this is how often employees fall for simulated phishing emails`,
+          overallClickRate > 20 ? "Tip: schedule more phishing awareness training to lower the click rate" : "Employees are performing well on phishing tests",
+        ]}
       />
+
+      <StatGrid stats={kpis} />
 
       {/* Charts row */}
       <section className="grid gap-3 xl:grid-cols-[1.4fr_1fr]">
-        <DualAreaChart
-          data={dualData}
+        <MetricPairCard
           title={t("dashboard.charts.activity")}
-          primaryLabel={t("dashboard.charts.incidents")}
-          secondaryLabel={t("dashboard.charts.resolved")}
+          metrics={[
+            {
+              label: "Avg Device Risk",
+              value: `${avgRisk}/100`,
+              description: "The average security health score across all company devices. Below 30 is healthy; above 60 needs urgent attention.",
+              color: avgRisk > 60 ? "var(--color-error)" : "var(--color-primary)",
+            },
+            {
+              label: "Phishing Click Rate",
+              value: `${overallClickRate}%`,
+              description: "How often employees click suspicious test emails. The lower this number, the more security-aware your team is.",
+              color: overallClickRate > 20 ? "var(--color-error)" : "var(--color-primary)",
+            },
+          ]}
         />
         <DonutGauge
           title={t("dashboard.charts.riskDist")}
@@ -229,9 +240,9 @@ export default function DashboardPage({ pageKey, title, description }: Dashboard
           label={t("dashboard.charts.riskScore")}
           breakdown={[
             { label: t("dashboard.charts.critical"),  value: summaryData?.device?.risk_level_distribution?.critical || 0,  color: "#fb7185" },
-            { label: t("dashboard.charts.high"),      value: summaryData?.device?.risk_level_distribution?.high || 0,  color: "#fbbf24" },
-            { label: t("dashboard.charts.medium"),    value: summaryData?.device?.risk_level_distribution?.medium || 0, color: "#1d4ed8" },
-            { label: t("dashboard.charts.low"),       value: summaryData?.device?.risk_level_distribution?.low || 0, color: "#38bdf8" },
+            { label: t("dashboard.charts.high"),      value: summaryData?.device?.risk_level_distribution?.high || 0,  color: "#f59e0b" },
+            { label: t("dashboard.charts.medium"),    value: summaryData?.device?.risk_level_distribution?.medium || 0, color: "#00a6d6" },
+            { label: t("dashboard.charts.low"),       value: summaryData?.device?.risk_level_distribution?.low || 0, color: "#00c6c1" },
           ]}
         />
       </section>
@@ -251,7 +262,7 @@ export default function DashboardPage({ pageKey, title, description }: Dashboard
         <DataTable
           title={t("dashboard.table.snapshot")}
           columns={[t("table.name"), t("table.owner"), t("table.state")]}
-          rows={rows.map((row) => [row.name, row.owner, row.state])}
+          rows={rows.map((row: any) => [row.name, row.owner, row.state])}
           minWidth={380}
           filterColumn={t("table.state")}
           searchPlaceholder={t("dashboard.search")}

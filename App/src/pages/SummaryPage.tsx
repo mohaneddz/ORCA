@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
-import { DualAreaChart } from "@/components/ui/TrendChart";
-import { DataTable, PageHeader, StatGrid } from "@/components/cards/BaseCards";
+import { MetricPairCard } from "@/components/ui/TrendChart";
+import { DataTable, PageHeader, StatGrid, SummaryBanner } from "@/components/cards/BaseCards";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { logger } from "@/lib/logger";
 import { SUMMARY_FALLBACK } from "@/data/mockData";
@@ -245,21 +245,17 @@ export default function SummaryPage() {
         }
       />
 
-      <p className="m-0 text-xs" style={{ color: "#64748b" }}>
+      <p className="m-0 text-xs text-neutral-500">
         {generatedLabel}
       </p>
 
       {data && (
         <>
-          <section className="card p-5">
-            <p className="m-0 text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--color-primary-soft)" }}>
-              {t("summary.status")}
-            </p>
-            <p className="m-0 mt-2 text-base font-semibold text-white">{t(data.interpretation.headline)}</p>
-            <p className="m-0 mt-2 text-sm leading-relaxed" style={{ color: "#94a3b8" }}>
-              {t("summary.explanation")}
-            </p>
-          </section>
+          <SummaryBanner
+            headline={t(data.interpretation.headline)}
+            subtext={t("summary.explanation")}
+            bullets={data.interpretation.highlights.map((h) => t(h))}
+          />
 
           <StatGrid
             stats={data.kpis.map((kpi, index) => ({
@@ -272,53 +268,56 @@ export default function SummaryPage() {
           />
 
           <section className="grid gap-3 xl:grid-cols-[1.4fr_1fr]">
-            <DualAreaChart
-              data={data.chart}
+            <MetricPairCard
               title={t("summary.chart.title")}
-              primaryLabel={t("summary.chart.primary")}
-              secondaryLabel={t("summary.chart.secondary")}
+              metrics={[
+                {
+                  label: t("summary.chart.primary"),
+                  value: data.chart.length > 0 ? data.chart[data.chart.length - 1].primary : "—",
+                  description: "Average device risk score this month. Lower is healthier — below 30 is your target.",
+                },
+                {
+                  label: t("summary.chart.secondary"),
+                  value: data.chart.length > 0 ? `${data.chart[data.chart.length - 1].secondary}%` : "—",
+                  description: "Phishing click rate this month. Shows how often employees fall for simulated phishing emails.",
+                  color: (() => {
+                    const rate = data.chart.length > 0 ? data.chart[data.chart.length - 1].secondary : 0;
+                    return rate > 20 ? "var(--color-error)" : "var(--color-primary)";
+                  })(),
+                },
+              ]}
             />
             <section className="card p-5">
-              <p className="m-0 text-sm font-semibold text-white">{t("summary.quickExplain")}</p>
-              <ul className="m-0 mt-3 space-y-2 pl-5 text-sm" style={{ color: "#94a3b8" }}>
-                {data.interpretation.highlights.map((point) => (
-                  <li key={point}>{t(point)}</li>
-                ))}
-              </ul>
-            </section>
-          </section>
-
-          <section className="grid gap-3 xl:grid-cols-[1.2fr_1fr]">
-            <DataTable
-              title={t("summary.table.steps")}
-              columns={[t("table.action"), t("table.why"), t("table.priority")]}
-              rows={data.interpretation.guidance.map((item) => [t(item.action), t(item.why), item.priority])}
-              minWidth={500}
-              searchPlaceholder={t("summary.table.search")}
-              filterColumn={t("table.priority")}
-              filterOptions={[t("table.priority.high"), t("table.priority.medium"), t("table.priority.low")]}
-              renderCell={(cell, row, _rowIndex, cellIndex) => {
-                if (cellIndex !== 2) return cell;
-                const tone =
-                  row[2] === t("table.priority.high") ? "status-danger" : row[2] === t("table.priority.medium") ? "status-warn" : "status-ok";
-                return <span className={tone}>{cell}</span>;
-              }}
-            />
-            <section className="card p-5">
-              <p className="m-0 text-sm font-semibold text-white">{t("summary.guidance.title")}</p>
+              <p className="m-0 text-sm font-semibold text-neutral-100">{t("summary.guidance.title")}</p>
               <div className="mt-3 space-y-3 text-sm">
-                <p className="m-0 leading-relaxed" style={{ color: "#94a3b8" }}>
+                <p className="m-0 leading-relaxed text-neutral-400">
                   {t("summary.guidance.p1")}
                 </p>
-                <p className="m-0 leading-relaxed" style={{ color: "#94a3b8" }}>
+                <p className="m-0 leading-relaxed text-neutral-400">
                   {t("summary.guidance.p2")}
                 </p>
-                <p className="m-0 leading-relaxed" style={{ color: "#94a3b8" }}>
+                <p className="m-0 leading-relaxed text-neutral-400">
                   {t("summary.guidance.p3")}
                 </p>
               </div>
             </section>
           </section>
+
+          <DataTable
+            title={t("summary.table.steps")}
+            columns={[t("table.action"), t("table.why"), t("table.priority")]}
+            rows={data.interpretation.guidance.map((item) => [t(item.action), t(item.why), item.priority])}
+            minWidth={500}
+            searchPlaceholder={t("summary.table.search")}
+            filterColumn={t("table.priority")}
+            filterOptions={[t("table.priority.high"), t("table.priority.medium"), t("table.priority.low")]}
+            renderCell={(cell, row, _rowIndex, cellIndex) => {
+              if (cellIndex !== 2) return cell;
+              const tone =
+                row[2] === t("table.priority.high") ? "status-danger" : row[2] === t("table.priority.medium") ? "status-warn" : "status-ok";
+              return <span className={tone}>{cell}</span>;
+            }}
+          />
         </>
       )}
     </div>

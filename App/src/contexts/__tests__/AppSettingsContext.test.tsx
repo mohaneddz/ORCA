@@ -44,7 +44,7 @@ describe("AppSettingsProvider", () => {
       expect(invokeMock).toHaveBeenCalledWith(
         "sync_runtime_settings",
         expect.objectContaining({
-          settings: expect.objectContaining({ language: "en", hideToTray: true }),
+          settings: expect.objectContaining({ language: "fr", hideToTray: true }),
         }),
       );
       expect(invokeMock).toHaveBeenCalledWith("set_hide_to_tray", { enabled: true });

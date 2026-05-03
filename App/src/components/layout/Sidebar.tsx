@@ -76,7 +76,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
         <img
           src={settings.theme === "light" ? "/title-light.png" : "/title-dark.png"}
           alt="ORCA"
-          className="shrink-0 object-contain"
+          className="shrink-0 object-contain px-4"
           style={{
             width: expanded ? 250 : 30,
             height: 80,

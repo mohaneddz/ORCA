@@ -399,12 +399,12 @@ body {
 }
 
 :root[data-theme="light"] .text-white {
-  color: var(--color-neutral-800) !important;
+  color: var(--color-neutral-100) !important;
 }
 
 :root[data-theme="light"] .text-slate-300,
 :root[data-theme="light"] .text-slate-200 {
-  color: var(--color-neutral-600) !important;
+  color: var(--color-neutral-200) !important;
 }
 
 :root[data-theme="light"] .text-cyan-100 {
@@ -508,6 +508,7 @@ body {
   color: #be123c !important;
 }
 
+:root[data-theme="light"] .text-rose-300,
 :root[data-theme="light"] .text-rose-400 {
   color: #e11d48 !important;
 }
@@ -521,7 +522,7 @@ body {
 }
 
 :root[data-theme="light"] .hover\:text-white:hover {
-  color: var(--color-neutral-800) !important;
+  color: var(--color-neutral-100) !important;
 }
 
 :root[data-theme="light"] .hover\:bg-white\/10:hover {

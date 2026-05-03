@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     AnomalyDetectionView,
+    AutomationsView,
     BillingUsageView,
     EmployeeReportView,
     ExportView,
@@ -11,6 +12,7 @@ from .views import (
     OrgSummaryView,
     RiskPredictionView,
     EmployeeScoreView,
+    TasksView,
     TrendView,
 )
 
@@ -27,4 +29,6 @@ urlpatterns = [
     path("dw/ml/anomalies/", AnomalyDetectionView.as_view(), name="dw-ml-anomalies"),
     path("dw/ml/predict/<str:employee_id>/", RiskPredictionView.as_view(), name="dw-ml-predict"),
     path("dw/employee-score/<str:employee_id>/", EmployeeScoreView.as_view(), name="dw-employee-score"),
+    path("automations/", AutomationsView.as_view(), name="dw-automations"),
+    path("tasks/", TasksView.as_view(), name="dw-tasks"),
 ]

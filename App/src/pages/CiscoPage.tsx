@@ -293,8 +293,8 @@ function DeviceCard({ device, onClick, selected }: {
             </span>
           </div>
           <div>
-            <p className="m-0 text-sm font-semibold text-white">{device.name}</p>
-            <p className="m-0 text-xs" style={{ color: "#64748b" }}>{device.ip_address}</p>
+            <p className="m-0 text-sm font-semibold text-neutral-900 dark:text-neutral-100">{device.name}</p>
+            <p className="m-0 text-xs text-slate-500 dark:text-neutral-400">{device.ip_address}</p>
           </div>
         </div>
         {statusChip(device.status)}
@@ -303,12 +303,12 @@ function DeviceCard({ device, onClick, selected }: {
       {/* Risk bar */}
       <div className="mb-3">
         <div className="flex justify-between mb-1">
-          <span className="text-xs" style={{ color: "#64748b" }}>Health Score</span>
+          <span className="text-xs text-slate-500 dark:text-neutral-400">Health Score</span>
           <span className="text-xs font-bold" style={{ color: riskColor(device.latest_risk_level ?? "") }}>
             {riskPct}/100
           </span>
         </div>
-        <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 9999 }}>
+        <div style={{ height: 4, background: "var(--border-color, rgba(0,0,0,0.06))", borderRadius: 9999 }}>
           <div
             style={{
               height: "100%",
@@ -322,22 +322,22 @@ function DeviceCard({ device, onClick, selected }: {
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-xs">
-        <div style={{ color: "#64748b" }}>
+        <div className="text-slate-500 dark:text-neutral-400">
           CPU:{" "}
-          <span style={{ color: (device.latest_cpu ?? 0) > 80 ? "#fb7185" : "#cbd5e1" }}>
+          <span style={{ color: (device.latest_cpu ?? 0) > 80 ? "#fb7185" : "currentColor" }}>
             {device.latest_cpu != null ? `${device.latest_cpu.toFixed(1)}%` : "N/A"}
           </span>
         </div>
-        <div style={{ color: "#64748b" }}>
-          Uptime: <span style={{ color: "#cbd5e1" }}>
+        <div className="text-slate-500 dark:text-neutral-400">
+          Uptime: <span style={{ color: "currentColor" }}>
             {device.latest_uptime_hours != null ? `${device.latest_uptime_hours}h` : "—"}
           </span>
         </div>
-        <div style={{ color: "#64748b" }}>
-          Model: <span style={{ color: "#cbd5e1" }}>{device.model || "—"}</span>
+        <div className="text-slate-500 dark:text-neutral-400">
+          Model: <span style={{ color: "currentColor" }}>{device.model || "—"}</span>
         </div>
-        <div style={{ color: "#64748b" }}>
-          Polled: <span style={{ color: "#cbd5e1" }}>{timeAgo(device.last_polled)}</span>
+        <div className="text-slate-500 dark:text-neutral-400">
+          Polled: <span style={{ color: "currentColor" }}>{timeAgo(device.last_polled)}</span>
         </div>
       </div>
 
@@ -376,7 +376,7 @@ function AlertRow({ alert, onResolve }: {
   return (
     <div
       className="rounded-xl overflow-hidden transition-colors"
-      style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)" }}
+      style={{ background: "rgba(255,255,255,0.025)", border: "1px solid var(--border-color, rgba(0,0,0,0.06))" }}
     >
       <div
         className="flex items-center gap-3 px-4 py-3 cursor-pointer"
@@ -387,7 +387,7 @@ function AlertRow({ alert, onResolve }: {
         </span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="m-0 text-sm font-medium text-white truncate">{alert.title}</p>
+            <p className="m-0 text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{alert.title}</p>
             {alert.ai_generated && (
               <span
                 className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
@@ -397,26 +397,26 @@ function AlertRow({ alert, onResolve }: {
               </span>
             )}
           </div>
-          <p className="m-0 text-xs" style={{ color: "#64748b" }}>
+          <p className="m-0 text-xs text-slate-500 dark:text-neutral-400">
             {alert["device__name"]} · {timeAgo(alert.created_at)}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {severityChip(alert.severity)}
-          {expanded ? <ChevronDown size={13} style={{ color: "#64748b" }} /> : <ChevronRight size={13} style={{ color: "#64748b" }} />}
+          {expanded ? <ChevronDown size={13} className="text-slate-500 dark:text-neutral-400" /> : <ChevronRight size={13} className="text-slate-500 dark:text-neutral-400" />}
         </div>
       </div>
 
       {expanded && (
         <div className="px-4 pb-4" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-          <p className="mt-3 text-sm" style={{ color: "#94a3b8" }}>{alert.description}</p>
+          <p className="mt-3 text-sm text-neutral-400">{alert.description}</p>
           {alert.recommendation && (
             <div
               className="mt-3 rounded-lg px-3 py-2"
               style={{ background: "rgba(34,211,238,0.06)", border: "1px solid rgba(34,211,238,0.12)" }}
             >
               <p className="m-0 text-xs font-semibold mb-1" style={{ color: "#22d3ee" }}>Recommendation</p>
-              <p className="m-0 text-xs font-mono" style={{ color: "#94a3b8" }}>{alert.recommendation}</p>
+              <p className="m-0 text-xs font-mono text-neutral-400">{alert.recommendation}</p>
             </div>
           )}
           <div className="mt-3 flex gap-2">
@@ -474,7 +474,7 @@ function AIInsightPanel({ device }: { device: typeof MOCK_DEVICES[0] | null }) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Brain size={16} style={{ color: "#22d3ee" }} />
-          <p className="m-0 text-sm font-semibold text-white">AI Analysis — {device.name}</p>
+          <p className="m-0 text-sm font-semibold text-neutral-900 dark:text-neutral-100">AI Analysis — {device.name}</p>
         </div>
         <button
           type="button"
@@ -528,9 +528,9 @@ function AIInsightPanel({ device }: { device: typeof MOCK_DEVICES[0] | null }) {
                 </span>
               )}
             </div>
-            <p className="m-0 text-xs" style={{ color: "#94a3b8" }}>{result.failure_prediction.summary}</p>
+            <p className="m-0 text-xs text-neutral-400">{result.failure_prediction.summary}</p>
             {result.failure_prediction.probability_pct !== null && (
-              <div className="mt-2" style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 9999 }}>
+              <div className="mt-2" style={{ height: 3, background: "var(--border-color, rgba(0,0,0,0.06))", borderRadius: 9999 }}>
                 <div style={{
                   height: "100%",
                   width: `${result.failure_prediction.probability_pct}%`,
@@ -547,7 +547,7 @@ function AIInsightPanel({ device }: { device: typeof MOCK_DEVICES[0] | null }) {
               <Brain size={10} className="inline mr-1" />
               AI Recommendation
             </p>
-            <p className="m-0 text-xs leading-relaxed" style={{ color: "#94a3b8" }}>{result.recommendation}</p>
+            <p className="m-0 text-xs leading-relaxed text-neutral-400">{result.recommendation}</p>
           </div>
         </div>
       )}
@@ -624,7 +624,7 @@ export default function CiscoPage() {
       {/* Add Device Form */}
       {showAddDevice && (
         <section className="card p-5 animate-fade-up">
-          <p className="m-0 mb-3 text-sm font-semibold text-white">Register New Cisco Device</p>
+          <p className="m-0 mb-3 text-sm font-semibold text-neutral-900 dark:text-neutral-100">Register New Cisco Device</p>
           <div className="grid gap-3 md:grid-cols-3">
             {[
               { label: "Device Name", value: newDeviceName, setter: setNewDeviceName, placeholder: "CORE-RTR-01" },
@@ -695,7 +695,7 @@ export default function CiscoPage() {
                 "flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors",
                 activeTab === key
                   ? "bg-purple-500/20 text-purple-200"
-                  : "bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white",
+                  : "bg-white/5 text-neutral-300 hover:bg-white/10 hover:text-neutral-900 dark:text-neutral-100",
               ].join(" ")}
             >
               <Icon size={12} />
@@ -725,7 +725,7 @@ export default function CiscoPage() {
             {selectedDevice && (
               <section className="card p-5 animate-fade-up">
                 <div className="flex items-center justify-between mb-4">
-                  <p className="m-0 text-sm font-semibold text-white">
+                  <p className="m-0 text-sm font-semibold text-neutral-900 dark:text-neutral-100">
                     {selectedDevice.name} — SNMP Metrics
                   </p>
                   <div className="flex items-center gap-1.5 text-xs" style={{ color: "#475569" }}>
@@ -746,13 +746,12 @@ export default function CiscoPage() {
                   ].map(({ label, value, warn }) => (
                     <div
                       key={label}
-                      className="rounded-xl p-3"
-                      style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}
+                      className="rounded-xl p-3 bg-neutral-100 dark:bg-white/5 border border-black/5 dark:border-white/5"
                     >
-                      <p className="m-0 text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "#475569" }}>
+                      <p className="m-0 text-[10px] font-semibold uppercase tracking-wider mb-1 text-slate-500 dark:text-slate-400">
                         {label}
                       </p>
-                      <p className="m-0 text-sm font-bold" style={{ color: warn ? "#fb7185" : "#fff" }}>
+                      <p className={`m-0 text-sm font-bold ${warn ? "text-rose-500 dark:text-rose-400" : "text-slate-900 dark:text-white"}`}>
                         {value}
                       </p>
                     </div>
@@ -770,7 +769,7 @@ export default function CiscoPage() {
       {activeTab === "alerts" && (
         <section className="page-section">
           <div className="flex items-center justify-between">
-            <p className="m-0 text-sm" style={{ color: "#64748b" }}>
+            <p className="m-0 text-sm text-slate-500 dark:text-neutral-400">
               {alerts.filter(a => a.severity === "critical").length} critical,{" "}
               {alerts.filter(a => a.severity === "high").length} high,{" "}
               {alerts.filter(a => a.ai_generated).length} AI-generated
@@ -785,7 +784,7 @@ export default function CiscoPage() {
             {alerts.length === 0 && (
               <div className="card p-8 text-center">
                 <CheckCircle size={28} style={{ color: "#34d399", margin: "0 auto" }} />
-                <p className="m-0 mt-2 text-sm text-white">All clear — no active alerts.</p>
+                <p className="m-0 mt-2 text-sm text-neutral-900 dark:text-neutral-100">All clear — no active alerts.</p>
               </div>
             )}
             {alerts.map(alert => (
@@ -800,11 +799,11 @@ export default function CiscoPage() {
         <section className="card overflow-hidden">
           <div
             className="flex items-center justify-between px-5 py-3.5"
-            style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+            style={{ borderBottom: "1px solid var(--border-color, rgba(0,0,0,0.06))" }}
           >
             <div>
-              <p className="m-0 text-sm font-semibold text-white">Cisco IOS CVE Vulnerability Scan</p>
-              <p className="m-0 text-xs" style={{ color: "#64748b" }}>
+              <p className="m-0 text-sm font-semibold text-neutral-900 dark:text-neutral-100">Cisco IOS CVE Vulnerability Scan</p>
+              <p className="m-0 text-xs text-slate-500 dark:text-neutral-400">
                 Cross-referencing IOS versions against Cisco PSIRT database
               </p>
             </div>
@@ -871,11 +870,11 @@ export default function CiscoPage() {
         <section className="card overflow-hidden">
           <div
             className="flex items-center justify-between px-5 py-3.5"
-            style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+            style={{ borderBottom: "1px solid var(--border-color, rgba(0,0,0,0.06))" }}
           >
             <div>
-              <p className="m-0 text-sm font-semibold text-white">Configuration Backup History</p>
-              <p className="m-0 text-xs" style={{ color: "#64748b" }}>
+              <p className="m-0 text-sm font-semibold text-neutral-900 dark:text-neutral-100">Configuration Backup History</p>
+              <p className="m-0 text-xs text-slate-500 dark:text-neutral-400">
                 SHA-256 checksums · automatic change detection · security diff analysis
               </p>
             </div>
@@ -921,7 +920,7 @@ export default function CiscoPage() {
                     <td style={{ fontSize: "0.78rem", color: row.changed ? "#fbbf24" : "#64748b" }}>
                       {row.diff}
                     </td>
-                    <td style={{ color: "#64748b" }}>{row.time}</td>
+                    <td className="text-slate-500 dark:text-neutral-400">{row.time}</td>
                   </tr>
                 ))}
               </tbody>
@@ -932,12 +931,11 @@ export default function CiscoPage() {
 
       {/* SNMP Collector Setup Guide */}
       <section
-        className="card p-5"
-        style={{ background: "rgba(168,85,247,0.04)", borderColor: "rgba(168,85,247,0.2)" }}
+        className="card p-5 bg-purple-500/5 dark:bg-purple-500/10 border-purple-500/10 dark:border-purple-500/20"
       >
         <div className="flex items-center gap-2 mb-3">
           <Globe size={15} style={{ color: "#a855f7" }} />
-          <p className="m-0 text-sm font-semibold text-white">SNMP Collector Setup</p>
+          <p className="m-0 text-sm font-semibold text-neutral-900 dark:text-neutral-100">SNMP Collector Setup</p>
           <span className="pill">Integration Guide</span>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
@@ -958,17 +956,7 @@ export default function CiscoPage() {
             <div key={title}>
               <p className="m-0 mb-1 text-xs font-semibold" style={{ color: "#a855f7" }}>{title}</p>
               <pre
-                style={{
-                  background: "rgba(0,0,0,0.3)",
-                  border: "1px solid rgba(168,85,247,0.15)",
-                  borderRadius: 8,
-                  padding: "0.6rem 0.8rem",
-                  fontSize: "0.68rem",
-                  color: "#94a3b8",
-                  margin: 0,
-                  whiteSpace: "pre-wrap",
-                  fontFamily: "monospace",
-                }}
+                className="bg-black/5 dark:bg-black/30 border border-purple-500/15 rounded-lg py-2.5 px-3 text-[0.68rem] text-slate-700 dark:text-slate-400 m-0 whitespace-pre-wrap font-mono"
               >
                 {code}
               </pre>

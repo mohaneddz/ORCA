@@ -111,7 +111,7 @@ pub struct ScanNetworkResponse {
 
 #[tauri::command]
 pub async fn get_router_mock_data() -> Result<RouterMockData, String> {
-    Ok(build_router_mock_data())
+    Ok(build_neighbor_data())
 }
 
 #[tauri::command]
@@ -151,7 +151,7 @@ pub async fn scan_network() -> Result<ScanNetworkResponse, String> {
         arp_rows.push((local_ip, None));
     }
 
-    let router_mock = build_router_mock_data();
+    let router_mock = build_neighbor_data();
     let mut map: HashMap<String, DeviceRecord> = HashMap::new();
     let now = Utc::now().to_rfc3339();
 
@@ -168,7 +168,7 @@ pub async fn scan_network() -> Result<ScanNetworkResponse, String> {
         );
     }
 
-    merge_router_mock_data(&mut map, &router_mock, &now);
+    merge_neighbor_data(&mut map, &router_mock, &now);
 
     let target_ips: Vec<IpAddr> = map
         .keys()
@@ -239,32 +239,81 @@ fn build_local_network_info() -> Result<LocalNetworkInfo, String> {
     })
 }
 
-fn build_router_mock_data() -> RouterMockData {
+/// Build neighbor data from real OS sources (Windows Neighbor Table + optional DHCP).
+/// Returns empty collections for data that requires router-level access.
+fn build_neighbor_data() -> RouterMockData {
     RouterMockData {
-        dhcp_leases: vec![
-            RouterClient { ip: "192.168.1.2".into(), mac: "b8:27:eb:12:34:56".into(), hostname: Some("ops-printer".into()) },
-            RouterClient { ip: "192.168.1.15".into(), mac: "00:1a:79:88:77:66".into(), hostname: Some("finance-laptop".into()) },
-        ],
-        arp_table: vec![
-            RouterClient { ip: "192.168.1.1".into(), mac: "f4:f5:e8:00:11:22".into(), hostname: Some("edge-router".into()) },
-            RouterClient { ip: "192.168.1.50".into(), mac: "dc:a6:32:ab:cd:ef".into(), hostname: Some("boardroom-tv".into()) },
-        ],
-        wifi_clients: vec![
-            RouterWifiClient { ip: "192.168.1.50".into(), mac: "dc:a6:32:ab:cd:ef".into(), ssid: "CorpWiFi".into(), ap: "AP-2F-East".into(), rssi: -52, switch_port: Some("sw1/0/23".into()), vlan: Some("20".into()) },
-            RouterWifiClient { ip: "192.168.1.77".into(), mac: "f0:18:98:44:55:66".into(), ssid: "CorpWiFi".into(), ap: "AP-1F-Lobby".into(), rssi: -60, switch_port: Some("sw1/0/09".into()), vlan: Some("20".into()) },
-        ],
-        dns_records: vec![
-            RouterDnsRecord { ip: "192.168.1.15".into(), hostname: "finance-laptop.local".into() },
-            RouterDnsRecord { ip: "192.168.1.2".into(), hostname: "ops-printer.local".into() },
-        ],
-        bandwidth_stats: vec![
-            RouterBandwidth { ip: "192.168.1.15".into(), down_mbps: 4.2, up_mbps: 0.8 },
-            RouterBandwidth { ip: "192.168.1.50".into(), down_mbps: 12.7, up_mbps: 1.1 },
-        ],
+        dhcp_leases: query_dhcp_leases(),
+        arp_table: vec![],  // ARP is already handled by read_arp_table()
+        wifi_clients: vec![],
+        dns_records: query_net_neighbors(),
+        bandwidth_stats: vec![],
     }
 }
 
-fn merge_router_mock_data(map: &mut HashMap<String, DeviceRecord>, router: &RouterMockData, now: &str) {
+#[cfg(target_os = "windows")]
+fn query_net_neighbors() -> Vec<RouterDnsRecord> {
+    use std::process::Command as StdCommand;
+    let Ok(output) = StdCommand::new("powershell")
+        .args(["-NoProfile", "-Command", "Get-NetNeighbor -State Reachable | Select-Object IPAddress | ConvertTo-Csv -NoTypeInformation"])
+        .output()
+    else {
+        return Vec::new();
+    };
+    let text = String::from_utf8_lossy(&output.stdout);
+    let mut records = Vec::new();
+    let mut skip_header = true;
+    for line in text.lines() {
+        if skip_header { skip_header = false; continue; }
+        let ip = line.trim().trim_matches('"').to_string();
+        if ip.is_empty() || ip.starts_with("//") { continue; }
+        records.push(RouterDnsRecord { ip, hostname: String::new() });
+    }
+    records
+}
+
+#[cfg(not(target_os = "windows"))]
+fn query_net_neighbors() -> Vec<RouterDnsRecord> {
+    Vec::new()
+}
+
+#[cfg(target_os = "windows")]
+fn query_dhcp_leases() -> Vec<RouterClient> {
+    use std::process::Command as StdCommand;
+    // Only succeeds when this machine is a Windows DHCP server; returns empty otherwise.
+    let Ok(output) = StdCommand::new("netsh")
+        .args(["dhcp", "server", "scope", "show", "clients"])
+        .output()
+    else {
+        return Vec::new();
+    };
+    if !output.status.success() {
+        return Vec::new();
+    }
+    let text = String::from_utf8_lossy(&output.stdout);
+    let mut leases = Vec::new();
+    for line in text.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() < 3 { continue; }
+        let ip = parts[0];
+        let mac = parts[2];
+        if ip.contains('.') && mac.contains('-') {
+            leases.push(RouterClient {
+                ip: ip.to_string(),
+                mac: mac.replace('-', ":").to_lowercase(),
+                hostname: parts.get(4).map(|s| s.to_string()),
+            });
+        }
+    }
+    leases
+}
+
+#[cfg(not(target_os = "windows"))]
+fn query_dhcp_leases() -> Vec<RouterClient> {
+    Vec::new()
+}
+
+fn merge_neighbor_data(map: &mut HashMap<String, DeviceRecord>, router: &RouterMockData, now: &str) {
     for lease in &router.dhcp_leases {
         upsert_device(map, &lease.ip, Some(lease.mac.clone()), vec!["router_dhcp".into()], now.to_string());
         if let Some(dev) = map.get_mut(&lease.ip) {

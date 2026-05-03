@@ -11,7 +11,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
-from agent.models import DeviceSnapshot
+from agent.models import DeviceSnapshot, PortRemediationRequest
 from gamification.models import QuizBatchAssignment, QuizSubmission
 from organizations.models import Employee
 from organizations.views import get_org_from_request
@@ -1026,6 +1026,77 @@ class AnomalyDetectionView(View):
             }
         )
 
+
+# ---------------------------------------------------------------------------
+# Automations  –  GET /api/automations/
+# Aggregates phishing campaign events as automation records.
+# ---------------------------------------------------------------------------
+@method_decorator(csrf_exempt, name="dispatch")
+class AutomationsView(View):
+    def get(self, request):
+        org, err = _get_org(request)
+        if err:
+            return err
+
+        campaigns = PhishingCampaign.objects.filter(organization=org).order_by("-created_at")[:20]
+        automations = []
+        for c in campaigns:
+            if c.status == "COMPLETED" and c.completed_at:
+                automations.append({
+                    "id": str(c.id),
+                    "title": f"Phishing campaign: {c.name}",
+                    "status": "completed",
+                    "triggered_at": c.completed_at.isoformat(),
+                    "type": "phishing",
+                })
+            elif c.status == "ACTIVE" and c.launched_at:
+                automations.append({
+                    "id": str(c.id),
+                    "title": f"Launched: {c.name}",
+                    "status": "running",
+                    "triggered_at": c.launched_at.isoformat(),
+                    "type": "phishing",
+                })
+            else:
+                automations.append({
+                    "id": str(c.id),
+                    "title": f"Scheduled: {c.name}",
+                    "status": "pending",
+                    "triggered_at": c.created_at.isoformat(),
+                    "type": "phishing",
+                })
+
+        return JsonResponse({"automations": automations})
+
+
+# ---------------------------------------------------------------------------
+# Tasks  –  GET /api/tasks/
+# Aggregates open port remediations as actionable task records.
+# ---------------------------------------------------------------------------
+@method_decorator(csrf_exempt, name="dispatch")
+class TasksView(View):
+    def get(self, request):
+        org, err = _get_org(request)
+        if err:
+            return err
+
+        remediations = PortRemediationRequest.objects.filter(
+            organization=org, status="PENDING"
+        ).select_related("employee").order_by("-requested_at")[:30]
+
+        tasks = []
+        for r in remediations:
+            tasks.append({
+                "id": str(r.id),
+                "title": f"Close port {r.port} on {r.hostname}",
+                "status": "todo",
+                "priority": "high",
+                "type": "port_closure",
+                "employee": r.employee.name if r.employee else "",
+                "created_at": r.requested_at.isoformat(),
+            })
+
+        return JsonResponse({"tasks": tasks})
 
 # ---------------------------------------------------------------------------
 # ML — RandomForest risk prediction for a specific employee

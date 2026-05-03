@@ -27,4 +27,5 @@ urlpatterns = [
     path("api/", include("agent.urls")),
     path("api/", include("cisco.urls")),   
     path("api/", include("datawarehouse.urls")),
+    path("api/", include("vmware.urls")),
 ]

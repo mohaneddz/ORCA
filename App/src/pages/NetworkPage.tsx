@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { PageHeader } from "@/components/cards/BaseCards";
+import { PageHeader, SummaryBanner } from "@/components/cards/BaseCards";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,10 +9,27 @@ import PageSkeleton from "@/components/ui/PageSkeleton";
 import { RISK_TREND, EXPOSURE_BY_ZONE, NAC_COMPLIANCE_TREND } from "@/data/mockData";
 
 const AXIS_STYLE = { fill: "#64748b", fontSize: 11 };
-const CHART_PRIMARY = "#1d4ed8";
-const CHART_SECONDARY = "#38bdf8";
+const CHART_PRIMARY = "#00c6c1";
+const CHART_SECONDARY = "#00a6d6";
 const RISK_CACHE_KEY = "network-port-risk-cache-v1";
 const RISK_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+
+// Toggle: set to false when backend chart endpoints for network analytics are available
+const USE_MOCK_NETWORK_CHARTS = true;
+
+function getMockNetworkChartData() {
+  return { riskTrend: RISK_TREND, exposureByZone: EXPOSURE_BY_ZONE, nacTrend: NAC_COMPLIANCE_TREND };
+}
+
+function getLiveNetworkChartData() {
+  // TODO: replace with real API calls when /api/dw/network-charts/ or similar is implemented
+  return getMockNetworkChartData();
+}
+
+function getNetworkThroughput(useMock: boolean): string {
+  // Throughput requires a network monitoring agent; no backend endpoint exists yet
+  return useMock ? "8.1 Gbps" : "--";
+}
 
 type OpenPortRow = { employee_id: string; employee_name: string; hostname: string; port: number; protocol: string };
 type PortRiskAnalysis = { riskLevel: "Low" | "Medium" | "High"; explanation: string };
@@ -158,21 +175,41 @@ export default function NetworkPage() {
   const remediationById: Record<string, any> = {};
   for (const r of remediationData?.remediations || []) remediationById[`${r.employee_id}-${r.port}`] = r;
 
+  const networkCharts = USE_MOCK_NETWORK_CHARTS ? getMockNetworkChartData() : getLiveNetworkChartData();
+  const blockedCount = (remediationData?.remediations || []).length;
+
   if (isPortsLoading || isSoftwareLoading) return <PageSkeleton />;
+
+  const openPortCount = portRows.length;
+  const pendingCount = (remediationData?.remediations || []).filter((r: any) => r.status === "PENDING").length;
+
+  const networkBannerHeadline = openPortCount === 0
+    ? "No open network ports detected — all devices are clean."
+    : `${openPortCount} open network port${openPortCount !== 1 ? "s" : ""} found across your devices. ${pendingCount > 0 ? `${pendingCount} already flagged for closure.` : "Review the table below and flag any suspicious ones."}`;
 
   return (
     <div className="page-section">
       <PageHeader badge={t("network.badge")} title={t("network.title")} description={t("network.description")} />
 
+      <SummaryBanner
+        headline={networkBannerHeadline}
+        subtext="Open network ports are like unlocked doors on a device. Each port should have a clear reason to be open — if you see an unusual one, use the 'Flag for Closure' button to schedule it for removal."
+        bullets={[
+          "Low-numbered ports (below 1024) are common services like web or email — usually fine",
+          "High-numbered ports are more unusual and worth reviewing with your IT team",
+          "Flagged ports will be automatically closed the next time that device checks in",
+        ]}
+      />
+
       <section className="grid gap-3 xl:grid-cols-2">
-        <section className="card p-5 min-h-[120px]"><p className="m-0 text-xs uppercase tracking-[0.08em] text-slate-400">{t("network.throughput")}</p><p className="m-0 mt-2 text-2xl font-bold text-white">8.1 Gbps</p></section>
-        <section className="card p-5 min-h-[120px]"><p className="m-0 text-xs uppercase tracking-[0.08em] text-slate-400">{t("network.blocked")}</p><p className="m-0 mt-2 text-2xl font-bold text-white">3,412</p></section>
+        <section className="card p-5 min-h-[120px]"><p className="m-0 text-xs uppercase tracking-[0.08em] text-slate-400">{t("network.throughput")}</p><p className="m-0 mt-2 text-2xl font-bold text-white">{getNetworkThroughput(USE_MOCK_NETWORK_CHARTS)}</p></section>
+        <section className="card p-5 min-h-[120px]"><p className="m-0 text-xs uppercase tracking-[0.08em] text-slate-400">{t("network.blocked")}</p><p className="m-0 mt-2 text-2xl font-bold text-white">{blockedCount.toLocaleString()}</p></section>
       </section>
 
       <section className="grid gap-3 xl:grid-cols-3">
-        <section className="card p-5 min-h-[280px]"><p className="m-0 text-sm font-semibold text-white">{t("network.risk.title")}</p><p className="m-0 mt-2 text-sm text-slate-400">{t("network.risk.subtitle")}</p><div className="mt-3 h-[170px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={RISK_TREND} margin={{ top: 4, right: 6, left: -20, bottom: 0 }}><defs><linearGradient id="riskGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={CHART_PRIMARY} stopOpacity={0.46} /><stop offset="100%" stopColor={CHART_PRIMARY} stopOpacity={0.03} /></linearGradient></defs><CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} /><XAxis dataKey="name" tick={AXIS_STYLE} tickLine={false} axisLine={false} /><YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={34} /><Tooltip contentStyle={{ background: "rgba(10, 25, 49, 0.76)", border: "1px solid rgba(29,78,216,0.45)", borderRadius: 10, color: "#e2e8f0", backdropFilter: "blur(10px)" }} labelStyle={{ color: "#64748b" }} /><Area type="monotone" dataKey="value" name="Risk score" stroke={CHART_PRIMARY} strokeWidth={2.5} fill="url(#riskGradient)" dot={false} /></AreaChart></ResponsiveContainer></div></section>
-        <section className="card p-5 min-h-[280px]"><p className="m-0 text-sm font-semibold text-white">{t("network.exposure.title")}</p><p className="m-0 mt-2 text-sm text-slate-400">{t("network.exposure.subtitle")}</p><div className="mt-3 h-[170px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={EXPOSURE_BY_ZONE} barCategoryGap="26%" margin={{ top: 4, right: 6, left: -20, bottom: 0 }}><CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} /><XAxis dataKey="name" tick={AXIS_STYLE} tickLine={false} axisLine={false} /><YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={34} /><Tooltip contentStyle={{ background: "rgba(10, 25, 49, 0.76)", border: "1px solid rgba(56,189,248,0.4)", borderRadius: 10, color: "#e2e8f0", backdropFilter: "blur(10px)" }} labelStyle={{ color: "#64748b" }} /><Bar dataKey="value" name="Open ports" fill={CHART_SECONDARY} radius={[5, 5, 0, 0]} maxBarSize={26} /></BarChart></ResponsiveContainer></div></section>
-        <section className="card p-5 min-h-[280px]"><p className="m-0 text-sm font-semibold text-white">{t("network.nac.title")}</p><p className="m-0 mt-2 text-sm text-slate-400">{t("network.nac.subtitle")}</p><div className="mt-3 h-[170px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={NAC_COMPLIANCE_TREND} margin={{ top: 4, right: 6, left: -20, bottom: 0 }}><defs><linearGradient id="nacGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={CHART_SECONDARY} stopOpacity={0.38} /><stop offset="100%" stopColor={CHART_SECONDARY} stopOpacity={0.02} /></linearGradient></defs><CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} /><XAxis dataKey="name" tick={AXIS_STYLE} tickLine={false} axisLine={false} /><YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={34} domain={[80, 100]} /><Tooltip contentStyle={{ background: "rgba(10, 25, 49, 0.76)", border: "1px solid rgba(56,189,248,0.4)", borderRadius: 10, color: "#e2e8f0", backdropFilter: "blur(10px)" }} labelStyle={{ color: "#64748b" }} /><Area type="monotone" dataKey="target" name="Target" stroke="#64748b" strokeWidth={1.8} fillOpacity={0} dot={false} /><Area type="monotone" dataKey="compliant" name="Compliant %" stroke={CHART_SECONDARY} strokeWidth={2.5} fill="url(#nacGradient)" dot={false} /></AreaChart></ResponsiveContainer></div></section>
+        <section className="card p-5 min-h-[280px]"><p className="m-0 text-sm font-semibold text-white">{t("network.risk.title")}</p><p className="m-0 mt-2 text-sm text-slate-400">{t("network.risk.subtitle")}</p><div className="mt-3 h-[170px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={networkCharts.riskTrend} margin={{ top: 4, right: 6, left: -20, bottom: 0 }}><defs><linearGradient id="riskGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#00c6c1" stopOpacity={0.46} /><stop offset="100%" stopColor="#00c6c1" stopOpacity={0.03} /></linearGradient></defs><CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} /><XAxis dataKey="name" tick={AXIS_STYLE} tickLine={false} axisLine={false} /><YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={34} /><Tooltip contentStyle={{ background: "rgba(10, 25, 49, 0.76)", border: "1px solid rgba(0,198,193,0.45)", borderRadius: 10, color: "#e2e8f0", backdropFilter: "blur(10px)" }} labelStyle={{ color: "#64748b" }} /><Area type="monotone" dataKey="value" name="Risk score" stroke={CHART_PRIMARY} strokeWidth={2.5} fill="url(#riskGradient)" dot={false} /></AreaChart></ResponsiveContainer></div></section>
+        <section className="card p-5 min-h-[280px]"><p className="m-0 text-sm font-semibold text-white">{t("network.exposure.title")}</p><p className="m-0 mt-2 text-sm text-slate-400">{t("network.exposure.subtitle")}</p><div className="mt-3 h-[170px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={networkCharts.exposureByZone} barCategoryGap="26%" margin={{ top: 4, right: 6, left: -20, bottom: 0 }}><CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} /><XAxis dataKey="name" tick={AXIS_STYLE} tickLine={false} axisLine={false} /><YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={34} /><Tooltip contentStyle={{ background: "rgba(10, 25, 49, 0.76)", border: "1px solid rgba(0,166,214,0.4)", borderRadius: 10, color: "#e2e8f0", backdropFilter: "blur(10px)" }} labelStyle={{ color: "#64748b" }} /><Bar dataKey="value" name="Open ports" fill={CHART_SECONDARY} radius={[5, 5, 0, 0]} maxBarSize={26} /></BarChart></ResponsiveContainer></div></section>
+        <section className="card p-5 min-h-[280px]"><p className="m-0 text-sm font-semibold text-white">{t("network.nac.title")}</p><p className="m-0 mt-2 text-sm text-slate-400">{t("network.nac.subtitle")}</p><div className="mt-3 h-[170px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={networkCharts.nacTrend} margin={{ top: 4, right: 6, left: -20, bottom: 0 }}><defs><linearGradient id="nacGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#00a6d6" stopOpacity={0.38} /><stop offset="100%" stopColor="#00a6d6" stopOpacity={0.02} /></linearGradient></defs><CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} /><XAxis dataKey="name" tick={AXIS_STYLE} tickLine={false} axisLine={false} /><YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={34} domain={[80, 100]} /><Tooltip contentStyle={{ background: "rgba(10, 25, 49, 0.76)", border: "1px solid rgba(0,166,214,0.4)", borderRadius: 10, color: "#e2e8f0", backdropFilter: "blur(10px)" }} labelStyle={{ color: "#64748b" }} /><Area type="monotone" dataKey="target" name="Target" stroke="#64748b" strokeWidth={1.8} fillOpacity={0} dot={false} /><Area type="monotone" dataKey="compliant" name="Compliant %" stroke={CHART_SECONDARY} strokeWidth={2.5} fill="url(#nacGradient)" dot={false} /></AreaChart></ResponsiveContainer></div></section>
       </section>
 
       {flagMsg && <div className={`flex items-center justify-between rounded-lg border px-4 py-3 text-sm ${flagMsg.startsWith("Error") ? "border-rose-500/30 bg-rose-500/10 text-rose-300" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"}`}><span>{flagMsg}</span><button type="button" onClick={() => setFlagMsg(null)} className="ml-4 opacity-60 hover:opacity-100">x</button></div>}

@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
+import { Toaster } from "sonner";
 import AppLayout from "@/components/layout/AppLayout";
 import RequireAuth from "@/components/layout/RequireAuth";
 import NotFoundPage from "@/pages/NotFoundPage";
@@ -67,6 +68,7 @@ export default function App() {
 
   return (
     <>
+      <Toaster position="bottom-right" theme="dark" richColors />
       <RouteLogger />
       <Routes>
         <Route path={ROUTES.root} element={<RootRoute />} />

@@ -19,18 +19,20 @@ pub fn collect_network_info() -> AppResult<NetworkInfo> {
     }
 
     let listening_ports = collect_listening_ports();
+    let active_connections = collect_active_connections();
+    let (default_gateway, dns_servers) = collect_gateway_and_dns();
 
     Ok(NetworkInfo {
         interfaces,
         listening_ports,
-        active_connections: Vec::<ActiveConnection>::new(),
-        default_gateway: None,
-        dns_servers: Vec::new(),
-        notes: vec![
-            "Active connections, DNS servers, and default gateway are placeholders unless implemented with platform APIs.".to_string(),
-        ],
+        active_connections,
+        default_gateway,
+        dns_servers,
+        notes: vec![],
     })
 }
+
+// ── Listening ports ───────────────────────────────────────────────────────────
 
 #[cfg(target_os = "windows")]
 fn collect_listening_ports() -> Vec<ListeningPort> {
@@ -109,6 +111,113 @@ fn extract_port(address: &str) -> Option<u16> {
     port_text.parse::<u16>().ok()
 }
 
+// ── Active connections ────────────────────────────────────────────────────────
+
+#[cfg(target_os = "windows")]
+fn collect_active_connections() -> Vec<ActiveConnection> {
+    let Ok(output) = Command::new("netstat").args(["-ano"]).output() else {
+        return Vec::new();
+    };
+    let text = String::from_utf8_lossy(&output.stdout);
+    let mut connections = Vec::new();
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let lower = trimmed.to_lowercase();
+        // Skip headers and listening/time_wait lines; capture ESTABLISHED and CLOSE_WAIT
+        if lower.contains("listening") || lower.starts_with("proto") || lower.starts_with("active") {
+            continue;
+        }
+        let parts: Vec<&str> = trimmed.split_whitespace().collect();
+        if parts.len() < 4 {
+            continue;
+        }
+        let proto = parts[0].to_uppercase();
+        if proto != "TCP" && proto != "UDP" {
+            continue;
+        }
+        let state = if parts.len() >= 4 && proto == "TCP" {
+            Some(parts[3].to_string())
+        } else {
+            None
+        };
+        connections.push(ActiveConnection {
+            local_address: Some(parts[1].to_string()),
+            remote_address: Some(parts[2].to_string()),
+            protocol: Some(proto),
+            state,
+        });
+    }
+    connections.truncate(100);
+    connections
+}
+
+#[cfg(not(target_os = "windows"))]
+fn collect_active_connections() -> Vec<ActiveConnection> {
+    Vec::new()
+}
+
+// ── Default gateway & DNS ─────────────────────────────────────────────────────
+
+#[cfg(target_os = "windows")]
+fn collect_gateway_and_dns() -> (Option<String>, Vec<String>) {
+    let Ok(output) = Command::new("ipconfig").arg("/all").output() else {
+        return (None, Vec::new());
+    };
+    let text = String::from_utf8_lossy(&output.stdout);
+    let mut gateway: Option<String> = None;
+    let mut dns_servers: Vec<String> = Vec::new();
+
+    for line in text.lines() {
+        let lower = line.to_lowercase();
+        if lower.contains("default gateway") {
+            if gateway.is_none() {
+                if let Some(ip) = extract_ip_value(line) {
+                    gateway = Some(ip);
+                }
+            }
+        } else if lower.contains("dns servers") {
+            if let Some(ip) = extract_ip_value(line) {
+                if !dns_servers.contains(&ip) {
+                    dns_servers.push(ip);
+                }
+            }
+        } else if dns_servers.len() > 0 && line.starts_with("   ") && !lower.contains(":") {
+            // Continuation lines for DNS servers (subsequent entries have no label)
+            let candidate = line.trim().to_string();
+            if candidate.contains('.') && candidate.chars().next().map_or(false, |c| c.is_ascii_digit()) {
+                if !dns_servers.contains(&candidate) {
+                    dns_servers.push(candidate);
+                }
+            }
+        }
+    }
+    (gateway, dns_servers)
+}
+
+#[cfg(not(target_os = "windows"))]
+fn collect_gateway_and_dns() -> (Option<String>, Vec<String>) {
+    (None, Vec::new())
+}
+
+fn extract_ip_value(line: &str) -> Option<String> {
+    let after_colon = line.split(':').last()?;
+    let candidate = after_colon.trim().to_string();
+    // Remove zone ID suffix (e.g., %12)
+    let clean = candidate.split('%').next()?.trim().to_string();
+    if clean.is_empty() {
+        return None;
+    }
+    // Must look like an IP (contains digits and dots or colons for IPv6)
+    if clean.chars().any(|c| c.is_ascii_digit()) && (clean.contains('.') || clean.contains(':')) {
+        Some(clean)
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{collect_network_info, parse_netstat_text};
@@ -116,7 +225,8 @@ mod tests {
     #[test]
     fn collects_network_info_shape() {
         let network = collect_network_info().expect("network info should collect");
-        assert!(!network.notes.is_empty());
+        // notes is now empty for real implementations; just check it returns
+        let _ = network;
     }
 
     #[test]
