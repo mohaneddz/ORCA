@@ -16,23 +16,18 @@ export const SIDEBAR_SECTIONS: NavSection[] = [
   {
     key: "overview",
     label: "Overview",
-    items: [
-      { key: "summary", label: "Summary", href: ROUTES.summary },
-      { key: "home", label: "Home", href: ROUTES.home },
-    ],
+    items: [{ key: "home", label: "Home", href: ROUTES.home }],
   },
   {
     key: "functionalities",
     label: "Functionalities",
     items: [
       { key: "control-center", label: "Control Center", href: ROUTES.controlCenter },
-      { key: "devices", label: "Devices", href: ROUTES.devices },
+      { key: "registered-devices", label: "Registered Devices", href: ROUTES.registeredDevices },
       { key: "network", label: "Network", href: ROUTES.network },
       { key: "accounts", label: "Accounts", href: ROUTES.accounts },
-      { key: "training", label: "Training", href: ROUTES.training },
-      { key: "chat", label: "Chat", href: ROUTES.chat },
-      { key: "virtual-machines", label: "Virtual Machines", href: ROUTES.virtualMachines },
-      { key: "billing-usage", label: "Billing & Usage", href: ROUTES.billingUsage },
+      { key: "employee-playground", label: "Employee Playground", href: ROUTES.employeePlayground },
+      { key: "cisco", label: "Cisco Devices", href: ROUTES.cisco },
     ],
   },
   {
@@ -43,4 +38,6 @@ export const SIDEBAR_SECTIONS: NavSection[] = [
       { key: "account", label: "Account", href: ROUTES.account },
     ],
   },
+  
 ];
+

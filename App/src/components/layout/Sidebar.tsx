@@ -2,18 +2,19 @@ import {
   CircleUserRound,
   House,
   LayoutGrid,
-  MessageSquare,
-  Monitor,
+  LogOut,
   Network,
+  Router,
   Settings,
   ShieldAlert,
-  Server,
+  ShieldCheck,
   UserCog,
   Users,
 } from "lucide-react";
 import type { ComponentType } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { SIDEBAR_SECTIONS } from "@/data/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import { ROUTES } from "@/config/routes";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
 
@@ -22,21 +23,27 @@ type SidebarProps = {
 };
 
 const sidebarIcons: Record<string, ComponentType<{ size?: number; className?: string }>> = {
-  summary: LayoutGrid,
   home: House,
   "control-center": LayoutGrid,
-  devices: Monitor,
-  "virtual-machines": Server,
+  "registered-devices": ShieldCheck,
   network: Network,
   accounts: Users,
-  training: ShieldAlert,
-  chat: MessageSquare,
+  "employee-playground": ShieldAlert,
   settings: Settings,
   account: CircleUserRound,
+  "cisco": Router,               
+
 };
 
 export default function Sidebar({ expanded }: SidebarProps) {
-  const { t, settings } = useAppSettings();
+  const { logout } = useAuth();
+  const { t } = useAppSettings();
+  const navigate = useNavigate();
+
+  const onSignOut = async () => {
+    await logout();
+    navigate(ROUTES.login, { replace: true });
+  };
 
   return (
     <aside
@@ -46,39 +53,56 @@ export default function Sidebar({ expanded }: SidebarProps) {
         expanded ? "px-4 py-5" : "px-2 py-5",
       ].join(" ")}
       style={{
-        background: "linear-gradient(180deg, color-mix(in srgb, var(--color-surface-2) 96%, transparent) 0%, var(--color-surface-1) 100%)",
-        borderColor: "var(--color-border)",
+        background: "linear-gradient(180deg, #0a0f1e 0%, #080c18 100%)",
+        borderColor: "rgba(255,255,255,0.06)",
       }}
     >
+      {/* Logo / Brand */}
       <NavLink
-        to={ROUTES.summary}
-        title={t("sidebar.item.summary")}
+        to={ROUTES.home}
+        title={t("sidebar.item.home")}
         className={[
-          "flex items-center shrink-0 font-bold tracking-tight transition-opacity hover:opacity-80",
+          "flex items-center shrink-0 font-bold tracking-tight text-white transition-opacity hover:opacity-80",
           expanded ? "gap-2.5 mb-6" : "justify-center mb-5",
         ].join(" ")}
       >
-        <img
-          src={settings.theme === "light" ? "/title-light.png" : "/title-dark.png"}
-          alt="ORCA"
-          className="shrink-0 object-contain"
+        {/* Icon mark */}
+        <span
+          className="flex items-center justify-center rounded-lg shrink-0 text-white font-black text-xs"
           style={{
-            width: expanded ? 250 : 30,
-            height: 80,
+            width: 30,
+            height: 30,
+            background: "linear-gradient(135deg, #7c3aed, #a855f7)",
+            boxShadow: "0 4px 12px rgba(124,58,237,0.45)",
           }}
-        />
+        >
+          IB
+        </span>
+        {expanded && (
+          <span
+            className="text-base font-extrabold"
+            style={{
+              background: "linear-gradient(90deg, #fff 30%, #c084fc)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
+          >
+            InnovByte
+          </span>
+        )}
       </NavLink>
 
+      {/* Nav */}
       <nav className={["flex-1 overflow-y-auto no-scrollbar", expanded ? "space-y-6" : "space-y-4"].join(" ")}>
         {SIDEBAR_SECTIONS.map((section, sectionIndex) => (
           <div key={section.key}>
             {sectionIndex > 0 && (
-              <div className="mb-4" style={{ borderTop: "1px solid var(--color-border-subtle)" }} />
+              <div className="mb-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }} />
             )}
             {expanded && (
               <p
                 className="m-0 mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.1em]"
-                style={{ color: "var(--color-neutral-500)" }}
+                style={{ color: "#475569" }}
               >
                 {t(`sidebar.section.${section.key}`)}
               </p>
@@ -109,13 +133,25 @@ export default function Sidebar({ expanded }: SidebarProps) {
         ))}
       </nav>
 
-      <div className="shrink-0 pt-4 mt-2" style={{ borderTop: "1px solid var(--color-border-subtle)" }}>
-        <div
-          className={["rounded-xl border text-center text-xs font-semibold tracking-[0.08em]", expanded ? "px-3 py-3" : "px-2 py-2"].join(" ")}
-          style={{ borderColor: "var(--color-border)", background: "var(--color-surface-muted)", color: "var(--color-neutral-300)" }}
+      {/* Sign Out */}
+      <div
+        className={["shrink-0 pt-4 mt-2", expanded ? "" : ""].join(" ")}
+        style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+      >
+        <button
+          type="button"
+          onClick={onSignOut}
+          title={t("action.signout")}
+          className={[
+            "flex w-full items-center justify-center rounded-md text-xs font-medium transition-colors",
+            "hover:bg-red-500/10",
+            expanded ? "gap-2 px-3 py-2" : "px-2 py-2",
+          ].join(" ")}
+          style={{ color: "#fb7185" }}
         >
-          Admin Dashboard
-        </div>
+          <LogOut size={13} />
+          {expanded && <span>{t("action.signout")}</span>}
+        </button>
       </div>
     </aside>
   );
