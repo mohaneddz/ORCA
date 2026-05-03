@@ -18,59 +18,152 @@ pub fn collect_usb_metadata(enabled: bool) -> AppResult<UsbReport> {
 
     #[cfg(target_os = "windows")]
     {
-        let output = std::process::Command::new("powershell")
-            .args([
-                "-NoProfile",
-                "-Command",
-                "Get-PnpDevice -Class USB | Select-Object -First 50 FriendlyName,InstanceId",
-            ])
-            .output();
+        let devices = collect_windows_usb_devices();
+        let events = devices
+            .iter()
+            .map(|d| UsbInsertionEvent {
+                timestamp_utc: now_utc_rfc3339(),
+                device_name: d.device_name.clone(),
+                vendor_id: d.vendor_id.clone(),
+                product_id: d.product_id.clone(),
+                mount_path: d.mount_path.clone(),
+            })
+            .collect();
 
-        if let Ok(output) = output {
-            let text = String::from_utf8_lossy(&output.stdout);
-            let mut devices = Vec::new();
-            for line in text.lines() {
-                let trimmed = line.trim();
-                if trimmed.is_empty()
-                    || trimmed.starts_with("FriendlyName")
-                    || trimmed.starts_with("---")
-                {
-                    continue;
-                }
-                devices.push(UsbDeviceMetadata {
-                    device_name: Some(trimmed.to_string()),
-                    vendor: None,
-                    serial: None,
-                    connected_at_utc: None,
-                    vendor_id: None,
-                    product_id: None,
-                    mount_path: None,
-                });
-            }
-            return Ok(UsbReport {
-                enabled: true,
-                events: devices
-                    .iter()
-                    .map(|d| UsbInsertionEvent {
-                        timestamp_utc: now_utc_rfc3339(),
-                        device_name: d.device_name.clone(),
-                        vendor_id: d.vendor_id.clone(),
-                        product_id: d.product_id.clone(),
-                        mount_path: d.mount_path.clone(),
-                    })
-                    .collect(),
-                devices,
-                notes: vec!["USB metadata only; no file contents collected.".to_string()],
-            });
-        }
+        return Ok(UsbReport {
+            enabled: true,
+            events,
+            devices,
+            notes: vec!["Live insertion/removal watchers require async WMI subscription; current data reflects snapshot.".to_string()],
+        });
     }
 
-    Ok(UsbReport {
-        enabled: true,
-        devices: Vec::new(),
-        events: Vec::new(),
-        notes: vec!["USB metadata collector placeholder. Integrate platform APIs for insertion/removal watchers.".to_string()],
-    })
+    #[cfg(not(target_os = "windows"))]
+    {
+        Ok(UsbReport {
+            enabled: true,
+            devices: Vec::new(),
+            events: Vec::new(),
+            notes: vec!["USB collector is only implemented on Windows.".to_string()],
+        })
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn collect_windows_usb_devices() -> Vec<UsbDeviceMetadata> {
+    use std::process::Command;
+
+    // Query PnP devices with DeviceID so we can extract VID/PID
+    let script = "Get-PnpDevice -Class USB | Select-Object -First 50 FriendlyName,InstanceId | ConvertTo-Csv -NoTypeInformation";
+    let Ok(output) = Command::new("powershell")
+        .args(["-NoProfile", "-Command", script])
+        .output()
+    else {
+        return Vec::new();
+    };
+
+    let text = String::from_utf8_lossy(&output.stdout);
+    let mut devices: Vec<UsbDeviceMetadata> = Vec::new();
+    let mut skip_header = true;
+    for line in text.lines() {
+        if skip_header {
+            skip_header = false;
+            continue;
+        }
+        let cols = parse_csv_line(line);
+        if cols.len() < 2 {
+            continue;
+        }
+        let friendly_name = cols[0].trim_matches('"').to_string();
+        let instance_id = cols[1].trim_matches('"').to_string();
+        if friendly_name.is_empty() {
+            continue;
+        }
+        let (vendor_id, product_id) = extract_vid_pid(&instance_id);
+        devices.push(UsbDeviceMetadata {
+            device_name: Some(friendly_name),
+            vendor: None,
+            serial: extract_serial(&instance_id),
+            connected_at_utc: None,
+            vendor_id,
+            product_id,
+            mount_path: None,
+        });
+    }
+
+    // Try to enrich with drive letter (mount path) from Get-Volume
+    enrich_with_drive_letters(&mut devices);
+
+    devices
+}
+
+#[cfg(target_os = "windows")]
+fn enrich_with_drive_letters(devices: &mut Vec<UsbDeviceMetadata>) {
+    use std::process::Command;
+    let script = "Get-Volume | Where-Object {$_.DriveType -eq 'Removable'} | Select-Object DriveLetter,FileSystemLabel | ConvertTo-Csv -NoTypeInformation";
+    let Ok(output) = Command::new("powershell")
+        .args(["-NoProfile", "-Command", script])
+        .output()
+    else {
+        return;
+    };
+    let text = String::from_utf8_lossy(&output.stdout);
+    let mut drive_letters: Vec<String> = Vec::new();
+    let mut skip_header = true;
+    for line in text.lines() {
+        if skip_header {
+            skip_header = false;
+            continue;
+        }
+        let cols = parse_csv_line(line);
+        if let Some(letter) = cols.first() {
+            let letter = letter.trim_matches('"');
+            if !letter.is_empty() {
+                drive_letters.push(format!("{}:\\", letter));
+            }
+        }
+    }
+    // Assign drive letters to devices that don't have a mount path yet
+    let mut letter_iter = drive_letters.into_iter();
+    for device in devices.iter_mut() {
+        if device.mount_path.is_none() {
+            device.mount_path = letter_iter.next();
+        }
+    }
+}
+
+fn extract_vid_pid(instance_id: &str) -> (Option<String>, Option<String>) {
+    let upper = instance_id.to_uppercase();
+    let vid = upper.find("VID_").map(|i| upper[i + 4..].split('&').next().unwrap_or("").to_string());
+    let pid = upper.find("PID_").map(|i| upper[i + 4..].split('\\').next().unwrap_or("").split('&').next().unwrap_or("").to_string());
+    (
+        vid.filter(|s| s.len() == 4),
+        pid.filter(|s| s.len() == 4),
+    )
+}
+
+fn extract_serial(instance_id: &str) -> Option<String> {
+    // InstanceId format: USB\VID_XXXX&PID_XXXX\SERIAL
+    let parts: Vec<&str> = instance_id.split('\\').collect();
+    parts.get(2).map(|s| s.to_string()).filter(|s| !s.is_empty())
+}
+
+fn parse_csv_line(line: &str) -> Vec<String> {
+    let mut cols = Vec::new();
+    let mut current = String::new();
+    let mut in_quotes = false;
+    for ch in line.chars() {
+        match ch {
+            '"' => in_quotes = !in_quotes,
+            ',' if !in_quotes => {
+                cols.push(current.clone());
+                current.clear();
+            }
+            _ => current.push(ch),
+        }
+    }
+    cols.push(current);
+    cols
 }
 
 #[cfg(test)]

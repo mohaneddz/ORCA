@@ -47,7 +47,7 @@ type StatItem = {
 
 export function StatGrid({ stats }: { stats: StatItem[] }) {
   return (
-    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+    <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {stats.map((stat, i) => {
         const trendUp   = stat.trend !== undefined && stat.trend > 0;
         const trendDown = stat.trend !== undefined && stat.trend < 0;
@@ -302,6 +302,46 @@ export function DataTable({
           </tbody>
         </table>
       </div>
+    </section>
+  );
+}
+
+/* ─── SummaryBanner ───────────────────────────────────── */
+export function SummaryBanner({
+  headline,
+  subtext,
+  bullets,
+}: {
+  headline: string;
+  subtext?: string;
+  bullets?: string[];
+}) {
+  return (
+    <section
+      className="card p-5"
+      style={{ borderLeft: "3px solid var(--color-primary)" }}
+    >
+      <p
+        className="m-0 text-[10px] font-semibold uppercase tracking-[0.1em]"
+        style={{ color: "var(--color-primary)" }}
+      >
+        At a glance
+      </p>
+      <p className="m-0 mt-2 text-base font-semibold text-[var(--color-neutral-100)]">
+        {headline}
+      </p>
+      {subtext && (
+        <p className="m-0 mt-1.5 text-sm leading-relaxed" style={{ color: "var(--color-neutral-400)" }}>
+          {subtext}
+        </p>
+      )}
+      {bullets && bullets.length > 0 && (
+        <ul className="m-0 mt-3 space-y-1.5 pl-4 text-sm" style={{ color: "var(--color-neutral-400)" }}>
+          {bullets.map((b) => (
+            <li key={b} className="leading-relaxed">{b}</li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

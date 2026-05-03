@@ -1,4 +1,4 @@
-﻿import { RefreshCw, Server, Cpu, HardDrive, Database, Activity, Shield, Camera, Wrench, Monitor } from "lucide-react";
+﻿import { RefreshCw, Server, Cpu, Database, Shield, Camera, Wrench, Monitor } from "lucide-react";
 import { useVmwareDashboard } from "@/hooks/useVmwareDashboard";
 import { VmwareMetricCard } from "./VmwareMetricCard";
 import { VmwareResourceBars } from "./VmwareResourceBars";
@@ -103,9 +103,6 @@ export function VmwareDashboard() {
     color: "var(--color-primary)",
   }));
 
-  // Top CPU VMs for metric card footer
-  const topCpuVms = clusterPerf?.topCpuVms ?? [];
-  const topMemVms = clusterPerf?.topMemVms ?? [];
 
   return (
     <div className="page-section relative">

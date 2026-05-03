@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "@/config/routes";
-import { DataTable, PageHeader, StatGrid } from "@/components/cards/BaseCards";
+import { DataTable, PageHeader, StatGrid, SummaryBanner } from "@/components/cards/BaseCards";
+import { ProgressBars } from "@/components/ui/TrendChart";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/apiClient";
@@ -15,6 +16,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+
 
 type DeviceRow = {
   snapshot_id: string;
@@ -84,7 +86,7 @@ export default function DevicesPage() {
   };
 
   const signalRows = (summaryData?.device?.top_signals || []) as Array<{ signal: string; affected_devices: number }>;
-  const chartPalette = ["#f59e0b", "#fb7185", "#a78bfa", "#22d3ee", "#34d399", "#60a5fa"];
+  const chartPalette = ["#00c6c1", "#00a6d6", "#66f7f0", "#0891b2", "#0e7490", "#155e75"];
   const exposureByType = (signalRows.length > 0
     ? signalRows.slice(0, 6).map((s, idx) => ({
         name: s.signal.length > 32 ? `${s.signal.slice(0, 32)}...` : s.signal,
@@ -95,6 +97,14 @@ export default function DevicesPage() {
   );
   const totalOpenExposures = exposureByType.reduce((acc, item) => acc + item.count, 0);
 
+  const totalDevs = summaryData?.device?.devices_reporting || 0;
+  const healthyDevs = summaryData?.device?.risk_level_distribution?.low || 0;
+  const atRiskDevs = (summaryData?.device?.risk_level_distribution?.high || 0) + (summaryData?.device?.risk_level_distribution?.critical || 0);
+
+  const deviceBannerHeadline = atRiskDevs > 0
+    ? `${healthyDevs} of ${totalDevs} devices are healthy — ${atRiskDevs} need attention.`
+    : `All ${totalDevs} devices are in good health. No issues detected.`;
+
   return (
     <div className="page-section">
       <PageHeader
@@ -103,56 +113,47 @@ export default function DevicesPage() {
         description={t("devices.description")}
       />
 
+      <SummaryBanner
+        headline={deviceBannerHeadline}
+        subtext="Each device gets a health score based on its security settings. Click any row in the table to see the full details for that device."
+        bullets={[
+          `Disk encryption: ${complianceLatest.encryption}% of devices have their hard drive encrypted (protects data if the device is lost or stolen)`,
+          `Antivirus: ${complianceLatest.edr}% of devices have active endpoint protection running`,
+          `Patches: ${complianceLatest.patching}% of devices are up-to-date with the latest security updates`,
+        ]}
+      />
+
       <StatGrid
         stats={[
-          { label: t("devices.stats.total"), value: String(summaryData?.device?.devices_reporting || 0), trend: 0 },
-          { label: t("devices.stats.healthy"), value: String(summaryData?.device?.risk_level_distribution?.low || 0), tone: "ok", trend: 0 },
-          { label: t("devices.stats.atRisk"), value: String(summaryData?.device?.risk_level_distribution?.high || 0), tone: "warn", trend: 0 },
-          { label: t("devices.stats.critical"), value: String(summaryData?.device?.risk_level_distribution?.critical || 0), tone: "danger", trend: 0 },
+          { label: t("devices.stats.total"), value: String(totalDevs), trend: 0 },
+          { label: t("devices.stats.healthy"), value: String(healthyDevs), tone: "ok", trend: 0 },
+          { label: t("devices.stats.atRisk"), value: String(summaryData?.device?.risk_level_distribution?.high || 0), trend: 0 },
+          { label: t("devices.stats.critical"), value: String(summaryData?.device?.risk_level_distribution?.critical || 0), tone: atRiskDevs > 0 ? "danger" : "default", trend: 0 },
         ]}
       />
 
       <section className="grid gap-3 xl:grid-cols-2">
-        <section className="card p-5 min-h-[280px]">
-          <p className="m-0 text-sm font-semibold text-white">{t("devices.compliance.title")}</p>
-          <p className="m-0 mt-1 text-xs text-slate-400">{t("devices.compliance.subtitle")}</p>
-          <div className="mt-4 h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={complianceTrend} barCategoryGap="22%">
-                <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis dataKey="week" tick={{ fill: "#64748b", fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis domain={[0, 100]} tick={{ fill: "#64748b", fontSize: 11 }} tickLine={false} axisLine={false} width={32} />
-                <Tooltip
-                  cursor={{ fill: "rgba(255,255,255,0.03)" }}
-                  contentStyle={{
-                    background: "#0c1220",
-                    border: "1px solid rgba(148,163,184,0.2)",
-                    borderRadius: 10,
-                    color: "#e2e8f0",
-                    fontSize: 12,
-                  }}
-                />
-                <Bar dataKey="encryption" name="Encryption" fill="#22d3ee" radius={[4, 4, 0, 0]} maxBarSize={14} />
-                <Bar dataKey="edr" name="EDR Online" fill="#34d399" radius={[4, 4, 0, 0]} maxBarSize={14} />
-                <Bar dataKey="patching" name="Patch Baseline" fill="#a78bfa" radius={[4, 4, 0, 0]} maxBarSize={14} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-            <div className="rounded-md border border-slate-800 bg-slate-950/40 p-2">
-              <p className="m-0 text-slate-400">{t("devices.compliance.encryption")}</p>
-              <p className="m-0 mt-1 font-semibold text-cyan-300">{complianceLatest.encryption}%</p>
-            </div>
-            <div className="rounded-md border border-slate-800 bg-slate-950/40 p-2">
-              <p className="m-0 text-slate-400">{t("devices.compliance.edr")}</p>
-              <p className="m-0 mt-1 font-semibold text-emerald-300">{complianceLatest.edr}%</p>
-            </div>
-            <div className="rounded-md border border-slate-800 bg-slate-950/40 p-2">
-              <p className="m-0 text-slate-400">{t("devices.compliance.patching")}</p>
-              <p className="m-0 mt-1 font-semibold text-violet-300">{complianceLatest.patching}%</p>
-            </div>
-          </div>
-        </section>
+        <ProgressBars
+          title={t("devices.compliance.title")}
+          subtitle={t("devices.compliance.subtitle")}
+          items={[
+            {
+              label: `${t("devices.compliance.encryption")} — hard drive data is locked`,
+              value: complianceLatest.encryption,
+              description: `${complianceLatest.encryption}% of devices have disk encryption enabled. Protects company data if a device is lost or stolen.`,
+            },
+            {
+              label: `${t("devices.compliance.edr")} — antivirus is running`,
+              value: complianceLatest.edr,
+              description: `${complianceLatest.edr}% of devices have active endpoint protection. Detects and blocks malware in real time.`,
+            },
+            {
+              label: `${t("devices.compliance.patching")} — software is up to date`,
+              value: complianceLatest.patching,
+              description: `${complianceLatest.patching}% of devices have all the latest security patches installed. Unpatched devices are easy targets.`,
+            },
+          ]}
+        />
         <section className="card p-5 min-h-[280px]">
           <p className="m-0 text-sm font-semibold text-white">{t("devices.exposure.title")}</p>
           <p className="m-0 mt-1 text-xs text-slate-400">{t("devices.exposure.subtitle")}</p>
@@ -189,7 +190,7 @@ export default function DevicesPage() {
           </div>
           <div className="mt-3 flex items-center justify-between rounded-md border border-slate-800 bg-slate-950/40 px-3 py-2 text-xs">
             <span className="text-slate-400">{t("devices.exposure.total")}</span>
-            <span className="font-semibold text-amber-300">{totalOpenExposures}</span>
+            <span className="font-semibold" style={{ color: "var(--color-primary)" }}>{totalOpenExposures}</span>
           </div>
         </section>
       </section>
@@ -198,7 +199,7 @@ export default function DevicesPage() {
         <DataTable
           title={t("devices.table.title")}
           actions={<span className="text-xs text-slate-400">{t("devices.table.hint")}</span>}
-          columns={["Hostname", "OS", "IP Address", "Status"]}
+          columns={["Hostname", "OS", "Employee", "Status"]}
           rows={tableRows}
           minWidth={500}
           filterColumn="Status"

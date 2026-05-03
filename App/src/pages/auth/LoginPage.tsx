@@ -5,30 +5,6 @@ import { ROUTES } from "@/config/routes";
 import Titlebar from "@/components/layout/Titlebar";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
 
-type SavedCredential = {
-  email: string;
-  password: string;
-  role: UserRole;
-  mode: "signin" | "signup";
-  lastUsedAt: string;
-};
-
-const SAVED_CREDENTIALS_STORAGE_KEY = "orca.auth.savedCredentials";
-
-function loadSavedCredentials(): SavedCredential[] {
-  const raw = localStorage.getItem(SAVED_CREDENTIALS_STORAGE_KEY);
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as SavedCredential[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveCredentials(credentials: SavedCredential[]) {
-  localStorage.setItem(SAVED_CREDENTIALS_STORAGE_KEY, JSON.stringify(credentials));
-}
 
 export default function LoginPage() {
   const { t } = useAppSettings();
@@ -45,18 +21,13 @@ export default function LoginPage() {
   const [organizationName, setOrganizationName] = useState("ORCA Organization");
   const [phone, setPhone] = useState("");
   const [mode, setMode] = useState<"signin" | "signup">(isRegisterRoute ? "signup" : "signin");
-  const [selectedSavedAccount, setSelectedSavedAccount] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const redirect = searchParams.get("redirect") || ROUTES.home;
-  const savedCredentials = loadSavedCredentials()
-    .filter((item) => item.role === role && item.mode === mode)
-    .sort((a, b) => new Date(b.lastUsedAt).getTime() - new Date(a.lastUsedAt).getTime());
 
   useEffect(() => {
     setRole(isStaffRoute ? "staff" : "admin");
     setMode(isRegisterRoute ? "signup" : "signin");
-    setSelectedSavedAccount("");
     setError(null);
   }, [isStaffRoute, isRegisterRoute]);
 
@@ -82,22 +53,6 @@ export default function LoginPage() {
       if (!result.ok) {
         setError(result.message || t("login.error.signin"));
         return;
-      }
-
-      const trimmedEmail = email.trim().toLowerCase();
-      if (trimmedEmail && password.trim()) {
-        const current = loadSavedCredentials();
-        const withoutCurrent = current.filter(
-          (item) => !(item.email === trimmedEmail && item.role === role && item.mode === mode),
-        );
-        withoutCurrent.unshift({
-          email: trimmedEmail,
-          password,
-          role,
-          mode,
-          lastUsedAt: new Date().toISOString(),
-        });
-        saveCredentials(withoutCurrent);
       }
 
       navigate(redirect, { replace: true });
@@ -142,32 +97,6 @@ export default function LoginPage() {
         </div>
 
         <form className="mt-5 grid gap-4" onSubmit={onSubmit}>
-          {savedCredentials.length > 0 && (
-            <label className="grid gap-1 text-sm text-slate-200">
-              Saved accounts
-              <select
-                value={selectedSavedAccount}
-                onChange={(event) => {
-                  const nextEmail = event.target.value;
-                  setSelectedSavedAccount(nextEmail);
-                  if (!nextEmail) return;
-                  const selected = savedCredentials.find((item) => item.email === nextEmail);
-                  if (!selected) return;
-                  setEmail(selected.email);
-                  setPassword(selected.password);
-                }}
-                className="rounded-md border border-white/15 bg-slate-900/60 px-3 py-2 text-white outline-none ring-cyan-300/40 focus:ring"
-              >
-                <option value="">Select saved account (optional)</option>
-                {savedCredentials.map((item) => (
-                  <option key={`${item.mode}-${item.role}-${item.email}`} value={item.email}>
-                    {item.email}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-
           {mode === "signup" && role === "admin" && (
             <>
               <label className="grid gap-1 text-sm text-slate-200">

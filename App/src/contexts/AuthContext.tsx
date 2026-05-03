@@ -62,10 +62,6 @@ type AuthContextValue = {
 type StoredSession = {
   token: string;
   user: SessionUser;
-  credentials?: {
-    email: string;
-    password: string;
-  };
 };
 
 type AuthApiResponse = {
@@ -340,10 +336,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const session: StoredSession = {
           token: result.data.token,
           user: nextUser,
-          credentials: {
-            email: trimmedEmail,
-            password,
-          },
         };
 
         setToken(result.data.token);
@@ -390,10 +382,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const session: StoredSession = {
             token: loginResult.data.token,
             user: nextUser,
-            credentials: {
-              email: trimmedEmail,
-              password,
-            },
           };
 
           setToken(loginResult.data.token);
@@ -421,10 +409,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const session: StoredSession = {
           token: result.data.token,
           user: nextUser,
-          credentials: {
-            email: trimmedEmail,
-            password,
-          },
         };
 
         setToken(result.data.token);

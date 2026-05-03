@@ -1,3 +1,4 @@
+import { type ReactNode } from "react";
 import {
   Area,
   AreaChart,
@@ -12,9 +13,9 @@ import {
   YAxis,
 } from "recharts";
 
-const CHART_PRIMARY = "#1d4ed8";
-const CHART_SECONDARY = "#38bdf8";
-const CHART_PRIMARY_BORDER = "rgba(29,78,216,0.45)";
+const CHART_PRIMARY = "#00c6c1";
+const CHART_SECONDARY = "#00a6d6";
+const CHART_PRIMARY_BORDER = "rgba(0,198,193,0.45)";
 
 /* ─── Shared tooltip ──────────────────────────────────── */
 function DarkTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value?: number; name?: string; color?: string }>; label?: string }) {
@@ -241,8 +242,8 @@ export function DonutGauge({
             >
               <defs>
                 <linearGradient id="radialGrad" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor={CHART_PRIMARY} />
-                  <stop offset="100%" stopColor={CHART_SECONDARY} />
+                  <stop offset="0%" stopColor="#00a6d6" />
+                  <stop offset="100%" stopColor="#00c6c1" />
                 </linearGradient>
               </defs>
               <RadialBar background={false} dataKey="value" cornerRadius={8} />
@@ -278,3 +279,132 @@ export function DonutGauge({
   );
 }
 
+/* ─── MetricPairCard – replaces area chart for sparse data ── */
+type MetricItem = {
+  label: string;
+  value: string | number;
+  description: string;
+  color?: string;
+  icon?: ReactNode;
+};
+
+export function MetricPairCard({
+  title,
+  metrics,
+}: {
+  title: string;
+  metrics: MetricItem[];
+}) {
+  return (
+    <div className="card p-5 flex flex-col h-full">
+      <p className="m-0 mb-4 text-sm font-semibold text-[var(--color-neutral-100)]">{title}</p>
+      <div
+        className="flex-1 grid gap-3"
+        style={{ gridTemplateColumns: `repeat(${Math.min(metrics.length, 2)}, 1fr)` }}
+      >
+        {metrics.map((m) => (
+          <div
+            key={m.label}
+            className="rounded-xl p-4 flex flex-col"
+            style={{
+              background: "var(--color-surface-muted)",
+              border: "1px solid var(--color-border-subtle)",
+            }}
+          >
+            {m.icon && (
+              <div className="mb-2" style={{ color: m.color || "var(--color-primary)" }}>
+                {m.icon}
+              </div>
+            )}
+            <p
+              className="m-0 text-3xl font-bold tabular-nums leading-none"
+              style={{ color: m.color || "var(--color-primary)" }}
+            >
+              {m.value}
+            </p>
+            <p
+              className="m-0 mt-1.5 text-xs font-semibold uppercase tracking-[0.06em]"
+              style={{ color: "var(--color-neutral-400)" }}
+            >
+              {m.label}
+            </p>
+            <p
+              className="m-0 mt-2 text-xs leading-relaxed"
+              style={{ color: "var(--color-neutral-500)" }}
+            >
+              {m.description}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── ProgressBars – horizontal % bars ───────────────── */
+type ProgressItem = {
+  label: string;
+  value: number;
+  max?: number;
+  description?: string;
+  color?: string;
+};
+
+export function ProgressBars({
+  title,
+  items,
+  subtitle,
+}: {
+  title: string;
+  items: ProgressItem[];
+  subtitle?: string;
+}) {
+  return (
+    <div className="card p-5">
+      <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">{title}</p>
+      {subtitle && (
+        <p className="m-0 mt-1 text-xs" style={{ color: "var(--color-neutral-500)" }}>
+          {subtitle}
+        </p>
+      )}
+      <div className="mt-4 space-y-5">
+        {items.map((item) => {
+          const pct = Math.min(100, Math.round((item.value / (item.max ?? 100)) * 100));
+          const barColor = item.color || "var(--color-primary)";
+          return (
+            <div key={item.label}>
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="m-0 text-sm" style={{ color: "var(--color-neutral-300)" }}>
+                  {item.label}
+                </p>
+                <p
+                  className="m-0 text-sm font-bold tabular-nums"
+                  style={{ color: barColor }}
+                >
+                  {pct}%
+                </p>
+              </div>
+              <div
+                className="h-2 rounded-full overflow-hidden"
+                style={{ background: "var(--color-surface-muted)", border: "1px solid var(--color-border-subtle)" }}
+              >
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${pct}%`,
+                    background: `linear-gradient(90deg, var(--color-primary-strong), var(--color-primary))`,
+                  }}
+                />
+              </div>
+              {item.description && (
+                <p className="m-0 mt-1 text-xs" style={{ color: "var(--color-neutral-500)" }}>
+                  {item.description}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
