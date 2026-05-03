@@ -10,7 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 import requests
 
 from .auth import get_employee_from_request
-from .models import AuthToken, Employee, EmployeeAuthToken, Organization
+from .models import AuthToken, Employee, EmployeeAuthToken, Organization, AuditLog
 
 
 # ---------------------------------------------------------------------------
@@ -142,6 +142,14 @@ class ChangePasswordView(View):
 
         org.set_password(new_password)
         org.save()
+        
+        AuditLog.objects.create(
+            organization=org,
+            action="Password Changed",
+            target="Account Security",
+            result="Success"
+        )
+        
         return JsonResponse({}, status=200)
 
 
@@ -172,6 +180,8 @@ class MeView(View):
             "id": str(org.id),
             "email": org.email,
             "name": org.name,
+            "phone": org.phone,
+            "avatarUrl": org.avatar_url,
             "is_staff": org.is_staff,
             "is_superuser": org.is_superuser,
             "created_at": org.created_at.isoformat(),
@@ -228,6 +238,7 @@ class ProfileAvatarUploadView(View):
         }
 
         try:
+            uploaded_file.seek(0)
             response = requests.post(
                 upload_url,
                 headers=headers,
@@ -260,6 +271,76 @@ class ProfileAvatarUploadView(View):
             },
             status=200,
         )
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class ProfileUpdateView(View):
+    """PATCH /api/auth/profile — update the current organization's profile details."""
+
+    def patch(self, request):
+        org, err = get_org_from_request(request)
+        if err:
+            return err
+
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON."}, status=400)
+
+        # Map organizationName from frontend to name in backend
+        name = body.get("name") or body.get("organizationName")
+        if name:
+            org.name = name.strip()
+        
+        if "email" in body:
+            new_email = body["email"].strip().lower()
+            if new_email and new_email != org.email:
+                if Organization.objects.filter(email=new_email).exists():
+                    return JsonResponse({"error": "Email already in use."}, status=409)
+                org.email = new_email
+        
+        if "phone" in body:
+            org.phone = body["phone"].strip()
+        
+        if "avatarUrl" in body:
+            org.avatar_url = body["avatarUrl"].strip()
+
+        org.save()
+        
+        AuditLog.objects.create(
+            organization=org,
+            action="Profile Updated",
+            target="Account Profile",
+            result="Success"
+        )
+        
+        return JsonResponse({
+            "id": str(org.id),
+            "name": org.name,
+            "email": org.email,
+            "phone": org.phone,
+        }, status=200)
+
+    def delete(self, request):
+        org, err = get_org_from_request(request)
+        if err:
+            return err
+        org.delete()
+        return JsonResponse({}, status=204)
+
+
+class AuditLogListView(View):
+    """GET /api/auth/audit-logs — return the current organization's audit history."""
+
+    def get(self, request):
+        org, err = get_org_from_request(request)
+        if err:
+            return err
+
+        logs = AuditLog.objects.filter(organization=org).values(
+            "id", "action", "target", "result", "created_at"
+        )
+        return JsonResponse({"logs": list(logs)})
 
 
 # ---------------------------------------------------------------------------

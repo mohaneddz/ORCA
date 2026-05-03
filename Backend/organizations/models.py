@@ -26,6 +26,8 @@ class Organization(AbstractBaseUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=255)
+    phone = models.CharField(max_length=20, blank=True, default="")
+    avatar_url = models.URLField(max_length=1024, blank=True, default="")
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
@@ -113,3 +115,21 @@ class EmployeeAuthToken(models.Model):
 
     def __str__(self):
         return f"Token for {self.employee}"
+
+
+class AuditLog(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="audit_logs"
+    )
+    action = models.CharField(max_length=255)
+    target = models.CharField(max_length=255)
+    result = models.CharField(max_length=50)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.action} - {self.target} ({self.result})"
+

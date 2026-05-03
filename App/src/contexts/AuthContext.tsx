@@ -105,6 +105,7 @@ function mapOrganizationToUser(
   organization: { id: string; name: string; email: string },
   role: UserRole,
   phone = "",
+  avatarUrl = "",
 ): SessionUser {
   return {
     id: organization.id,
@@ -112,6 +113,7 @@ function mapOrganizationToUser(
     email: organization.email,
     organizationName: organization.name || DEFAULT_ORG_NAME,
     phone,
+    avatarUrl,
     role,
     lastLoginAt: new Date().toISOString(),
   };
@@ -185,7 +187,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (!result.ok || !result.data) return { ok: false, message: result.message || "Sign in failed." };
 
-        const nextUser = mapOrganizationToUser(result.data.organization, "admin");
+        const nextUser = mapOrganizationToUser(
+          result.data.organization,
+          "admin",
+          (result.data.organization as any).phone || "",
+          (result.data.organization as any).avatarUrl || "",
+        );
         const session: StoredSession = {
           token: result.data.token,
           user: nextUser,
@@ -230,19 +237,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { ok: true };
       },
       updateProfile: async ({ name, email, organizationName, phone, avatarUrl }) => {
-        if (!user) return { ok: false, message: "No active user session." };
+        if (!user || !token) return { ok: false, message: "No active user session." };
+
+        const result = await authRequest<any>("/api/auth/profile", {
+          method: "PATCH",
+          body: JSON.stringify({
+            name: name.trim(),
+            email: email.trim().toLowerCase(),
+            phone: phone.trim(),
+            // backend also accepts organizationName as an alias for name
+          }),
+          headers: withAuthHeaders(token),
+        });
+
+        if (!result.ok || !result.data) {
+          return { ok: false, message: result.message || "Failed to update profile on server." };
+        }
 
         const updatedUser: SessionUser = {
           ...user,
-          name: name.trim(),
-          email: email.trim().toLowerCase(),
-          organizationName: organizationName.trim(),
-          phone: phone.trim(),
+          name: result.data.name,
+          email: result.data.email,
+          organizationName: result.data.name, // mapped from name
+          phone: result.data.phone,
           avatarUrl: avatarUrl ?? user.avatarUrl,
         };
 
         setUser(updatedUser);
-        if (token) saveStoredSession({ token, user: updatedUser });
+        saveStoredSession({ token, user: updatedUser });
         logger.info("auth.profile.updated", { userId: updatedUser.id });
 
         return { ok: true };
@@ -263,8 +285,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { ok: true };
       },
       deleteOwnAccount: async () => {
-        logger.warn("auth.account.delete_unavailable");
-        return { ok: false, message: "Account deletion endpoint is not available yet in backend auth API." };
+        if (!token) return { ok: false, message: "No active session." };
+        
+        const result = await authRequest("/api/auth/profile", {
+          method: "DELETE",
+          headers: withAuthHeaders(token),
+        });
+
+        if (!result.ok) return { ok: false, message: result.message || "Failed to delete account." };
+
+        setToken(null);
+        setUser(null);
+        saveStoredSession(null);
+        logger.warn("auth.account.deleted");
+        return { ok: true };
       },
       logout: async () => {
         if (token) {

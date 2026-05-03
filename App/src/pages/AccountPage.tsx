@@ -27,25 +27,57 @@ export default function AccountPage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     setName(user.name);
     setEmail(user.email);
     setOrganizationName(user.organizationName);
-    setPhone(user.phone);
+    setPhone(user.phone || "");
     setAvatarUrl(user.avatarUrl || null);
     setAvatarLoadFailed(false);
   }, [user]);
 
+  useEffect(() => {
+    async function fetchLogs() {
+      try {
+        const raw = localStorage.getItem("orca.auth.session");
+        const session = raw ? JSON.parse(raw) : null;
+        if (!session?.token) return;
+
+        const res = await fetch(`${APP_URLS.api.backendBase}/api/auth/audit-logs`, {
+          headers: { Authorization: `Token ${session.token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setAuditLogs(data.logs || []);
+        }
+      } catch (e) {
+        console.error("Failed to fetch audit logs", e);
+      } finally {
+        setIsLoadingLogs(false);
+      }
+    }
+    fetchLogs();
+  }, [status]); 
+
   if (!user) return null;
+
+  const auditRows = auditLogs.map(log => [
+    log.action,
+    log.target,
+    log.result,
+    new Date(log.created_at).toLocaleDateString()
+  ]);
 
   const onSaveProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setStatus(null);
 
-    if (!name.trim() || !email.trim() || !organizationName.trim() || !phone.trim()) {
-      setStatus("All profile fields are required.");
+    if (!name.trim() || !email.trim() || !organizationName.trim()) {
+      setStatus("Name and email are required.");
       return;
     }
 
@@ -132,6 +164,7 @@ export default function AccountPage() {
   };
 
   const onDeleteAccount = async () => {
+    if (!window.confirm("Are you sure you want to delete your account? This action is irreversible.")) return;
     const result = await deleteOwnAccount();
     if (!result.ok) {
       setStatus(result.message || "Failed to delete account.");
@@ -291,13 +324,9 @@ export default function AccountPage() {
         columns={[t("account.audit.action"), t("account.audit.target"), t("account.audit.result"), t("account.audit.date")]}
         filterColumn={t("account.audit.result")}
         searchPlaceholder={t("account.audit.search")}
-        rows={[
-          ["Updated profile details", "Account Profile", "Success", "2026-05-02"],
-          ["Changed settings tab policy", "Security Settings", "Success", "2026-05-01"],
-          ["Forced account password reset", "nadia@org.com", "Success", "2026-05-01"],
-          ["Quarantined unknown device", "Unknown-Lenovo", "Success", "2026-04-30"],
-        ]}
+        rows={auditRows.length > 0 ? auditRows : (isLoadingLogs ? [["Loading logs...", "", "", ""]] : [["No audit logs found", "", "", ""]])}
       />
     </div>
   );
 }
+
