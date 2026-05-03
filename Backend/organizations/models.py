@@ -28,6 +28,7 @@ class Organization(AbstractBaseUser):
     name = models.CharField(max_length=255)
     phone = models.CharField(max_length=20, blank=True, default="")
     avatar_url = models.URLField(max_length=1024, blank=True, default="")
+    telegram_chat_id = models.CharField(max_length=64, blank=True, default="")
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)

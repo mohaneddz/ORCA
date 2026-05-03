@@ -195,6 +195,13 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 
 PHISHING_BASE_URL = os.environ.get("PHISHING_BASE_URL", "http://localhost:8000")
 
+# -----------------------------------------------------------------
+# Telegram Bot
+# TELEGRAM_BOT_TOKEN  — the HTTP API token issued by @BotFather
+# Each Organisation stores its own chat_id (telegram_chat_id field).
+# -----------------------------------------------------------------
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+
 EXTENSION_BLACKLIST_DOMAINS = [
     "malware-test.local",
     "credential-harvest-test.local",

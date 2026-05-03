@@ -16,6 +16,7 @@ from .views import (
     ProfileAvatarUploadView,
     ProfileUpdateView,
     RegisterView,
+    TelegramSettingsView,
 )
 
 urlpatterns = [
@@ -27,6 +28,7 @@ urlpatterns = [
     path("auth/profile/avatar", ProfileAvatarUploadView.as_view(), name="auth-profile-avatar"),
     path("auth/profile", ProfileUpdateView.as_view(), name="auth-profile-update"),
     path("auth/audit-logs", AuditLogListView.as_view(), name="auth-audit-logs"),
+    path("auth/telegram", TelegramSettingsView.as_view(), name="auth-telegram-settings"),
     # Employee auth
     path("auth/employee/login", EmployeeLoginView.as_view(), name="employee-login"),
     path("auth/employee/password-audit", EmployeePasswordAuditView.as_view(), name="employee-password-audit"),

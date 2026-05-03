@@ -735,3 +735,46 @@ class SessionDeviceIngestView(View):
             status=201,
         )
 
+
+# ---------------------------------------------------------------------------
+# Telegram notification settings
+# GET  /api/auth/telegram  — return current chat_id for the organisation
+# POST /api/auth/telegram  — set / update chat_id
+# ---------------------------------------------------------------------------
+
+@method_decorator(csrf_exempt, name="dispatch")
+class TelegramSettingsView(View):
+    """Allow the manager to register their Telegram chat_id for anomaly alerts."""
+
+    def get(self, request):
+        org, err = get_org_from_request(request)
+        if err:
+            return err
+        return JsonResponse({"telegram_chat_id": org.telegram_chat_id or ""})
+
+    def post(self, request):
+        org, err = get_org_from_request(request)
+        if err:
+            return err
+
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON."}, status=400)
+
+        chat_id = str(body.get("telegram_chat_id", "")).strip()
+        if not chat_id:
+            return JsonResponse({"error": "telegram_chat_id is required."}, status=400)
+
+        org.telegram_chat_id = chat_id
+        org.save(update_fields=["telegram_chat_id"])
+
+        AuditLog.objects.create(
+            organization=org,
+            action="Telegram Chat ID Updated",
+            target="Notifications",
+            result="Success",
+        )
+
+        return JsonResponse({"telegram_chat_id": org.telegram_chat_id})
+
