@@ -274,10 +274,13 @@ class ProfileAvatarUploadView(View):
             return JsonResponse({"error": "Profile picture must be under 5MB."}, status=400)
 
         supabase_url = (settings.SUPABASE_URL or "").rstrip("/")
+        # Prefer privileged server-side keys for Storage writes.
+        # SUPABASE_KEY can be configured as anon/publishable in some environments,
+        # which will fail with storage.objects RLS on INSERT.
         supabase_key = (
-            settings.SUPABASE_KEY
+            getattr(settings, "SUPABASE_SERVICE_ROLE_KEY", None)
             or getattr(settings, "SUPABASE_SECRET_KEY", None)
-            or getattr(settings, "SUPABASE_SERVICE_ROLE_KEY", None)
+            or settings.SUPABASE_KEY
         )
         if not supabase_url or not supabase_key:
             return JsonResponse(

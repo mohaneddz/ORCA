@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { RefreshCw, Server, Cpu, Database, Shield, Camera, Wrench, Monitor } from "lucide-react";
 import { useVmwareDashboard } from "@/hooks/useVmwareDashboard";
 import { VmwareMetricCard } from "./VmwareMetricCard";
@@ -9,6 +9,7 @@ import { VmwareAlertsPanel } from "./VmwareAlertsPanel";
 import { VmwareInventoryTable } from "./VmwareInventoryTable";
 import { VmwareVmDetailDrawer } from "./VmwareVmDetailDrawer";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
+import { SummaryBanner } from "@/components/cards/BaseCards";
 
 function TranslatedModeBadge({ isDummy, t }: { isDummy: boolean; t: (k: string) => string }) {
   return isDummy ? (
@@ -110,7 +111,7 @@ export function VmwareDashboard() {
   return (
     <div className="page-section relative">
 
-      {/* ── Header ────────────────────────────────────────── */}
+      {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
@@ -146,116 +147,17 @@ export function VmwareDashboard() {
 
       {error && <ErrorBanner message={error} onRetry={() => void refresh()} />}
 
-<<<<<<< HEAD
-      {/* â”€â”€ 4 KPI Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <VmwareMetricCard
-          icon={<Monitor size={15} />}
-          label={t("vmware.stats.totalVMs")}
-          value={s?.totalVMs ?? 0}
-          delay={0.00}
-          valueTone="default"
-          subMetrics={[
-            { label: t("vmware.stats.running"),   value: s?.runningVMs ?? 0,   tone: "ok" },
-            { label: t("vmware.stats.stopped"),   value: s?.stoppedVMs ?? 0,   tone: "neutral" },
-            { label: t("vmware.stats.suspended"), value: s?.suspendedVMs ?? 0, tone: "neutral" },
-          ]}
-        />
-        <VmwareMetricCard
-          icon={<Server size={15} />}
-          label={t("vmware.stats.hosts")}
-          value={s?.totalHosts ?? 0}
-          delay={0.06}
-          valueTone={s && s.disconnectedHosts > 0 ? "danger" : "ok"}
-          subMetrics={[
-            { label: t("vmware.stats.connected"),   value: s?.connectedHosts ?? 0,    tone: "ok" },
-            { label: t("vmware.stats.issues"),      value: s?.disconnectedHosts ?? 0, tone: s && s.disconnectedHosts > 0 ? "danger" : "neutral" },
-            { label: t("vmware.stats.maintenance"), value: s?.maintenanceHosts ?? 0,  tone: "neutral" },
-          ]}
-        />
-        <VmwareMetricCard
-          icon={<Database size={15} />}
-          label={t("vmware.stats.storage")}
-          value={s ? `${s.storageUsagePercent.toFixed(1)}` : "â€”"}
-          unit="%"
-          delay={0.12}
-          valueTone={s && s.storageUsagePercent >= 90 ? "danger" : s && s.storageUsagePercent >= 75 ? "warn" : "default"}
-          subMetrics={[
-            { label: "Used",  value: s ? formatTiB(s.totalStorageUsedTiB) : "â€”" },
-            { label: "Total", value: s ? formatTiB(s.totalStorageCapacityTiB) : "â€”" },
-            { label: ">85%",  value: s?.datastoresAbove85Pct ?? 0, tone: s && s.datastoresAbove85Pct > 0 ? "warn" : "ok" },
-          ]}
-        />
-        <VmwareMetricCard
-          icon={<Cpu size={15} />}
-          label={t("vmware.stats.cpuUsage")}
-          value={clusterPerf ? `${clusterPerf.cpuUsagePct}` : s ? `${s.clusterCpuUsagePct}` : "â€”"}
-          unit="%"
-          delay={0.18}
-          valueTone={
-            (clusterPerf?.cpuUsagePct ?? s?.clusterCpuUsagePct ?? 0) >= 90 ? "danger" :
-            (clusterPerf?.cpuUsagePct ?? s?.clusterCpuUsagePct ?? 0) >= 75 ? "warn" : "default"
-          }
-          subMetrics={[
-            { label: "Mem", value: `${clusterPerf?.memUsagePct ?? s?.clusterMemUsagePct ?? 0}%` },
-            { label: "vCPU", value: `${s?.totalAllocatedVcpu ?? 0}` },
-            { label: "RAM", value: s ? `${s.totalAllocatedMemoryGiB} GiB` : "â€”" },
-          ]}
-        />
-      </section>
+      <SummaryBanner
+        headline={`${s?.runningVMs ?? 0} running VMs across ${s?.totalHosts ?? 0} hosts`}
+        subtext={`Current infrastructure utilization is ${s?.clusterCpuUsagePct ?? 0}% CPU and ${s?.storageUsagePercent?.toFixed(1) ?? "0.0"}% storage.`}
+        bullets={[
+          `${alerts.length} active alerts`,
+          `${s?.criticalVMs ?? 0} critical VMs require attention`,
+          `${s?.datastoresAbove85Pct ?? 0} datastores above 85% usage`,
+        ]}
+      />
 
-      {/* â”€â”€ Resource + Datastore â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <section className="grid gap-3 xl:grid-cols-[3fr_2fr]">
-        <VmwareResourceBars
-          title={t("vmware.resource.title")}
-          subtitle={t("vmware.resource.subtitle")}
-          bars={storageBars}
-          footer={[
-            { label: "vCPUs", value: String(s?.totalAllocatedVcpu ?? 0) },
-            { label: "RAM",   value: s ? `${s.totalAllocatedMemoryGiB} GiB` : "â€”" },
-            { label: t("vmware.stats.clusters"), value: String(s?.totalClusters ?? 0) },
-          ]}
-        />
-        <VmwareDatastoreHealth datastores={datastores} />
-      </section>
-
-      {/* â”€â”€ Hosts + Alerts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <section className="grid gap-3 xl:grid-cols-2">
-        <VmwareHostUsageList hosts={hosts} />
-        <VmwareAlertsPanel alerts={alerts} />
-      </section>
-
-      {/* â”€â”€ Quick-stats strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      {s && (
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px]" style={{ color: "var(--color-neutral-500)" }}>
-          <span className="inline-flex items-center gap-1.5">
-            <span>VM Health:</span>
-            <span className="tabular-nums font-medium" style={{ color: "#7dd3fc" }}>{s.healthyVMs} ok</span>
-            <span className="tabular-nums font-medium" style={{ color: "#fcd34d" }}>{s.warningVMs} warn</span>
-            <span className="tabular-nums font-medium" style={{ color: "#fda4af" }}>{s.criticalVMs} crit</span>
-          </span>
-          <span className="w-px h-3 opacity-20" style={{ background: "var(--color-neutral-500)" }} />
-          <span className="inline-flex items-center gap-1.5">
-            <span>Snapshots:</span>
-            <span className="tabular-nums font-medium text-neutral-200">{s.vmsWithSnapshots} VMs</span>
-            {s.oldestSnapshotDays !== null && (
-              <span className="tabular-nums">(oldest {s.oldestSnapshotDays}d)</span>
-            )}
-            {s.criticalSnapshotCount > 0 && (
-              <span className="tabular-nums font-medium" style={{ color: "#fda4af" }}>{s.criticalSnapshotCount} crit</span>
-            )}
-          </span>
-          <span className="w-px h-3 opacity-20" style={{ background: "var(--color-neutral-500)" }} />
-          <span className="inline-flex items-center gap-1.5">
-            <span>Tools:</span>
-            <span className="tabular-nums font-medium text-neutral-200">{s.toolsRunning} running</span>
-            {s.toolsNotRunning > 0 && (
-              <span className="tabular-nums font-medium" style={{ color: "#fcd34d" }}>{s.toolsNotRunning} stopped</span>
-            )}
-            <span className="tabular-nums">{s.guestIpsAvailable} IPs</span>
-          </span>
-=======
-      {/* ── Tabs ──────────────────────────────────────────── */}
+      {/* â”€â”€ Tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex items-center justify-between border-b border-white/5 pb-4">
         <div className="tabs-list">
           <button
@@ -321,20 +223,20 @@ export function VmwareDashboard() {
             <VmwareMetricCard
               icon={<Database size={18} />}
               label={t("vmware.stats.storage")}
-              value={s ? `${s.storageUsagePercent.toFixed(1)}` : "—"}
+              value={s ? `${s.storageUsagePercent.toFixed(1)}` : "â€”"}
               unit="%"
               delay={0.10}
               valueTone={s && s.storageUsagePercent >= 90 ? "danger" : s && s.storageUsagePercent >= 75 ? "warn" : "default"}
               subMetrics={[
-                { label: "Used",  value: s ? formatTiB(s.totalStorageUsedTiB) : "—" },
-                { label: "Total", value: s ? formatTiB(s.totalStorageCapacityTiB) : "—" },
+                { label: "Used",  value: s ? formatTiB(s.totalStorageUsedTiB) : "â€”" },
+                { label: "Total", value: s ? formatTiB(s.totalStorageCapacityTiB) : "â€”" },
                 { label: ">85%",  value: s?.datastoresAbove85Pct ?? 0, tone: s && s.datastoresAbove85Pct > 0 ? "warn" : "ok" },
               ]}
             />
             <VmwareMetricCard
               icon={<Cpu size={18} />}
               label={t("vmware.stats.cpuUsage")}
-              value={clusterPerf ? `${clusterPerf.cpuUsagePct}` : s ? `${s.clusterCpuUsagePct}` : "—"}
+              value={clusterPerf ? `${clusterPerf.cpuUsagePct}` : s ? `${s.clusterCpuUsagePct}` : "â€”"}
               unit="%"
               delay={0.15}
               valueTone={
@@ -344,7 +246,7 @@ export function VmwareDashboard() {
               subMetrics={[
                 { label: "Mem", value: `${clusterPerf?.memUsagePct ?? s?.clusterMemUsagePct ?? 0}%` },
                 { label: "vCPU", value: `${s?.totalAllocatedVcpu ?? 0}` },
-                { label: "RAM", value: s ? `${s.totalAllocatedMemoryGiB} GiB` : "—" },
+                { label: "RAM", value: s ? `${s.totalAllocatedMemoryGiB} GiB` : "â€”" },
               ]}
             />
           </section>
@@ -357,14 +259,13 @@ export function VmwareDashboard() {
                   bars={storageBars}
                   footer={[
                     { label: "vCPUs", value: String(s?.totalAllocatedVcpu ?? 0) },
-                    { label: "RAM",   value: s ? `${s.totalAllocatedMemoryGiB} GiB` : "—" },
+                    { label: "RAM",   value: s ? `${s.totalAllocatedMemoryGiB} GiB` : "â€”" },
                     { label: t("vmware.stats.clusters"), value: String(s?.totalClusters ?? 0) },
                   ]}
                 />
              </div>
              <VmwareAlertsPanel alerts={alerts} />
           </section>
->>>>>>> 8b6e4206a7c69f88ef889c8c8cb53fadd8d4f39b
         </div>
       )}
 
@@ -375,7 +276,7 @@ export function VmwareDashboard() {
             <VmwareDatastoreHealth datastores={datastores} />
           </section>
 
-          {/* Quick-stats strip (Health · Snapshots · Tools) */}
+          {/* Quick-stats strip (Health Â· Snapshots Â· Tools) */}
           {s && (
             <div
               className="glass-panel p-6 grid gap-8 sm:grid-cols-3"
@@ -416,7 +317,7 @@ export function VmwareDashboard() {
                 <div className="grid grid-cols-2 gap-4">
                   {[
                     { label: t("vmware.snapshot.vms"), value: String(s.vmsWithSnapshots) },
-                    { label: t("vmware.snapshot.oldest"), value: s.oldestSnapshotDays !== null ? `${s.oldestSnapshotDays}d` : "—" },
+                    { label: t("vmware.snapshot.oldest"), value: s.oldestSnapshotDays !== null ? `${s.oldestSnapshotDays}d` : "â€”" },
                     { label: "Crit count", value: String(s.criticalSnapshotCount), danger: s.criticalSnapshotCount > 0 },
                   ].map(row => (
                     <div key={row.label} className="bg-white/5 p-2.5 rounded-lg">
@@ -460,7 +361,7 @@ export function VmwareDashboard() {
         </div>
       )}
 
-      {/* â”€â”€ VM Detail Drawer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* Ã¢â€â‚¬Ã¢â€â‚¬ VM Detail Drawer Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
       <VmwareVmDetailDrawer
         vm={selectedVm}
         loading={selectedVmLoading}
@@ -471,3 +372,4 @@ export function VmwareDashboard() {
     </div>
   );
 }
+

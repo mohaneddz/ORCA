@@ -122,14 +122,71 @@ export default function BillingUsagePage() {
       {showPlans && (
         <section className="grid gap-3 xl:grid-cols-3">
           {[
-            { name: "Free", limits: "Members: 1-3 | Projects: 1-3 | Devices: 3-5 | API: 1k | Storage: 1 GB | Support: Community only | Retention: 7-30 days" },
-            { name: "Pro", limits: "Members: 10 | Projects: 20 | Devices: 25 | API: 50k | Storage: 50 GB | Support: 5-10 tickets/mo | Retention: 90 days" },
-            { name: "Business", limits: "Members: 50+ | Projects: Unlimited | Devices: 100+ | API: 500k+ | Storage: 500 GB+ | Support: Priority/unlimited | Retention: 1 year+" },
+            {
+              name: "Free",
+              price: "$0",
+              period: "/mo",
+              tagline: "Starter for tiny teams",
+              featured: false,
+              border: "border-[var(--color-border-glow)]",
+              cta: "btn-ghost",
+              limits: ["1-3 Members", "1-3 Projects", "3-5 Devices", "1k API / month", "1 GB Storage", "Community Support", "7-30 days Retention"],
+            },
+            {
+              name: "Pro",
+              price: "$99",
+              period: "/mo",
+              tagline: "Best for growing operations",
+              featured: true,
+              border: "border-[var(--color-border-glow)]",
+              cta: "btn-primary",
+              limits: ["10 Members", "20 Projects", "25 Devices", "50k API / month", "50 GB Storage", "5-10 Tickets / month", "90 days Retention"],
+            },
+            {
+              name: "Business",
+              price: "Custom",
+              period: "",
+              tagline: "Advanced scale and governance",
+              featured: false,
+              border: "border-[var(--color-border-glow)]",
+              cta: "btn-ghost",
+              limits: ["50+ Members", "Unlimited Projects", "100+ Devices", "500k+ API / month", "500 GB+ Storage", "Priority Support", "1 year+ Retention"],
+            },
           ].map((plan) => (
-            <article key={plan.name} className="card p-5">
-              <p className="m-0 text-xs uppercase tracking-[0.08em] text-[var(--color-neutral-500)]">{plan.name}</p>
-              <p className="m-0 mt-3 text-sm text-[var(--color-neutral-300)]">{plan.limits}</p>
-              <button type="button" className="mt-4 rounded-md border border-white/15 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-200 hover:bg-white/8">
+            <article
+              key={plan.name}
+              className={`card relative overflow-hidden p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl ${plan.border} ${plan.featured ? "ring-2 ring-[var(--color-primary-glow)]" : ""}`}
+              style={{
+                background: "linear-gradient(180deg, rgba(0, 198, 193, 0.16) 0%, var(--color-surface-1) 48%)",
+              }}
+            >
+              <div className="relative">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="m-0 text-sm font-semibold tracking-[0.01em] text-[var(--color-neutral-200)]">{plan.name}</p>
+                    <p className="m-0 mt-1 text-sm text-[var(--color-neutral-400)]">{plan.tagline}</p>
+                  </div>
+                  {plan.featured ? (
+                    <span className="rounded-full border border-[var(--color-border-glow)] bg-[var(--color-primary-glow)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-neutral-100)]">
+                      Popular
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="mt-4 flex items-end gap-1">
+                  <p className="m-0 text-4xl font-extrabold leading-none text-white">{plan.price}</p>
+                  {plan.period ? <p className="m-0 pb-1 text-base text-[var(--color-neutral-400)]">{plan.period}</p> : null}
+                </div>
+
+                <div className="mt-4 space-y-2">
+                  {plan.limits.map((feature) => (
+                    <p key={feature} className="m-0 text-[15px] leading-6 text-[var(--color-neutral-300)]">
+                      {feature}
+                    </p>
+                  ))}
+                </div>
+              </div>
+              <button type="button" className={`mt-5 w-full rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wide ${plan.cta}`}>
                 {t("billing.plans.select")}
               </button>
             </article>
