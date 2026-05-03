@@ -78,7 +78,7 @@ export default function AccountPage() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const raw = localStorage.getItem("cyberbase-auth-v1");
+      const raw = localStorage.getItem("orca.auth.session");
       const session = raw ? JSON.parse(raw) : null;
 
       const res = await fetch(`${APP_URLS.api.backendBase}/api/auth/profile/avatar`, {
@@ -98,8 +98,8 @@ export default function AccountPage() {
       setAvatarUrl(data.avatarUrl);
       setAvatarLoadFailed(false);
       setStatus("Avatar updated successfully.");
-      
-      await updateProfile({ avatarUrl: data.avatarUrl });
+
+      await updateProfile({ name, email, organizationName, phone, avatarUrl: data.avatarUrl });
     } catch (e: any) {
       setStatus(e.message || "Failed to upload avatar.");
     } finally {
@@ -122,15 +122,6 @@ export default function AccountPage() {
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-
-      if (error) {
-        setStatus(error.message);
-        return;
-      }
-
       await updatePassword({ newPassword });
       setStatus("Password updated.");
       setNewPassword("");
@@ -183,7 +174,6 @@ export default function AccountPage() {
             )}
             <div className="min-w-0">
               <p className="m-0 text-sm font-medium text-white">Profile picture</p>
-              <p className="m-0 mt-0.5 text-xs text-slate-400">Stored in Supabase bucket: {AVATARS_BUCKET}</p>
               <label className="mt-2 inline-flex cursor-pointer items-center rounded-md border border-[var(--color-border-glow)] bg-[var(--color-surface-hover)] px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-primary-strong)] hover:opacity-80 transition-opacity">
                 {isUploadingAvatar ? t("account.profile.uploading") : t("account.profile.upload")}
                 <input
