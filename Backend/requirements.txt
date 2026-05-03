@@ -9,5 +9,4 @@ numpy
 gunicorn
 whitenoise
 django-cors-headers
-auditw
 zxcvbn
