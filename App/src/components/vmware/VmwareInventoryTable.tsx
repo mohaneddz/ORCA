@@ -108,48 +108,45 @@ export function VmwareInventoryTable({ vms, onSelectVm }: VmwareInventoryTablePr
   const columns = ["Name", "Power", "Host", "Cluster", "vCPU", "RAM", "CPU %", "Mem %", "IP", "OS"];
 
   return (
-    <div className="card overflow-hidden flex flex-col">
-      {/* Header */}
-      <div
-        className="flex items-center justify-between px-5 py-3.5 gap-3 flex-wrap"
-        style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
-      >
-        <p className="m-0 text-sm font-semibold text-[var(--color-neutral-100)]">
-          VM Inventory
-          <span className="ml-2 text-xs font-normal" style={{ color: "var(--color-neutral-500)" }}>
-            {sorted.length} of {vms.length}
+    <div className="flex flex-col gap-4">
+      {/* Filters and Stats Row */}
+      <div className="flex flex-wrap items-center justify-between gap-4 glass-panel px-6 py-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative group">
+            <input
+              type="search"
+              value={search}
+              onChange={e => { setSearch(e.target.value); }}
+              placeholder="Search name, OS, IP…"
+              className="table-input w-full min-w-[240px] pl-3 h-10 transition-all focus:min-w-[300px]"
+            />
+          </div>
+          <select value={powerFilter} onChange={e => { setPowerFilter(e.target.value); }} className="table-input h-10 px-3 font-semibold" aria-label="Power">
+            {POWER_OPTS.map(o => <option key={o} value={o}>{o === "All" ? "All States" : o.replace("POWERED_", "").charAt(0) + o.replace("POWERED_", "").slice(1).toLowerCase()}</option>)}
+          </select>
+          <select value={healthFilter} onChange={e => { setHealthFilter(e.target.value); }} className="table-input h-10 px-3 font-semibold" aria-label="Health">
+            {HEALTH_OPTS.map(o => <option key={o} value={o}>{o === "All" ? "All Health" : o.charAt(0).toUpperCase() + o.slice(1)}</option>)}
+          </select>
+          <select value={hostFilter} onChange={e => { setHostFilter(e.target.value); }} className="table-input h-10 px-3 font-semibold" aria-label="Host">
+            {hosts.map(o => <option key={o} value={o}>{o === "All" ? "All Hosts" : o}</option>)}
+          </select>
+          <select value={clusterFilter} onChange={e => { setClusterFilter(e.target.value); }} className="table-input h-10 px-3 font-semibold" aria-label="Cluster">
+            {clusters.map(o => <option key={o} value={o}>{o === "All" ? "All Clusters" : o}</option>)}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+             Result: <span className="text-white ml-1">{sorted.length}</span> / {vms.length} VMs
           </span>
-        </p>
-        <p className="m-0 text-xs" style={{ color: "var(--color-neutral-500)" }}>
-          Click any row for full details
-        </p>
+          <div className="h-4 w-px bg-white/10" />
+          <p className="m-0 text-[10px] font-bold uppercase tracking-widest text-neutral-600">
+            Click row for details
+          </p>
+        </div>
       </div>
 
-      {/* Filters */}
-      <div
-        className="flex flex-wrap items-center gap-2 px-5 py-3"
-        style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
-      >
-        <input
-          type="search"
-          value={search}
-          onChange={e => { setSearch(e.target.value); }}
-          placeholder="Search name, OS, IP…"
-          className="table-input w-full max-w-[200px]"
-        />
-        <select value={powerFilter} onChange={e => { setPowerFilter(e.target.value); }} className="table-input" aria-label="Power">
-          {POWER_OPTS.map(o => <option key={o} value={o}>{o === "All" ? "All States" : o.replace("POWERED_", "").charAt(0) + o.replace("POWERED_", "").slice(1).toLowerCase()}</option>)}
-        </select>
-        <select value={healthFilter} onChange={e => { setHealthFilter(e.target.value); }} className="table-input" aria-label="Health">
-          {HEALTH_OPTS.map(o => <option key={o} value={o}>{o === "All" ? "All Health" : o.charAt(0).toUpperCase() + o.slice(1)}</option>)}
-        </select>
-        <select value={hostFilter} onChange={e => { setHostFilter(e.target.value); }} className="table-input" aria-label="Host">
-          {hosts.map(o => <option key={o} value={o}>{o === "All" ? "All Hosts" : o}</option>)}
-        </select>
-        <select value={clusterFilter} onChange={e => { setClusterFilter(e.target.value); }} className="table-input" aria-label="Cluster">
-          {clusters.map(o => <option key={o} value={o}>{o === "All" ? "All Clusters" : o}</option>)}
-        </select>
-      </div>
+      <div className="card overflow-hidden">
 
       {/* Table */}
       <div className="overflow-x-auto">
@@ -258,5 +255,6 @@ export function VmwareInventoryTable({ vms, onSelectVm }: VmwareInventoryTablePr
         </div>
       </div>
     </div>
+  </div>
   );
 }

@@ -31,27 +31,34 @@ export function VmwareMetricCard({
 }: VmwareMetricCardProps) {
   return (
     <article
-      className="kpi-card animate-fade-up flex flex-col gap-3"
-      style={{ animationDelay: `${delay}s` }}
+      className="kpi-card animate-fade-up flex flex-col gap-3 group"
+      style={{
+        animationDelay: `${delay}s`,
+        background: `linear-gradient(165deg, var(--color-surface-1), ${toneColor[valueTone]}10)`,
+      }}
     >
       <div className="flex items-center justify-between">
-        <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--color-neutral-500)" }}>
+        <p className="m-0 text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: "var(--color-neutral-500)" }}>
           {label}
         </p>
-        <span className="opacity-60" style={{ color: "var(--color-primary)" }}>{icon}</span>
+        <div className="p-1.5 rounded-lg bg-white/5 group-hover:bg-primary/10 transition-colors" style={{ color: toneColor[valueTone] === "var(--color-neutral-100)" ? "var(--color-primary)" : toneColor[valueTone] }}>
+          {icon}
+        </div>
       </div>
 
-      <p className="m-0 text-2xl font-bold tabular-nums leading-none" style={{ color: toneColor[valueTone] }}>
-        {value}
-        {unit && <span className="text-sm font-normal ml-1" style={{ color: "var(--color-neutral-500)" }}>{unit}</span>}
-      </p>
+      <div className="flex items-baseline gap-1">
+        <p className="m-0 text-3xl font-extrabold tabular-nums leading-none tracking-tight" style={{ color: toneColor[valueTone] }}>
+          {value}
+        </p>
+        {unit && <span className="text-xs font-semibold" style={{ color: "var(--color-neutral-500)" }}>{unit}</span>}
+      </div>
 
       {subMetrics && subMetrics.length > 0 && (
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-2 border-t border-slate-800/60">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-3 mt-1 border-t border-white/5">
           {subMetrics.map(m => (
-            <div key={m.label} className="flex items-center justify-between gap-1">
-              <span className="text-[10px]" style={{ color: "var(--color-neutral-500)" }}>{m.label}</span>
-              <span className="text-[11px] font-semibold tabular-nums" style={{ color: toneColor[m.tone ?? "default"] }}>
+            <div key={m.label} className="flex flex-col gap-0.5">
+              <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--color-neutral-500)" }}>{m.label}</span>
+              <span className="text-xs font-bold tabular-nums" style={{ color: toneColor[m.tone ?? "default"] }}>
                 {m.value}
               </span>
             </div>

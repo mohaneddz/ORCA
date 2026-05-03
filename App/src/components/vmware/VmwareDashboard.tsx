@@ -1,4 +1,5 @@
-﻿import { RefreshCw, Server, Cpu, Database, Shield, Camera, Wrench, Monitor } from "lucide-react";
+import { useState } from "react";
+import { RefreshCw, Server, Cpu, Database, Shield, Camera, Wrench, Monitor } from "lucide-react";
 import { useVmwareDashboard } from "@/hooks/useVmwareDashboard";
 import { VmwareMetricCard } from "./VmwareMetricCard";
 import { VmwareResourceBars } from "./VmwareResourceBars";
@@ -90,6 +91,8 @@ export function VmwareDashboard() {
     lastRefresh, refresh, selectVm, performPowerAction,
   } = useVmwareDashboard();
 
+  const [activeTab, setActiveTab] = useState<"overview" | "infra" | "inventory">("overview");
+
   if (loading) return <LoadingSkeleton />;
 
   const s = summary;
@@ -107,185 +110,245 @@ export function VmwareDashboard() {
   return (
     <div className="page-section relative">
 
-      {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--color-primary)" }}>
-              {t("vmware.badge")}
-            </span>
+      {/* ── Header ────────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <h1 className="m-0 text-3xl font-black tracking-tight text-white">
+              {t("vmware.title")}
+            </h1>
             <ModeBadge isDummy={isDummyMode} />
           </div>
-          <h1 className="m-0 text-2xl font-bold tracking-tight text-[var(--color-neutral-100)]">
-            {t("vmware.title")}
-          </h1>
-          <p className="m-0 mt-1.5 max-w-[78ch] text-sm" style={{ color: "var(--color-neutral-500)" }}>
+          <p className="m-0 max-w-[70ch] text-sm font-medium leading-relaxed" style={{ color: "var(--color-neutral-500)" }}>
             {t("vmware.description")}
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+
+        <div className="flex items-center gap-4">
           {lastRefresh && (
-            <span className="text-[10px]" style={{ color: "var(--color-neutral-500)" }}>
-              {lastRefresh.toLocaleTimeString()}
-            </span>
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-600">Last Sync</span>
+              <span className="text-xs font-mono font-bold text-neutral-400">
+                {lastRefresh.toLocaleTimeString()}
+              </span>
+            </div>
           )}
-          <button className="btn-ghost text-xs" onClick={() => void refresh()} disabled={loading}>
-            <RefreshCw size={13} className={`mr-1.5 ${loading ? "animate-spin" : ""}`} />
-            {t("vmware.sync")}
+          <button
+            className="btn-primary group h-10 px-5"
+            onClick={() => void refresh()}
+            disabled={loading}
+          >
+            <RefreshCw size={14} className={`${loading ? "animate-spin" : "group-hover:rotate-180 transition-transform duration-500"}`} />
+            <span>{t("vmware.sync")}</span>
           </button>
         </div>
       </div>
 
       {error && <ErrorBanner message={error} onRetry={() => void refresh()} />}
 
-      {/* â”€â”€ 4 KPI Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <VmwareMetricCard
-          icon={<Monitor size={15} />}
-          label={t("vmware.stats.totalVMs")}
-          value={s?.totalVMs ?? 0}
-          delay={0.00}
-          valueTone="default"
-          subMetrics={[
-            { label: t("vmware.stats.running"),   value: s?.runningVMs ?? 0,   tone: "ok" },
-            { label: t("vmware.stats.stopped"),   value: s?.stoppedVMs ?? 0,   tone: "neutral" },
-            { label: t("vmware.stats.suspended"), value: s?.suspendedVMs ?? 0, tone: "neutral" },
-          ]}
-        />
-        <VmwareMetricCard
-          icon={<Server size={15} />}
-          label={t("vmware.stats.hosts")}
-          value={s?.totalHosts ?? 0}
-          delay={0.06}
-          valueTone={s && s.disconnectedHosts > 0 ? "danger" : "ok"}
-          subMetrics={[
-            { label: t("vmware.stats.connected"),   value: s?.connectedHosts ?? 0,    tone: "ok" },
-            { label: t("vmware.stats.issues"),      value: s?.disconnectedHosts ?? 0, tone: s && s.disconnectedHosts > 0 ? "danger" : "neutral" },
-            { label: t("vmware.stats.maintenance"), value: s?.maintenanceHosts ?? 0,  tone: "neutral" },
-          ]}
-        />
-        <VmwareMetricCard
-          icon={<Database size={15} />}
-          label={t("vmware.stats.storage")}
-          value={s ? `${s.storageUsagePercent.toFixed(1)}` : "â€”"}
-          unit="%"
-          delay={0.12}
-          valueTone={s && s.storageUsagePercent >= 90 ? "danger" : s && s.storageUsagePercent >= 75 ? "warn" : "default"}
-          subMetrics={[
-            { label: "Used",  value: s ? formatTiB(s.totalStorageUsedTiB) : "â€”" },
-            { label: "Total", value: s ? formatTiB(s.totalStorageCapacityTiB) : "â€”" },
-            { label: ">85%",  value: s?.datastoresAbove85Pct ?? 0, tone: s && s.datastoresAbove85Pct > 0 ? "warn" : "ok" },
-          ]}
-        />
-        <VmwareMetricCard
-          icon={<Cpu size={15} />}
-          label={t("vmware.stats.cpuUsage")}
-          value={clusterPerf ? `${clusterPerf.cpuUsagePct}` : s ? `${s.clusterCpuUsagePct}` : "â€”"}
-          unit="%"
-          delay={0.18}
-          valueTone={
-            (clusterPerf?.cpuUsagePct ?? s?.clusterCpuUsagePct ?? 0) >= 90 ? "danger" :
-            (clusterPerf?.cpuUsagePct ?? s?.clusterCpuUsagePct ?? 0) >= 75 ? "warn" : "default"
-          }
-          subMetrics={[
-            { label: "Mem", value: `${clusterPerf?.memUsagePct ?? s?.clusterMemUsagePct ?? 0}%` },
-            { label: "vCPU", value: `${s?.totalAllocatedVcpu ?? 0}` },
-            { label: "RAM", value: s ? `${s.totalAllocatedMemoryGiB} GiB` : "â€”" },
-          ]}
-        />
-      </section>
-
-      {/* â”€â”€ 2-column panels â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <section className="grid gap-4 xl:grid-cols-2">
-        {/* Left: Resource bars + Host load */}
-        <div className="grid gap-4">
-          <VmwareResourceBars
-            title={t("vmware.resource.title")}
-            subtitle={t("vmware.resource.subtitle")}
-            bars={storageBars}
-            footer={[
-              { label: "vCPUs", value: String(s?.totalAllocatedVcpu ?? 0) },
-              { label: "RAM",   value: s ? `${s.totalAllocatedMemoryGiB} GiB` : "â€”" },
-              { label: t("vmware.stats.clusters"), value: String(s?.totalClusters ?? 0) },
-            ]}
-          />
-          <VmwareHostUsageList hosts={hosts} />
+      {/* ── Tabs ──────────────────────────────────────────── */}
+      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+        <div className="tabs-list">
+          <button
+            className={`tab-trigger ${activeTab === "overview" ? "active" : ""}`}
+            onClick={() => setActiveTab("overview")}
+          >
+            Overview
+          </button>
+          <button
+            className={`tab-trigger ${activeTab === "infra" ? "active" : ""}`}
+            onClick={() => setActiveTab("infra")}
+          >
+            Infrastructure
+          </button>
+          <button
+            className={`tab-trigger ${activeTab === "inventory" ? "active" : ""}`}
+            onClick={() => setActiveTab("inventory")}
+          >
+            VM Inventory
+          </button>
         </div>
 
-        {/* Right: Datastore health + Alerts */}
-        <div className="grid gap-4">
-          <VmwareDatastoreHealth datastores={datastores} />
-          <VmwareAlertsPanel alerts={alerts} />
+        <div className="hidden lg:flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-neutral-600">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span>{s?.runningVMs ?? 0} Active</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-rose-500" />
+            <span>{alerts.length} Alerts</span>
+          </div>
         </div>
-      </section>
+      </div>
 
-      {/* â”€â”€ Quick-stats strip (Health Â· Snapshots Â· Tools) â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      {s && (
-        <div
-          className="card px-5 py-4 grid gap-x-8 gap-y-3 sm:grid-cols-3 text-xs"
-          style={{ borderColor: "var(--color-border-subtle)" }}
-        >
-          {/* VM Health */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Shield size={12} style={{ color: "var(--color-primary)" }} />
-              <span className="font-semibold text-white text-xs">{t("vmware.health.title")}</span>
-            </div>
-            <div className="flex items-center gap-2 h-1.5 rounded-full overflow-hidden">
-              <div style={{ width: `${(s.healthyVMs / Math.max(s.runningVMs, 1)) * 100}%`, background: "#34d399", height: "100%" }} />
-              <div style={{ width: `${(s.warningVMs / Math.max(s.runningVMs, 1)) * 100}%`, background: "#fbbf24", height: "100%" }} />
-              <div style={{ width: `${(s.criticalVMs / Math.max(s.runningVMs, 1)) * 100}%`, background: "#fb7185", height: "100%" }} />
-            </div>
-            <div className="flex gap-3 text-[11px]">
-              <span style={{ color: "#34d399" }}>âœ“ {s.healthyVMs}</span>
-              <span style={{ color: "#fbbf24" }}>âš  {s.warningVMs}</span>
-              <span style={{ color: "#fb7185" }}>âœ— {s.criticalVMs}</span>
-            </div>
-          </div>
+      {activeTab === "overview" && (
+        <div className="space-y-6 animate-fade-up">
+          {/* 4 KPI Cards */}
+          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <VmwareMetricCard
+              icon={<Monitor size={18} />}
+              label={t("vmware.stats.totalVMs")}
+              value={s?.totalVMs ?? 0}
+              delay={0.00}
+              valueTone="default"
+              subMetrics={[
+                { label: t("vmware.stats.running"),   value: s?.runningVMs ?? 0,   tone: "ok" },
+                { label: t("vmware.stats.stopped"),   value: s?.stoppedVMs ?? 0,   tone: "neutral" },
+                { label: t("vmware.stats.suspended"), value: s?.suspendedVMs ?? 0, tone: "neutral" },
+              ]}
+            />
+            <VmwareMetricCard
+              icon={<Server size={18} />}
+              label={t("vmware.stats.hosts")}
+              value={s?.totalHosts ?? 0}
+              delay={0.05}
+              valueTone={s && s.disconnectedHosts > 0 ? "danger" : "ok"}
+              subMetrics={[
+                { label: t("vmware.stats.connected"),   value: s?.connectedHosts ?? 0,    tone: "ok" },
+                { label: t("vmware.stats.issues"),      value: s?.disconnectedHosts ?? 0, tone: s && s.disconnectedHosts > 0 ? "danger" : "neutral" },
+                { label: t("vmware.stats.maintenance"), value: s?.maintenanceHosts ?? 0,  tone: "neutral" },
+              ]}
+            />
+            <VmwareMetricCard
+              icon={<Database size={18} />}
+              label={t("vmware.stats.storage")}
+              value={s ? `${s.storageUsagePercent.toFixed(1)}` : "—"}
+              unit="%"
+              delay={0.10}
+              valueTone={s && s.storageUsagePercent >= 90 ? "danger" : s && s.storageUsagePercent >= 75 ? "warn" : "default"}
+              subMetrics={[
+                { label: "Used",  value: s ? formatTiB(s.totalStorageUsedTiB) : "—" },
+                { label: "Total", value: s ? formatTiB(s.totalStorageCapacityTiB) : "—" },
+                { label: ">85%",  value: s?.datastoresAbove85Pct ?? 0, tone: s && s.datastoresAbove85Pct > 0 ? "warn" : "ok" },
+              ]}
+            />
+            <VmwareMetricCard
+              icon={<Cpu size={18} />}
+              label={t("vmware.stats.cpuUsage")}
+              value={clusterPerf ? `${clusterPerf.cpuUsagePct}` : s ? `${s.clusterCpuUsagePct}` : "—"}
+              unit="%"
+              delay={0.15}
+              valueTone={
+                (clusterPerf?.cpuUsagePct ?? s?.clusterCpuUsagePct ?? 0) >= 90 ? "danger" :
+                (clusterPerf?.cpuUsagePct ?? s?.clusterCpuUsagePct ?? 0) >= 75 ? "warn" : "default"
+              }
+              subMetrics={[
+                { label: "Mem", value: `${clusterPerf?.memUsagePct ?? s?.clusterMemUsagePct ?? 0}%` },
+                { label: "vCPU", value: `${s?.totalAllocatedVcpu ?? 0}` },
+                { label: "RAM", value: s ? `${s.totalAllocatedMemoryGiB} GiB` : "—" },
+              ]}
+            />
+          </section>
 
-          {/* Snapshot Risk */}
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Camera size={12} style={{ color: "var(--color-primary)" }} />
-              <span className="font-semibold text-white text-xs">{t("vmware.snapshot.title")}</span>
-            </div>
-            {[
-              { label: t("vmware.snapshot.vms"), value: String(s.vmsWithSnapshots) },
-              { label: t("vmware.snapshot.oldest"), value: s.oldestSnapshotDays !== null ? `${s.oldestSnapshotDays}d` : "â€”" },
-              { label: t("vmware.snapshot.crit"), value: String(s.criticalSnapshotCount), danger: s.criticalSnapshotCount > 0 },
-            ].map(row => (
-              <div key={row.label} className="flex items-center justify-between">
-                <span style={{ color: "var(--color-neutral-400)" }}>{row.label}</span>
-                <span className={row.danger ? "status-danger" : "font-semibold text-white tabular-nums"}>{row.value}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* VMware Tools */}
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Wrench size={12} style={{ color: "var(--color-primary)" }} />
-              <span className="font-semibold text-white text-xs">{t("vmware.tools.title")}</span>
-            </div>
-            {[
-              { label: t("vmware.tools.running"),    value: String(s.toolsRunning),    ok: true },
-              { label: t("vmware.tools.notRunning"), value: String(s.toolsNotRunning), warn: s.toolsNotRunning > 0 },
-              { label: t("vmware.tools.ips"),        value: String(s.guestIpsAvailable) },
-            ].map(row => (
-              <div key={row.label} className="flex items-center justify-between">
-                <span style={{ color: "var(--color-neutral-400)" }}>{row.label}</span>
-                <span className={row.ok ? "status-ok" : row.warn ? "status-warn" : "font-semibold text-white tabular-nums"}>{row.value}</span>
-              </div>
-            ))}
-          </div>
+          <section className="grid gap-6 xl:grid-cols-3">
+             <div className="xl:col-span-2">
+                <VmwareResourceBars
+                  title={t("vmware.resource.title")}
+                  subtitle={t("vmware.resource.subtitle")}
+                  bars={storageBars}
+                  footer={[
+                    { label: "vCPUs", value: String(s?.totalAllocatedVcpu ?? 0) },
+                    { label: "RAM",   value: s ? `${s.totalAllocatedMemoryGiB} GiB` : "—" },
+                    { label: t("vmware.stats.clusters"), value: String(s?.totalClusters ?? 0) },
+                  ]}
+                />
+             </div>
+             <VmwareAlertsPanel alerts={alerts} />
+          </section>
         </div>
       )}
 
-      {/* â”€â”€ VM Inventory (paginated) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <VmwareInventoryTable
-        vms={localVms}
-        onSelectVm={id => void selectVm(id)}
-      />
+      {activeTab === "infra" && (
+        <div className="space-y-6 animate-fade-up">
+          <section className="grid gap-6 xl:grid-cols-2">
+            <VmwareHostUsageList hosts={hosts} />
+            <VmwareDatastoreHealth datastores={datastores} />
+          </section>
+
+          {/* Quick-stats strip (Health · Snapshots · Tools) */}
+          {s && (
+            <div
+              className="glass-panel p-6 grid gap-8 sm:grid-cols-3"
+            >
+              {/* VM Health */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Shield size={16} className="text-primary" />
+                    <span className="font-bold text-white text-sm">{t("vmware.health.title")}</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-400">{( (s.healthyVMs / Math.max(s.runningVMs, 1)) * 100).toFixed(0)}% Healthy</span>
+                </div>
+                <div className="flex h-2 rounded-full overflow-hidden bg-white/5">
+                  <div style={{ width: `${(s.healthyVMs / Math.max(s.runningVMs, 1)) * 100}%`, background: "#10b981" }} />
+                  <div style={{ width: `${(s.warningVMs / Math.max(s.runningVMs, 1)) * 100}%`, background: "#f59e0b" }} />
+                  <div style={{ width: `${(s.criticalVMs / Math.max(s.runningVMs, 1)) * 100}%`, background: "#f43f5e" }} />
+                </div>
+                <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
+                  <div className="flex items-center gap-1.5" style={{ color: "#10b981" }}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-current" /> {s.healthyVMs} Healthy
+                  </div>
+                  <div className="flex items-center gap-1.5" style={{ color: "#f59e0b" }}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-current" /> {s.warningVMs} Warn
+                  </div>
+                  <div className="flex items-center gap-1.5" style={{ color: "#f43f5e" }}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-current" /> {s.criticalVMs} Crit
+                  </div>
+                </div>
+              </div>
+
+              {/* Snapshot Risk */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Camera size={16} className="text-primary" />
+                  <span className="font-bold text-white text-sm">{t("vmware.snapshot.title")}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { label: t("vmware.snapshot.vms"), value: String(s.vmsWithSnapshots) },
+                    { label: t("vmware.snapshot.oldest"), value: s.oldestSnapshotDays !== null ? `${s.oldestSnapshotDays}d` : "—" },
+                    { label: "Crit count", value: String(s.criticalSnapshotCount), danger: s.criticalSnapshotCount > 0 },
+                  ].map(row => (
+                    <div key={row.label} className="bg-white/5 p-2.5 rounded-lg">
+                      <span className="block text-[9px] font-bold uppercase text-neutral-500 mb-1">{row.label}</span>
+                      <span className={`text-sm font-bold tabular-nums ${row.danger ? "text-rose-500" : "text-white"}`}>{row.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* VMware Tools */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Wrench size={16} className="text-primary" />
+                  <span className="font-bold text-white text-sm">{t("vmware.tools.title")}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { label: "Running",    value: String(s.toolsRunning),    ok: true },
+                    { label: "Issues", value: String(s.toolsNotRunning), warn: s.toolsNotRunning > 0 },
+                    { label: "IPs Found",        value: String(s.guestIpsAvailable) },
+                  ].map(row => (
+                    <div key={row.label} className="bg-white/5 p-2.5 rounded-lg">
+                      <span className="block text-[9px] font-bold uppercase text-neutral-500 mb-1">{row.label}</span>
+                      <span className={`text-sm font-bold tabular-nums ${row.ok ? "text-emerald-500" : row.warn ? "text-amber-500" : "text-white"}`}>{row.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "inventory" && (
+        <div className="animate-fade-up">
+          <VmwareInventoryTable
+            vms={localVms}
+            onSelectVm={id => void selectVm(id)}
+          />
+        </div>
+      )}
 
       {/* â”€â”€ VM Detail Drawer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <VmwareVmDetailDrawer
