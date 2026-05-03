@@ -1,4 +1,4 @@
-﻿const rawBackendBase = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+const rawBackendBase = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 const normalizedBackendBase = rawBackendBase.replace(/\/+$/, "");
 
 export const APP_URLS = {
@@ -8,8 +8,8 @@ export const APP_URLS = {
     tailwind: "https://tailwindcss.com/docs/installation/using-vite",
   },
   api: {
-    // In dev, use Vite proxy (/api) to avoid browser CORS against backend.
-    backendBase: import.meta.env.DEV ? "" : normalizedBackendBase,
+    // Force full URL in dev to bypass potential proxy issues in Tauri
+    backendBase: normalizedBackendBase,
   },
 } as const;
 

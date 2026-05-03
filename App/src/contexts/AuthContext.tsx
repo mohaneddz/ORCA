@@ -130,7 +130,8 @@ async function authRequest<T>(path: string, options?: RequestInit): Promise<{ ok
 
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      logger.warn("auth.request.failed", { path, status: response.status });
+      logger.warn("auth.request.failed", { path, status: response.status, data });
+      console.error("AUTH ERROR:", { path, status: response.status, data });
       return { ok: false, message: (data as { error?: string })?.error || `Request failed: ${response.status}` };
     }
 
@@ -247,9 +248,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { ok: true };
       },
       updatePassword: async ({ newPassword }) => {
+        if (!token) return { ok: false, message: "No active session." };
         if (!newPassword.trim()) return { ok: false, message: "New password is required." };
-        logger.warn("auth.password.update_unavailable");
-        return { ok: false, message: "Password update endpoint is not available yet in backend auth API." };
+
+        const result = await authRequest("/api/auth/change-password", {
+          method: "POST",
+          body: JSON.stringify({ new_password: newPassword }),
+          headers: withAuthHeaders(token),
+        });
+
+        if (!result.ok) return { ok: false, message: result.message || "Failed to update password." };
+
+        logger.info("auth.password.updated", { userId: user?.id });
+        return { ok: true };
       },
       deleteOwnAccount: async () => {
         logger.warn("auth.account.delete_unavailable");

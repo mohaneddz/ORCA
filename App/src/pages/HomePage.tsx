@@ -1,74 +1,99 @@
 import { DonutGauge, DualAreaChart } from "@/components/ui/TrendChart";
 import { DataTable, PageHeader, StatGrid } from "@/components/cards/BaseCards";
+import { useAppSettings } from "@/contexts/AppSettingsContext";
+import { useQuery } from "@tanstack/react-query";
+import { fetchApi } from "@/lib/apiClient";
+import PageSkeleton from "@/components/ui/PageSkeleton";
 
 export default function HomePage() {
+  const { t } = useAppSettings();
+
+  const { data: summaryData, isLoading: isSummaryLoading } = useQuery({
+    queryKey: ["home-summary"],
+    queryFn: () => fetchApi<any>("/api/dw/summary/"),
+  });
+  
+  const { data: trendData } = useQuery({
+    queryKey: ["home-trend"],
+    queryFn: () => fetchApi<any>("/api/dw/trend/?months=7"),
+  });
+
+  if (isSummaryLoading || !summaryData) {
+    return <PageSkeleton />;
+  }
+
+  const kpis = [
+    { label: t("home.stats.risk"), value: `${Math.round(summaryData?.device?.avg_risk_score || 0)} / 100`, trend: -2.1 },
+    { label: t("home.stats.incidents"), value: String(summaryData?.device?.risk_level_distribution?.high || 0), tone: "danger", trend: 12.5 },
+    { label: t("home.stats.devices"), value: String(summaryData?.device?.devices_reporting || 0), tone: "ok", trend: 4.8 },
+    { label: t("home.stats.policy"), value: `${summaryData?.quiz?.correct_rate || 0}%`, trend: 1.4 },
+  ];
+
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const chartData = (trendData?.trend || []).map((t: any) => {
+    const parts = t.month.split('-');
+    const mIndex = parts.length > 1 ? parseInt(parts[1], 10) - 1 : 0;
+    return {
+      name: monthNames[mIndex] || t.month,
+      primary: Math.round(t.device?.avg_risk_score || 0),
+      secondary: Math.round(t.phishing?.click_rate || 0),
+    };
+  });
+
+  const totalDevices = summaryData?.device?.devices_reporting || 1;
+  const compliantDevices = totalDevices - (summaryData?.device?.risk_level_distribution?.high || 0) - (summaryData?.device?.risk_level_distribution?.critical || 0);
+
+  const incidentsRows = (summaryData?.device?.top_signals || []).map((s: any) => [
+    s.signal,
+    `${s.affected_devices} devices`,
+    "High",
+    "Open"
+  ]);
+
   return (
     <div className="page-section">
       <PageHeader
-        badge="Home"
-        title="Security Operations Home"
-        description="High-level posture, risk movement, and active queues across devices, identities, and network activity."
+        badge={t("home.badge")}
+        title={t("home.title")}
+        description={t("home.description")}
       />
 
-      <StatGrid
-        stats={[
-          { label: "Global Risk Score", value: "61 / 100", trend: -2.1 },
-          { label: "Open Incidents", value: "18", tone: "danger", trend: 12.5 },
-          { label: "Managed Devices", value: "142", tone: "ok", trend: 4.8 },
-          { label: "Policy Coverage", value: "93%", trend: 1.4 },
-        ]}
-      />
+      <StatGrid stats={kpis} />
 
       <section className="grid gap-3 xl:grid-cols-[1.7fr_1fr]">
         <div className="min-h-[280px]">
           <DualAreaChart
-            data={[
-              { name: "Mon", primary: 72, secondary: 38 },
-              { name: "Tue", primary: 66, secondary: 44 },
-              { name: "Wed", primary: 63, secondary: 47 },
-              { name: "Thu", primary: 68, secondary: 51 },
-              { name: "Fri", primary: 64, secondary: 54 },
-              { name: "Sat", primary: 59, secondary: 46 },
-              { name: "Sun", primary: 61, secondary: 58 },
-            ]}
-            title="Risk vs Remediation Velocity"
-            primaryLabel="Risk Index"
-            secondaryLabel="Resolved Signals"
+            data={chartData}
+            title={t("home.chart.riskVsRemediation")}
+            primaryLabel={t("home.chart.riskIndex")}
+            secondaryLabel={"Click Rate"}
           />
         </div>
         <DonutGauge
-          title="Asset Compliance"
-          value={132}
-          max={142}
-          label="Compliant"
+          title={t("home.gauge.assetCompliance")}
+          value={compliantDevices}
+          max={totalDevices}
+          label={t("home.gauge.compliant")}
           breakdown={[
-            { label: "Compliant", value: 132, color: "#10b981" },
-            { label: "Pending", value: 7, color: "#f59e0b" },
-            { label: "Critical", value: 3, color: "#f43f5e" },
+            { label: t("home.gauge.compliant"), value: compliantDevices, color: "#10b981" },
+            { label: t("home.gauge.pending"), value: summaryData?.device?.risk_level_distribution?.medium || 0, color: "#f59e0b" },
+            { label: t("home.gauge.critical"), value: (summaryData?.device?.risk_level_distribution?.high || 0) + (summaryData?.device?.risk_level_distribution?.critical || 0), color: "#f43f5e" },
           ]}
         />
       </section>
 
       <section className="grid gap-3 xl:grid-cols-2">
         <DataTable
-          title="Incident Queue"
-          columns={["Signal", "Entity", "Owner", "Priority", "Status"]}
-          rows={[
-            ["Credential reuse", "finance@org.com", "IAM Team", "P1", "Open"],
-            ["Suspicious binary", "OPS-WIN-09", "SOC", "P1", "Investigating"],
-            ["Unauthorized USB", "HR-LAP-02", "Endpoint", "P2", "Queued"],
-            ["Anomalous DNS", "172.16.10.77", "Network", "P2", "Monitoring"],
-          ]}
+          title={t("home.table.incidentQueue")}
+          columns={[t("table.signal"), t("table.entity"), t("table.priority"), t("table.status")]}
+          rows={incidentsRows}
+          minWidth={500}
         />
         <DataTable
-          title="Recent Automations"
-          columns={["Automation", "Target", "Result", "Executor", "Time"]}
-          rows={[
-            ["Force MFA", "34 accounts", "Success", "Policy Engine", "09:45"],
-            ["Patch rollout", "12 devices", "In progress", "Endpoint Ops", "09:31"],
-            ["Token revoke", "nadia@org.com", "Success", "Control Center", "09:21"],
-            ["Network isolate", "Unknown-Lenovo", "Success", "NAC", "08:59"],
-          ]}
+          title={t("home.table.recentAutomations")}
+          columns={[t("table.automation"), t("table.target"), t("table.result"), t("table.time")]}
+          rows={[]}
+          minWidth={500}
         />
       </section>
     </div>

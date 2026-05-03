@@ -1,0 +1,16 @@
+NOTE FOR TESTERS
+================
+
+This file is a placeholder. The size-threshold DLP test requires a file > 10 MB.
+
+To generate the actual test file, run this PowerShell command from the fixtures directory:
+
+    $content = "A" * 1MB
+    $bigContent = $content * 11
+    [System.IO.File]::WriteAllText("$PWD\large_file_test.txt", $bigContent)
+
+This creates an ~11 MB .txt file. Upload it on any website with a file input while the
+extension is active to trigger the size-threshold block (Tier 0).
+
+The file content is intentionally benign (repeated 'A' characters) to isolate the
+size check from regex or semantic detection.

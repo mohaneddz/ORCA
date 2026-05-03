@@ -35,6 +35,13 @@ def get_org_from_request(request):
 
 @method_decorator(csrf_exempt, name="dispatch")
 class RegisterView(View):
+    def options(self, request, *args, **kwargs):
+        response = JsonResponse({})
+        response["Access-Control-Allow-Origin"] = "*"
+        response["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response["Access-Control-Allow-Headers"] = "Content-Type"
+        return response
+
     def post(self, request):
         try:
             body = json.loads(request.body)
@@ -57,18 +64,31 @@ class RegisterView(View):
         org = Organization.objects.create_user(email=email, name=name, password=password)
         token = AuthToken.objects.create(organization=org)
 
-        return JsonResponse(
+        response = JsonResponse(
             {"token": token.key, "organization": {"id": str(org.id), "name": org.name, "email": org.email}},
             status=201,
         )
+        response["Access-Control-Allow-Origin"] = "*"
+        response["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response["Access-Control-Allow-Headers"] = "Content-Type"
+        return response
 
 
 @method_decorator(csrf_exempt, name="dispatch")
 class LoginView(View):
+    def options(self, request, *args, **kwargs):
+        response = JsonResponse({})
+        response["Access-Control-Allow-Origin"] = "*"
+        response["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response["Access-Control-Allow-Headers"] = "Content-Type"
+        return response
+
     def post(self, request):
+        print(f"DEBUG: Raw request body: {request.body}")
         try:
             body = json.loads(request.body)
         except json.JSONDecodeError:
+            print("DEBUG: JSON Decode Error")
             return JsonResponse({"error": "Invalid JSON."}, status=400)
 
         email = body.get("email", "").strip().lower()
@@ -77,16 +97,52 @@ class LoginView(View):
         if not all([email, password]):
             return JsonResponse({"error": "email and password are required."}, status=400)
 
-        org = authenticate(request, email=email, password=password)
+        print(f"DEBUG: Login attempt for email: {email}")
+        org = authenticate(request, username=email, password=password)
+        print(f"DEBUG: Authenticate result: {org}")
         if org is None:
-            return JsonResponse({"error": "Invalid credentials."}, status=401)
+            response = JsonResponse({"error": "Invalid credentials."}, status=401)
+            response["Access-Control-Allow-Origin"] = "*"
+            response["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+            response["Access-Control-Allow-Headers"] = "Content-Type"
+            return response
 
         token = AuthToken.objects.create(organization=org)
 
-        return JsonResponse(
+        response = JsonResponse(
             {"token": token.key, "organization": {"id": str(org.id), "name": org.name, "email": org.email}},
             status=200,
         )
+        response["Access-Control-Allow-Origin"] = "*"
+        response["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response["Access-Control-Allow-Headers"] = "Content-Type"
+        return response
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class ChangePasswordView(View):
+    """POST /api/auth/change-password — update the organisation account password."""
+
+    def post(self, request):
+        org, err = get_org_from_request(request)
+        if err:
+            return err
+
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON."}, status=400)
+
+        new_password = body.get("new_password", "")
+        if not new_password:
+            return JsonResponse({"error": "new_password is required."}, status=400)
+
+        if len(new_password) < 8:
+            return JsonResponse({"error": "Password must be at least 8 characters."}, status=400)
+
+        org.set_password(new_password)
+        org.save()
+        return JsonResponse({}, status=200)
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -314,6 +370,13 @@ class EmployeeDetailView(View):
 class EmployeeLoginView(View):
     """POST /api/auth/employee/login — authenticate an employee with email + password."""
 
+    def options(self, request, *args, **kwargs):
+        response = JsonResponse({})
+        response["Access-Control-Allow-Origin"] = "*"
+        response["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response["Access-Control-Allow-Headers"] = "Content-Type"
+        return response
+
     def post(self, request):
         try:
             body = json.loads(request.body)
@@ -331,14 +394,22 @@ class EmployeeLoginView(View):
                 email=email, is_active=True
             )
         except Employee.DoesNotExist:
-            return JsonResponse({"error": "Invalid credentials."}, status=401)
+            response = JsonResponse({"error": "Invalid credentials."}, status=401)
+            response["Access-Control-Allow-Origin"] = "*"
+            response["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+            response["Access-Control-Allow-Headers"] = "Content-Type"
+            return response
 
         if not employee.check_password(password):
-            return JsonResponse({"error": "Invalid credentials."}, status=401)
+            response = JsonResponse({"error": "Invalid credentials."}, status=401)
+            response["Access-Control-Allow-Origin"] = "*"
+            response["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+            response["Access-Control-Allow-Headers"] = "Content-Type"
+            return response
 
         token = EmployeeAuthToken.objects.create(employee=employee)
 
-        return JsonResponse({
+        response = JsonResponse({
             "token": token.key,
             "employee": {
                 "id": str(employee.id),
@@ -353,6 +424,10 @@ class EmployeeLoginView(View):
                 },
             },
         }, status=200)
+        response["Access-Control-Allow-Origin"] = "*"
+        response["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response["Access-Control-Allow-Headers"] = "Content-Type"
+        return response
 
 
 @method_decorator(csrf_exempt, name="dispatch")
