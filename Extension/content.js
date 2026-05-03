@@ -9,20 +9,37 @@ function sanitize(str, maxLen = 500) {
   return str.replace(/</g, "&lt;").replace(/>/g, "&gt;").slice(0, maxLen);
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 let protectionEnabled = null;
 let protectionListenersAttached = false;
-let authStateRefreshInFlight = false;
+let authStateRefreshPromise = null;
 
-if (!document.body) {
-  log("No document.body, skipping content script init.");
-} else {
-  init().catch((error) => {
-    log("Init failure:", error?.message || error);
-  });
+boot().catch((error) => {
+  log("Init failure:", error?.message || error);
+});
+
+async function boot() {
+  // Attach critical guards immediately so upload handlers on the page don't run first.
+  attachDlpListeners();
+  attachAiPromptListeners();
+  listenForAdminTriggers();
+  protectionListenersAttached = true;
+
+  if (document.readyState === "loading") {
+    await new Promise((resolve) => {
+      document.addEventListener("DOMContentLoaded", resolve, { once: true });
+    });
+  }
+
+  await init();
 }
 
 async function init() {
   showHttpWarning();
+  await renderReputationWarningIfNeeded();
   await refreshProtectionState();
   watchAuthStorageChanges();
 }
@@ -38,14 +55,18 @@ function watchAuthStorageChanges() {
 }
 
 async function refreshProtectionState() {
-  if (authStateRefreshInFlight) return;
-  authStateRefreshInFlight = true;
-  try {
+  if (authStateRefreshPromise) return authStateRefreshPromise;
+
+  authStateRefreshPromise = (async () => {
     const state = await safeRuntimeMessage({ action: "AUTH_GET_STATE" }, { isAuthenticated: false });
     const authenticated = Boolean(state?.isAuthenticated);
     setProtectionEnabled(authenticated);
+  })();
+
+  try {
+    await authStateRefreshPromise;
   } finally {
-    authStateRefreshInFlight = false;
+    authStateRefreshPromise = null;
   }
 }
 
@@ -62,12 +83,6 @@ function setProtectionEnabled(enabled) {
   }
 
   removeSetupBanner();
-  if (!protectionListenersAttached) {
-    attachDlpListeners();
-    attachAiPromptListeners();
-    listenForAdminTriggers();
-    protectionListenersAttached = true;
-  }
   checkBlacklist();
 }
 
@@ -76,6 +91,7 @@ function isProtectionEnabled() {
 }
 
 function injectSetupBanner() {
+  if (!document.body) return;
   if (document.getElementById("cb-setup-banner")) return;
   const banner = document.createElement("div");
   banner.id = "cb-setup-banner";
@@ -102,6 +118,42 @@ function showHttpWarning() {
   banner.textContent =
     "CyberBase - Insecure connection (HTTP). Do not submit passwords or confidential data on this page.";
   document.body.prepend(banner);
+}
+
+async function renderReputationWarningIfNeeded() {
+  const warning = await safeRuntimeMessage(
+    {
+      action: "REPUTATION_CONSUME_WARNING",
+      page_url: window.location.href,
+    },
+    null
+  );
+
+  if (!warning || !warning.has_warning) return;
+  injectReputationWarningBanner(warning);
+}
+
+function injectReputationWarningBanner(warning) {
+  if (document.getElementById("cb-reputation-warning")) return;
+
+  const banner = document.createElement("div");
+  banner.id = "cb-reputation-warning";
+  banner.className = "cb-reputation-warning";
+
+  const verdict = sanitize(String(warning.verdict || "unknown"), 50);
+  const reason = sanitize(String(warning.reason || "provider_degraded_allow"), 120);
+  banner.innerHTML =
+    "<span>CyberBase: reputation providers were partially unavailable for this page. " +
+    "Navigation was allowed with caution. (verdict: " +
+    verdict +
+    ", reason: " +
+    reason +
+    ")</span>" +
+    '<button id="cb-reputation-dismiss" aria-label="Dismiss">X</button>';
+
+  document.body.prepend(banner);
+  const dismissBtn = document.getElementById("cb-reputation-dismiss");
+  if (dismissBtn) dismissBtn.addEventListener("click", () => banner.remove());
 }
 
 // Blacklist
@@ -150,6 +202,7 @@ const DLP_PIPELINE_CONFIG = {
   maxPdfPages: 8,
   uploadSizeThresholdBytes: 10 * 1024 * 1024,
   promptTextThresholdChars: 2500,
+  keywordHitThreshold: 2,
 };
 
 const AI_MONITOR_FALLBACK = {
@@ -166,6 +219,36 @@ const AI_MONITOR_FALLBACK = {
 const REGEX_PATTERNS_URL = chrome.runtime.getURL("config/regex-patterns.json");
 let tier1PatternsPromise = null;
 let aiMonitorProfilePromise = null;
+const HIGH_RISK_KEYWORDS = [
+  "password",
+  "passphrase",
+  "api key",
+  "private key",
+  "secret",
+  "token",
+  "credential",
+  "access token",
+  "jwt",
+  "oauth",
+  "ssn",
+  "passport",
+  "iban",
+  "swift",
+  "payroll",
+  "salary",
+  "nda",
+  "contract",
+  "customer database",
+  "client records",
+  "pii",
+  "source code",
+  "repository",
+  "architecture",
+  "roadmap",
+  "internal planning",
+  "proprietary",
+  "unreleased",
+];
 
 async function safeRuntimeMessage(payload, fallback = null) {
   try {
@@ -177,25 +260,53 @@ async function safeRuntimeMessage(payload, fallback = null) {
 }
 
 function attachDlpListeners() {
+  // Capture at window first, then document, to beat page-level upload listeners.
+  window.addEventListener("input", handleFileChange, true);
+  window.addEventListener("change", handleFileChange, true);
   document.addEventListener("input", handleFileChange, true);
   document.addEventListener("change", handleFileChange, true);
 }
 
 async function handleFileChange(event) {
-  if (!isProtectionEnabled()) return;
   const input = event.target;
   if (!input || input.type !== "file") return;
   if (!input.files || input.files.length === 0) return;
-  if (dlpActive) return;
 
+  const captureEvent = () => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    event.stopPropagation();
+  };
+
+  // Allow our synthetic replay event to pass through even if the guard
+  // is still finalizing state from the prior decision.
   if (replayBypassInputs.has(input)) {
     replayBypassInputs.delete(input);
     return;
   }
 
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  event.stopPropagation();
+  // While DLP is active, block follow-up native events (e.g. a second
+  // `change` after `input`) so page auto-upload handlers cannot race through.
+  if (dlpActive) {
+    captureEvent();
+    return;
+  }
+
+  if (protectionEnabled === null) {
+    // First events can happen before auth state arrives; hold them until state is known.
+    captureEvent();
+    await refreshProtectionState();
+
+    if (!isProtectionEnabled()) {
+      replayBypassInputs.add(input);
+      input.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+      return;
+    }
+  } else if (!isProtectionEnabled()) {
+    return;
+  }
+
+  captureEvent();
 
   const file = input.files[0];
   dlpActive = true;
@@ -217,16 +328,21 @@ async function handleFileChange(event) {
     try {
       const decision = await showDlpWarningModal(file.name, analysis);
       const actionTaken = decision === "cancel" ? "cancel" : "force";
-      await sendDlpDecisionLog(actionTaken, file.name, analysis, {
+      if (actionTaken === "cancel") {
+        input.value = "";
+        void sendDlpDecisionLog("cancel", file.name, analysis, {
+          eventChannel: "file_upload",
+          inputSizeBytes: file.size,
+          inputSizeChars: 0,
+        });
+        return;
+      }
+
+      void sendDlpDecisionLog("force", file.name, analysis, {
         eventChannel: "file_upload",
         inputSizeBytes: file.size,
         inputSizeChars: 0,
       });
-
-      if (actionTaken === "cancel") {
-        input.value = "";
-        return;
-      }
 
       replayBypassInputs.add(input);
       input.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
@@ -241,9 +357,10 @@ async function handleFileChange(event) {
   try {
     const analysis = await runUploadPipeline(file);
     closeCheckingModal();
+    await sleep(350);
 
     if (!analysis.shouldBlock) {
-      await sendDlpDecisionLog("allow", file.name, analysis, {
+      void sendDlpDecisionLog("allow", file.name, analysis, {
         eventChannel: "file_upload",
         inputSizeBytes: file.size,
         inputSizeChars: analysis.inputSizeChars || 0,
@@ -255,16 +372,21 @@ async function handleFileChange(event) {
 
     const decision = await showDlpWarningModal(file.name, analysis);
     const actionTaken = decision === "cancel" ? "cancel" : "force";
-    await sendDlpDecisionLog(actionTaken, file.name, analysis, {
+    if (actionTaken === "cancel") {
+      input.value = "";
+      void sendDlpDecisionLog("cancel", file.name, analysis, {
+        eventChannel: "file_upload",
+        inputSizeBytes: file.size,
+        inputSizeChars: analysis.inputSizeChars || 0,
+      });
+      return;
+    }
+
+    void sendDlpDecisionLog("force", file.name, analysis, {
       eventChannel: "file_upload",
       inputSizeBytes: file.size,
       inputSizeChars: analysis.inputSizeChars || 0,
     });
-
-    if (actionTaken === "cancel") {
-      input.value = "";
-      return;
-    }
 
     replayBypassInputs.add(input);
     input.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
@@ -326,6 +448,21 @@ async function runUploadPipeline(file) {
     };
   }
 
+  const tierKeyword = runTier1Keyword(extractedText, file.name, HIGH_RISK_KEYWORDS);
+  if (tierKeyword.hit) {
+    return {
+      shouldBlock: true,
+      topic,
+      tier: "tier1_keyword",
+      similarity: computeKeywordRiskScore(tierKeyword),
+      reason: "High-risk keyword combination detected",
+      matchedPattern: tierKeyword.keywords.join(","),
+      thresholdType: "keyword_match",
+      thresholdValue: tierKeyword.hitCount,
+      inputSizeChars,
+    };
+  }
+
   const semanticResponse = await safeRuntimeMessage({
     action: "DLP_SEMANTIC_CHECK",
     text: semanticInput,
@@ -333,7 +470,7 @@ async function runUploadPipeline(file) {
     blocked: true,
     top_score: 1,
     top_topic: "semantic_error",
-    threshold: 0.85,
+    threshold: 0.65,
   });
 
   const similarity = typeof semanticResponse?.top_score === "number" ? semanticResponse.top_score : 0;
@@ -369,14 +506,17 @@ function showCheckingModal(filename) {
       '<div class="cb-dlp-body-wrap">' +
       '<p class="cb-dlp-body">Analyzing:</p>' +
       '<div class="cb-dlp-filename">' + sanitize(filename, 80) + "</div>" +
-      '<p class="cb-dlp-question">Running privacy checks (regex + semantic model). Please wait.</p>' +
+      '<p class="cb-dlp-question">Running privacy checks (regex + keywords + semantic model). Please wait.</p>' +
       "</div>" +
       "</div>",
     allowOutsideClick: false,
     allowEscapeKey: false,
     showConfirmButton: false,
     didOpen: () => Swal.showLoading(),
-    customClass: { container: "cb-swal-container", popup: "cb-swal-popup" },
+    customClass: {
+      container: "cb-swal-container",
+      popup: "cb-swal-popup cb-swal-popup--dlp",
+    },
   });
 }
 
@@ -465,6 +605,7 @@ async function processAiPromptEvent(event, promptEl, triggerType) {
   try {
     const analysis = await runPromptPipeline(text);
     closeCheckingModal();
+    await sleep(350);
 
     if (!analysis.shouldBlock) {
       await sendDlpDecisionLog("allow", "AI prompt submission", analysis, {
@@ -570,6 +711,21 @@ async function runPromptPipeline(text) {
     };
   }
 
+  const tierKeyword = runTier1Keyword(text, "ai_prompt.txt", HIGH_RISK_KEYWORDS);
+  if (tierKeyword.hit) {
+    return {
+      shouldBlock: true,
+      topic,
+      tier: "tier1_keyword",
+      similarity: computeKeywordRiskScore(tierKeyword),
+      reason: "High-risk keyword combination detected",
+      matchedPattern: tierKeyword.keywords.join(","),
+      thresholdType: "keyword_match",
+      thresholdValue: tierKeyword.hitCount,
+      inputSizeChars: text.length,
+    };
+  }
+
   const semanticResponse = await safeRuntimeMessage({
     action: "DLP_SEMANTIC_CHECK",
     text: buildSemanticInput("ai_prompt.txt", text),
@@ -577,7 +733,7 @@ async function runPromptPipeline(text) {
     blocked: true,
     top_score: 1,
     top_topic: "semantic_error",
-    threshold: 0.85,
+    threshold: 0.65,
   });
 
   const similarity = typeof semanticResponse?.top_score === "number" ? semanticResponse.top_score : 0;
@@ -749,6 +905,7 @@ async function getTier1Patterns() {
 }
 
 function runTier1Regex(text, filename, patterns) {
+  log("[DLP Tier1] scanning:", filename, "| text length:", (text||"").length);
   const source = (filename || "") + "\n" + (text || "");
   const safePatterns = Array.isArray(patterns) ? patterns : [];
   const hits = [];
@@ -765,6 +922,24 @@ function runTier1Regex(text, filename, patterns) {
   };
 }
 
+function runTier1Keyword(text, filename, keywords) {
+  const source = ((filename || "") + "\n" + (text || "")).toLowerCase();
+  const safeKeywords = Array.isArray(keywords) ? keywords : [];
+  const hits = [];
+  for (const keyword of safeKeywords) {
+    const needle = String(keyword || "").trim().toLowerCase();
+    if (!needle) continue;
+    if (source.includes(needle)) hits.push(needle);
+  }
+
+  const uniqueHits = Array.from(new Set(hits));
+  return {
+    hit: uniqueHits.length >= DLP_PIPELINE_CONFIG.keywordHitThreshold,
+    keywords: uniqueHits,
+    hitCount: uniqueHits.length,
+  };
+}
+
 function buildSemanticInput(filename, text) {
   const safeName = (filename || "").trim();
   const safeText = (text || "").trim();
@@ -776,6 +951,13 @@ function computeRegexRiskScore(tier1) {
   const hits = Number(tier1?.hitCount || 0);
   const base = 0.86;
   const gain = Math.min(0.12, hits * 0.03);
+  return Number((base + gain).toFixed(4));
+}
+
+function computeKeywordRiskScore(tierKeyword) {
+  const hits = Number(tierKeyword?.hitCount || 0);
+  const base = 0.83;
+  const gain = Math.min(0.14, hits * 0.04);
   return Number((base + gain).toFixed(4));
 }
 
@@ -889,7 +1071,10 @@ async function showDlpWarningModal(filename, analysis) {
     allowOutsideClick: false,
     allowEscapeKey: false,
     showClass: { popup: "cb-swal-enter" },
-    customClass: { container: "cb-swal-container", popup: "cb-swal-popup" },
+    customClass: {
+      container: "cb-swal-container",
+      popup: "cb-swal-popup cb-swal-popup--dlp",
+    },
   });
 
   if (result.isConfirmed) return "cancel";
@@ -967,7 +1152,10 @@ function showQuizModal(payload) {
     confirmButtonColor: "#2b6cb0",
     allowOutsideClick: false,
     showClass: { popup: "cb-swal-enter" },
-    customClass: { container: "cb-swal-container", popup: "cb-swal-popup" },
+    customClass: {
+      container: "cb-swal-container",
+      popup: "cb-swal-popup cb-swal-popup--quiz",
+    },
     preConfirm: () => {
       const selected = document.querySelector('input[name="cb-quiz-radio"]:checked');
       if (!selected) {

@@ -1,3 +1,6 @@
+// Must be at the top level — MV3 service workers only allow importScripts() during initial evaluation
+try { importScripts("./lib/transformers.min.js"); } catch (e) { console.warn("[CyberBase BG] Top-level transformers import failed:", e.message); }
+
 const BACKEND_URL = "http://127.0.0.1:8000";
 const DEBUG_MODE = true;
 const POLL_INTERVAL_MINUTES = 0.2; // 12 seconds
@@ -5,8 +8,16 @@ const OFFLINE_QUEUE_MAX = 20;
 const BLACKLIST_CACHE_TTL_MS = 5 * 60 * 1000;
 const AI_TARGETS_CACHE_TTL_MS = 5 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 5000;
+const NAV_ALLOW_TTL_MS = 15 * 1000;
+const NAV_WARNING_TTL_MS = 60 * 1000;
 const EMPLOYEE_AUTH_PREFIX = "EmployeeToken ";
 const AUTH_STORAGE_KEYS = ["employeeAuthToken", "employeeProfile"];
+const SEMANTIC_THRESHOLD_STORAGE_KEY = "semanticDlpThreshold";
+const SEMANTIC_THRESHOLD_SOURCE_KEY = "semanticDlpThresholdSource";
+const SEMANTIC_THRESHOLD_CALIBRATED_AT_KEY = "semanticDlpThresholdCalibratedAt";
+const REPUTATION_CHECK_PATH = "/api/extension/reputation/check/";
+const REPUTATION_CHECK_PAGE = "reputation-check.html";
+const BLOCKED_PAGE = "blocked.html";
 
 const DEFAULT_BLACKLIST = [
   "malware-test.local",
@@ -33,18 +44,261 @@ const SENSITIVE_TOPICS_URL = chrome.runtime.getURL("config/sensitive-topics.json
 
 const SEMANTIC_DLP_CONFIG = {
   modelId: "Xenova/all-MiniLM-L6-v2",
-  threshold: 0.85,
+  threshold: 0.65,
   maxInputChars: 12000,
 };
+const SEMANTIC_THRESHOLD_GRID = { min: 0.35, max: 0.8, step: 0.03 };
+const SEMANTIC_CALIBRATION_EXAMPLES = [
+  { label: 0, text: "Team standup is at 10am and we will review sprint tasks." },
+  { label: 0, text: "Please update the meeting agenda and share the final deck." },
+  { label: 0, text: "Weekly status update: throughput improved and error rate decreased." },
+  { label: 0, text: "Customer asked for a public product overview and timeline." },
+  { label: 0, text: "Reminder to submit your vacation plan before Friday." },
+  { label: 0, text: "Let's review front-end spacing and dashboard card layout." },
+  { label: 1, text: "password=Admin123 and token=abcd-1234, keep this secret." },
+  { label: 1, text: "Here is our customer database export with emails and phone numbers." },
+  { label: 1, text: "Attached are payroll files, IBAN values, and salary statements." },
+  { label: 1, text: "Sharing private source code and internal architecture diagram for review." },
+  { label: 1, text: "These NDA contract clauses and legal investigation notes are confidential." },
+  { label: 1, text: "Please upload admin credentials and API keys to the AI chat." },
+];
 
 let semanticExtractorPromise = null;
 let sensitiveTopicEmbeddingsPromise = null;
 let sensitiveTopicsPromise = null;
 let authSyncPromise = null;
-let logoutInFlight = false;
+let authSessionIssueInFlight = false;
+const oneTimeAllowByTab = new Map();
+const oneTimeWarningByTab = new Map();
 
 function log(...args) {
   if (DEBUG_MODE) console.log("[CyberBase BG]", ...args);
+}
+
+function normalizeSemanticThreshold(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return SEMANTIC_DLP_CONFIG.threshold;
+  return Math.max(0.01, Math.min(0.99, parsed));
+}
+
+async function getSemanticThreshold() {
+  try {
+    const stored = await chrome.storage.local.get([SEMANTIC_THRESHOLD_STORAGE_KEY]);
+    return normalizeSemanticThreshold(stored?.[SEMANTIC_THRESHOLD_STORAGE_KEY]);
+  } catch (_) {
+    return SEMANTIC_DLP_CONFIG.threshold;
+  }
+}
+
+function computePrf(tp, fp, fn) {
+  const precision = tp + fp > 0 ? tp / (tp + fp) : 0;
+  const recall = tp + fn > 0 ? tp / (tp + fn) : 0;
+  const f1 = precision + recall > 0 ? (2 * precision * recall) / (precision + recall) : 0;
+  return { precision, recall, f1 };
+}
+
+function selectBestThreshold(scores, labels) {
+  let best = {
+    threshold: SEMANTIC_DLP_CONFIG.threshold,
+    precision: 0,
+    recall: 0,
+    f1: -1,
+  };
+
+  for (let t = SEMANTIC_THRESHOLD_GRID.min; t <= SEMANTIC_THRESHOLD_GRID.max + 1e-9; t += SEMANTIC_THRESHOLD_GRID.step) {
+    const threshold = Number(t.toFixed(2));
+    let tp = 0;
+    let fp = 0;
+    let fn = 0;
+
+    for (let i = 0; i < scores.length; i += 1) {
+      const pred = scores[i] >= threshold ? 1 : 0;
+      const truth = labels[i];
+      if (pred === 1 && truth === 1) tp += 1;
+      if (pred === 1 && truth === 0) fp += 1;
+      if (pred === 0 && truth === 1) fn += 1;
+    }
+
+    const metrics = computePrf(tp, fp, fn);
+    const isBetter =
+      metrics.f1 > best.f1 ||
+      (metrics.f1 === best.f1 && metrics.precision > best.precision) ||
+      (metrics.f1 === best.f1 && metrics.precision === best.precision && metrics.recall > best.recall);
+
+    if (isBetter) {
+      best = {
+        threshold,
+        precision: Number(metrics.precision.toFixed(4)),
+        recall: Number(metrics.recall.toFixed(4)),
+        f1: Number(metrics.f1.toFixed(4)),
+      };
+    }
+  }
+
+  return best;
+}
+
+async function scoreSemanticOnly(text) {
+  const source = (text || "").trim().slice(0, SEMANTIC_DLP_CONFIG.maxInputChars);
+  if (!source) return { score: 0, topic: "no_text" };
+
+  const [docVector, topicEmbeddings] = await Promise.all([
+    getEmbeddingVector(source),
+    getSensitiveTopicEmbeddings(),
+  ]);
+  if (!docVector.length) return { score: 0, topic: "no_vector" };
+
+  let topScore = -1;
+  let topTopic = "none";
+  for (const topic of topicEmbeddings) {
+    const score = cosineSimilarity(docVector, topic.vector);
+    if (score > topScore) {
+      topScore = score;
+      topTopic = topic.id;
+    }
+  }
+  const boundedScore = Math.max(0, Math.min(1, topScore));
+  return { score: Number(boundedScore.toFixed(4)), topic: topTopic };
+}
+
+async function maybeAutoCalibrateSemanticThreshold() {
+  try {
+    const existing = await chrome.storage.local.get([
+      SEMANTIC_THRESHOLD_STORAGE_KEY,
+      SEMANTIC_THRESHOLD_SOURCE_KEY,
+    ]);
+    const hasManualThreshold = Number.isFinite(Number(existing?.[SEMANTIC_THRESHOLD_STORAGE_KEY]));
+    if (hasManualThreshold) return;
+
+    const scores = [];
+    const labels = [];
+    for (const example of SEMANTIC_CALIBRATION_EXAMPLES) {
+      const result = await scoreSemanticOnly(example.text);
+      scores.push(result.score);
+      labels.push(example.label);
+    }
+
+    const best = selectBestThreshold(scores, labels);
+    await chrome.storage.local.set({
+      [SEMANTIC_THRESHOLD_STORAGE_KEY]: best.threshold,
+      [SEMANTIC_THRESHOLD_SOURCE_KEY]: "auto_calibration_v1",
+      [SEMANTIC_THRESHOLD_CALIBRATED_AT_KEY]: Date.now(),
+    });
+
+    log("Semantic threshold auto-calibrated:", best);
+  } catch (error) {
+    log("Semantic threshold auto-calibration failed:", error.message || error);
+  }
+}
+
+function normalizeHttpUrl(rawUrl) {
+  try {
+    const parsed = new URL(String(rawUrl || ""));
+    const protocol = (parsed.protocol || "").toLowerCase();
+    if (protocol !== "http:" && protocol !== "https:") return "";
+    parsed.hash = "";
+    if ((protocol === "http:" && parsed.port === "80") || (protocol === "https:" && parsed.port === "443")) {
+      parsed.port = "";
+    }
+    return parsed.toString();
+  } catch (_) {
+    return "";
+  }
+}
+
+function isRuntimePage(url, pageName) {
+  if (!url || !pageName) return false;
+  return String(url).startsWith(chrome.runtime.getURL(pageName));
+}
+
+function reapExpiredTabCaches() {
+  const now = Date.now();
+
+  for (const [tabId, entry] of oneTimeAllowByTab.entries()) {
+    if (!entry || entry.expiresAt <= now) oneTimeAllowByTab.delete(tabId);
+  }
+
+  for (const [tabId, entry] of oneTimeWarningByTab.entries()) {
+    if (!entry || entry.expiresAt <= now) oneTimeWarningByTab.delete(tabId);
+  }
+}
+
+function setOneTimeAllow(tabId, normalizedUrl) {
+  if (!Number.isInteger(tabId) || tabId < 0 || !normalizedUrl) return;
+  oneTimeAllowByTab.set(tabId, {
+    url: normalizedUrl,
+    expiresAt: Date.now() + NAV_ALLOW_TTL_MS,
+  });
+}
+
+function consumeOneTimeAllow(tabId, normalizedUrl) {
+  if (!Number.isInteger(tabId) || tabId < 0) return false;
+  const entry = oneTimeAllowByTab.get(tabId);
+  if (!entry) return false;
+  if (entry.expiresAt <= Date.now()) {
+    oneTimeAllowByTab.delete(tabId);
+    return false;
+  }
+  if (entry.url !== normalizedUrl) return false;
+  oneTimeAllowByTab.delete(tabId);
+  return true;
+}
+
+function setOneTimeWarning(tabId, warningPayload) {
+  if (!Number.isInteger(tabId) || tabId < 0 || !warningPayload) return;
+  oneTimeWarningByTab.set(tabId, {
+    ...warningPayload,
+    expiresAt: Date.now() + NAV_WARNING_TTL_MS,
+  });
+}
+
+function consumeOneTimeWarning(tabId, normalizedUrl = "") {
+  if (!Number.isInteger(tabId) || tabId < 0) return null;
+  const entry = oneTimeWarningByTab.get(tabId);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    oneTimeWarningByTab.delete(tabId);
+    return null;
+  }
+  if (normalizedUrl && entry.url && entry.url !== normalizedUrl) return null;
+  oneTimeWarningByTab.delete(tabId);
+  return entry;
+}
+
+function buildReputationCheckUrl(targetUrl, tabId) {
+  const params = new URLSearchParams();
+  params.set("target", targetUrl);
+  if (Number.isInteger(tabId) && tabId >= 0) params.set("tab_id", String(tabId));
+  return `${chrome.runtime.getURL(REPUTATION_CHECK_PAGE)}?${params.toString()}`;
+}
+
+function buildBlockedPageUrl(targetUrl, verdict) {
+  const params = new URLSearchParams();
+  params.set("target", targetUrl);
+  if (verdict?.verdict) params.set("verdict", String(verdict.verdict));
+  if (verdict?.reason) params.set("reason", String(verdict.reason));
+  if (Array.isArray(verdict?.matched_sources) && verdict.matched_sources.length) {
+    params.set("sources", verdict.matched_sources.join(","));
+  }
+  return `${chrome.runtime.getURL(BLOCKED_PAGE)}?${params.toString()}`;
+}
+
+function sanitizeReputationPayload(payload) {
+  const decision = payload?.decision === "block" ? "block" : "allow";
+  const verdict = String(payload?.verdict || (decision === "block" ? "malicious" : "clean"));
+  const reason = String(payload?.reason || (decision === "block" ? "threat_match" : "no_match"));
+  const degraded = Boolean(payload?.degraded);
+  const matchedSources = Array.isArray(payload?.matched_sources)
+    ? payload.matched_sources.map((value) => String(value || "").trim()).filter(Boolean)
+    : [];
+
+  return {
+    decision,
+    verdict,
+    reason,
+    degraded,
+    matched_sources: matchedSources,
+  };
 }
 
 function normalizeEmployee(raw) {
@@ -103,12 +357,14 @@ async function clearAuthSession(reason = "logout") {
 }
 
 async function handleUnauthorized(reason = "unauthorized") {
-  if (logoutInFlight) return;
-  logoutInFlight = true;
+  if (authSessionIssueInFlight) return;
+  authSessionIssueInFlight = true;
   try {
-    await clearAuthSession(reason);
+    // Keep session persisted even when backend rejects token.
+    // This prevents automatic logout across browser restarts/offline periods.
+    log(`Auth warning (session kept): ${reason}`);
   } finally {
-    logoutInFlight = false;
+    authSessionIssueInFlight = false;
   }
 }
 
@@ -175,7 +431,8 @@ async function syncAuthSession() {
       const employee = await fetchEmployeeProfile(state.token);
       if (!employee) {
         await handleUnauthorized("session_validation_failed");
-        return null;
+        // Keep stored session instead of forcing logout.
+        return state.employee || null;
       }
       await persistAuthSession(state.token, employee);
       return employee;
@@ -260,7 +517,8 @@ async function logoutEmployee() {
 
 function ensureTransformersRuntime() {
   if (!globalThis.transformers) {
-    importScripts(chrome.runtime.getURL("lib/transformers.min.js"));
+    // Fallback: try chrome.runtime.getURL path (works if called during initial event handling)
+    try { importScripts(chrome.runtime.getURL("lib/transformers.min.js")); } catch (_) {}
   }
 
   if (!globalThis.transformers) {
@@ -268,7 +526,9 @@ function ensureTransformersRuntime() {
   }
 
   const runtime = globalThis.transformers;
-  runtime.env.allowLocalModels = false;
+  runtime.env.allowLocalModels = true;
+  runtime.env.allowRemoteModels = true;
+  runtime.env.localModelPath = chrome.runtime.getURL("models/");
   runtime.env.useBrowserCache = true;
   runtime.env.backends.onnx.wasm.wasmPaths = chrome.runtime.getURL("lib/");
   return runtime;
@@ -386,7 +646,9 @@ async function getBlacklistDomains(forceRefresh = false) {
     const { response, authMissing, error } = await authorizedFetch("/api/extension/blacklist/", {
       method: "GET",
     });
-    if (authMissing) return [];
+    if (authMissing) {
+      return cachedDomains.length ? cachedDomains : DEFAULT_BLACKLIST;
+    }
     if (!response) throw error || new Error("Blacklist request failed");
     if (!response.ok) throw new Error(`Blacklist endpoint returned ${response.status}`);
 
@@ -426,7 +688,12 @@ async function getAiTargets(forceRefresh = false) {
     const { response, authMissing, error } = await authorizedFetch("/api/extension/ai-targets/", {
       method: "GET",
     });
-    if (authMissing) return { domains: [], keywords: [] };
+    if (authMissing) {
+      return {
+        domains: cachedDomains.length ? cachedDomains : DEFAULT_AI_TARGET_DOMAINS,
+        keywords: cachedKeywords.length ? cachedKeywords : DEFAULT_AI_TARGET_KEYWORDS,
+      };
+    }
     if (!response) throw error || new Error("AI targets request failed");
     if (!response.ok) throw new Error(`AI targets endpoint returned ${response.status}`);
 
@@ -466,52 +733,36 @@ function isHostnameInDomains(hostname, domains) {
 }
 
 async function runSemanticDlp(text) {
-  const source = (text || "").trim().slice(0, SEMANTIC_DLP_CONFIG.maxInputChars);
-  if (!source) {
+  const threshold = await getSemanticThreshold();
+  const result = await scoreSemanticOnly(text);
+  if (result.topic === "no_text") {
     return {
       blocked: false,
       top_score: 0,
       top_topic: "no_text",
-      threshold: SEMANTIC_DLP_CONFIG.threshold,
+      threshold,
     };
   }
-
-  const [docVector, topicEmbeddings] = await Promise.all([
-    getEmbeddingVector(source),
-    getSensitiveTopicEmbeddings(),
-  ]);
-
-  if (!docVector.length) {
+  if (result.topic === "no_vector") {
     return {
       blocked: false,
       top_score: 0,
       top_topic: "no_vector",
-      threshold: SEMANTIC_DLP_CONFIG.threshold,
+      threshold,
     };
   }
-
-  let topScore = -1;
-  let topTopic = "none";
-  for (const topic of topicEmbeddings) {
-    const score = cosineSimilarity(docVector, topic.vector);
-    if (score > topScore) {
-      topScore = score;
-      topTopic = topic.id;
-    }
-  }
-
-  const boundedScore = Math.max(0, Math.min(1, topScore));
   return {
-    blocked: boundedScore >= SEMANTIC_DLP_CONFIG.threshold,
-    top_score: Number(boundedScore.toFixed(4)),
-    top_topic: topTopic,
-    threshold: SEMANTIC_DLP_CONFIG.threshold,
+    blocked: result.score >= threshold,
+    top_score: result.score,
+    top_topic: result.topic,
+    threshold,
   };
 }
 
 async function warmSemanticModel() {
   try {
     await getSensitiveTopicEmbeddings();
+    await maybeAutoCalibrateSemanticThreshold();
     log("Semantic model warm-up complete.");
   } catch (error) {
     log("Semantic model warm-up failed:", error.message || error);
@@ -525,6 +776,8 @@ async function warmAiTargets() {
     log("AI target warm-up failed:", error.message || error);
   }
 }
+
+
 
 chrome.alarms.get("poll", (alarm) => {
   if (!alarm) {
@@ -665,8 +918,66 @@ async function postLog(url, body) {
   }
 }
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  handleMessage(message)
+async function fetchReputationDecision(targetUrl) {
+  const normalizedUrl = normalizeHttpUrl(targetUrl);
+  if (!normalizedUrl) {
+    return {
+      decision: "allow",
+      verdict: "unknown",
+      reason: "invalid_url",
+      degraded: true,
+      matched_sources: [],
+    };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const headers = { "Content-Type": "application/json" };
+
+  try {
+    const state = await getAuthState();
+    if (state.token) headers.Authorization = `${EMPLOYEE_AUTH_PREFIX}${state.token}`;
+
+    const response = await fetch(`${BACKEND_URL}${REPUTATION_CHECK_PATH}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ url: normalizedUrl }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Reputation endpoint returned ${response.status}`);
+    }
+
+    const payload = await response.json();
+    return sanitizeReputationPayload(payload);
+  } catch (error) {
+    log("Reputation check failed:", error?.message || error);
+    return {
+      decision: "allow",
+      verdict: "unknown",
+      reason: "reputation_check_unavailable",
+      degraded: true,
+      matched_sources: [],
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function logBlockAttemptIfAuthenticated(attemptedUrl) {
+  const state = await getAuthState();
+  if (!state.isAuthenticated) return;
+
+  const payload = { attempted_url: attemptedUrl };
+  const result = await postLog("/api/logs/blacklist/", payload);
+  if (!result.ok && !result.authMissing) {
+    await queueLog("/api/logs/blacklist/", payload);
+  }
+}
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  handleMessage(message, sender)
     .then(sendResponse)
     .catch((e) => {
       log("Message handler error:", e.message);
@@ -675,7 +986,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   return true;
 });
 
-async function handleMessage(message) {
+async function handleMessage(message, sender = null) {
   if (!message || typeof message !== "object") {
     return { ok: false, error: "Invalid message." };
   }
@@ -704,6 +1015,69 @@ async function handleMessage(message) {
     return { ok: true, isAuthenticated: false, employee: null };
   }
 
+  if (message.action === "REPUTATION_PREPARE_ALLOW") {
+    const tabId = Number.isInteger(message.tab_id)
+      ? message.tab_id
+      : (sender?.tab?.id ?? -1);
+    const targetUrl = normalizeHttpUrl(message.target_url);
+    if (!targetUrl) return { ok: false, error: "invalid_target_url" };
+    setOneTimeAllow(tabId, targetUrl);
+    return { ok: true };
+  }
+
+  if (message.action === "REPUTATION_CHECK_URL") {
+    const tabId = Number.isInteger(message.tab_id)
+      ? message.tab_id
+      : (sender?.tab?.id ?? -1);
+    const targetUrl = normalizeHttpUrl(message.target_url);
+    if (!targetUrl) {
+      return {
+        ok: true,
+        target_url: "",
+        decision: "allow",
+        verdict: "unknown",
+        reason: "invalid_target_url",
+        degraded: true,
+        matched_sources: [],
+      };
+    }
+
+    const verdict = await fetchReputationDecision(targetUrl);
+    if (verdict.decision === "block") {
+      await logBlockAttemptIfAuthenticated(targetUrl);
+      return {
+        ok: true,
+        target_url: targetUrl,
+        ...verdict,
+        blocked_page: buildBlockedPageUrl(targetUrl, verdict),
+      };
+    }
+
+    if (verdict.degraded && Number.isInteger(tabId) && tabId >= 0) {
+      setOneTimeWarning(tabId, {
+        url: targetUrl,
+        verdict: verdict.verdict,
+        reason: verdict.reason,
+      });
+    }
+
+    return {
+      ok: true,
+      target_url: targetUrl,
+      ...verdict,
+    };
+  }
+
+  if (message.action === "REPUTATION_CONSUME_WARNING") {
+    reapExpiredTabCaches();
+    const tabId = sender?.tab?.id ?? -1;
+    const pageUrl = normalizeHttpUrl(message.page_url || sender?.tab?.url || "");
+    const warning = consumeOneTimeWarning(tabId, pageUrl);
+    return warning
+      ? { has_warning: true, verdict: warning.verdict, reason: warning.reason }
+      : { has_warning: false };
+  }
+
   const state = await getAuthState();
   if (!state.isAuthenticated) {
     if (message.action === "CHECK_BLACKLIST") {
@@ -713,11 +1087,12 @@ async function handleMessage(message) {
       return { domains: [], keywords: [], is_known_domain: false, auth_required: true };
     }
     if (message.action === "DLP_SEMANTIC_CHECK") {
+      const threshold = await getSemanticThreshold();
       return {
         blocked: false,
         top_score: 0,
         top_topic: "auth_required",
-        threshold: SEMANTIC_DLP_CONFIG.threshold,
+        threshold,
         auth_required: true,
       };
     }
@@ -755,11 +1130,12 @@ async function handleMessage(message) {
         return await runSemanticDlp(message.text || "");
       } catch (error) {
         log("Semantic DLP failed:", error.message || error);
+        const threshold = await getSemanticThreshold();
         return {
           blocked: true,
           top_score: 1,
           top_topic: "semantic_error",
-          threshold: SEMANTIC_DLP_CONFIG.threshold,
+          threshold,
         };
       }
     }
